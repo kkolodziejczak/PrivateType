@@ -1,4 +1,4 @@
-﻿name: Build portable PrivateType
+name: Build portable PrivateType
 
 on:
   workflow_dispatch:
@@ -21,6 +21,14 @@ jobs:
           git clone https://github.com/NVIDIA/NeMo-Speech.cpp.git .engine/NeMo-Speech.cpp
           git -C .engine/NeMo-Speech.cpp checkout 1118951337094db3b362fbf1b27e871696f10590
 
+      - name: Restore native build cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            .engine/vcpkg/downloads
+            .engine/vcpkg/installed
+            .engine/build-cpu-realtime-manual
+          key: native-win-x64-release-${{ hashFiles('Build-NemoSpeechCpu.ps1', 'patches/nemo-speech-windows-sentencepiece-absl.patch', 'triplets/x64-windows-release.cmake') }}
       - name: Build CPU speech runtime
         shell: pwsh
         run: ./Build-NemoSpeechCpu.ps1

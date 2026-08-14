@@ -80,12 +80,18 @@ try {
     $engineRoot = Join-Path $PSScriptRoot '.engine'
     $repository = Join-Path $engineRoot 'NeMo-Speech.cpp'
     $vcpkgRoot = Join-Path $engineRoot 'vcpkg'
+    $tripletDirectory = Join-Path $PSScriptRoot 'triplets'
+    $tripletName = 'x64-windows-release'
     $buildDirectory = Join-Path $engineRoot 'build-cpu-realtime-manual'
     $windowsSentencePiecePatch = Join-Path $PSScriptRoot 'patches\nemo-speech-windows-sentencepiece-absl.patch'
+    $tripletPath = Join-Path $tripletDirectory "$tripletName.cmake"
     $vcVarsPath = Find-MsvcVcVarsPath
 
     if (!(Test-Path $repository)) {
         throw "NeMo-Speech.cpp sources are missing: $repository"
+    }
+    if (!(Test-Path $tripletPath)) {
+        throw "Release-only vcpkg triplet is missing: $tripletPath"
     }
 
 
@@ -104,7 +110,7 @@ try {
     }
 
     Write-Host '==> Preparing local SentencePiece dependency' -ForegroundColor Cyan
-    Invoke-Checked { & "$vcpkgRoot\vcpkg.exe" install sentencepiece:x64-windows --disable-metrics } `
+    Invoke-Checked { & "$vcpkgRoot\vcpkg.exe" install "sentencepiece:$tripletName" "--overlay-triplets=$tripletDirectory" --disable-metrics } `
         'Could not install SentencePiece'
 
     $cmake = Get-ChildItem "$vcpkgRoot\downloads\tools\cmake-*-windows\*\bin\cmake.exe" |
@@ -123,7 +129,8 @@ try {
         & $cmake -S $repository -B $buildDirectory -G Ninja `
             -DCMAKE_BUILD_TYPE=Release `
             -DCMAKE_TOOLCHAIN_FILE="$vcpkgRoot\scripts\buildsystems\vcpkg.cmake" `
-            -DVCPKG_TARGET_TRIPLET=x64-windows `
+            -DVCPKG_TARGET_TRIPLET=$tripletName `
+            -DVCPKG_OVERLAY_TRIPLETS="$tripletDirectory" `
             -DNEMO_SPEECH_GGML_PATCHED=OFF `
             -DNEMO_SPEECH_BUILD_ASR=ON `
             -DNEMO_SPEECH_BUILD_DIAR=OFF `
@@ -148,7 +155,7 @@ try {
         throw "The expected ASR library was not produced: $asrLibrary"
     }
 
-    $env:PATH = "$runtimeDirectory;$vcpkgRoot\installed\x64-windows\bin;$env:PATH"
+    $env:PATH = "$runtimeDirectory;$vcpkgRoot\installed\$tripletName\bin;$env:PATH"
 
     Write-Host '==> Verifying the built runtime' -ForegroundColor Cyan
     Invoke-Checked { & $runtimeExecutable --version } 'Runtime verification failed'
