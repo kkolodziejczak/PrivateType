@@ -94,6 +94,10 @@ try {
         'Could not initialize NeMo-Speech.cpp submodules'
 
     Apply-WindowsSentencePiecePatch -Repository $repository -PatchPath $windowsSentencePiecePatch
+    $stableSourceTimestamp = [DateTime]::SpecifyKind([DateTime]::new(2000, 1, 1), [DateTimeKind]::Utc)
+    Get-ChildItem -LiteralPath $repository -File -Recurse -Force |
+        Where-Object { $_.FullName -notlike "$repository\.git\*" } |
+        ForEach-Object { $_.LastWriteTimeUtc = $stableSourceTimestamp }
 
     if (!(Test-Path "$vcpkgRoot\vcpkg.exe")) {
         Write-Host '==> Downloading vcpkg into the local engine directory' -ForegroundColor Cyan
