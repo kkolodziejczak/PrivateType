@@ -4,10 +4,11 @@ Research date: 2026-08-14. This is an engineering release checklist, not legal a
 
 ## Release decision summary
 
-Do not publish the current portable ZIP yet. The release build copies native
-NeMo-Speech.cpp binaries but does not bundle the upstream `LICENSE`, `NOTICE`,
-or third-party notices. The chosen distribution route and signing identity also
-remain undecided.
+The portable release builder bundles the app MIT license, the upstream
+NeMo-Speech.cpp `LICENSE`, `NOTICE`, and third-party notices, plus the audited
+ggml, cpp-httplib, vcpkg, NAudio, and .NET license materials. The release test
+fails if any expected notice is missing. A final-artifact audit and clean-machine
+test remain required before public publication.
 
 ## Model: NVIDIA Nemotron 3.5 ASR Streaming 0.6B
 
@@ -62,19 +63,19 @@ Choose one route before packaging:
 | Direct MSIX | Certificate/Artifact Signing identity and update host | Sign package and publish an `.appinstaller` feed. |
 | Direct ZIP | Signing identity and manual-update policy | Sign every executable/DLL, publish checksums, and explain updates clearly. |
 
-## Hard publication blockers
+## Remaining publication gates
 
-- [ ] Select Store MSIX, direct MSIX, or direct ZIP; select the publisher/signing identity.
-- [ ] Produce and verify a release from a clean checkout after the current UI changes are committed.
-- [ ] Audit the exact native binary dependency/license footprint and bundle required notices/licenses.
-- [ ] Complete legal review of the notices bundle and LGPL/KenLM implications.
-- [ ] Sign the final, immutable artifacts and verify signatures before distribution.
-- [ ] Run the documented clean-machine acceptance test on the final signed artifact.
+- [x] Choose direct ZIP distribution with manual updates for the initial release.
+- [x] Bundle the required notice and license materials, and verify their presence in the ZIP.
+- [ ] Produce and audit the final `v1.0.0` ZIP from a clean checkout, including the exact native dependency/import inventory.
+- [ ] Run the documented clean-machine acceptance test, including the VC++ prerequisite path.
+- [ ] Publish the SHA-256 beside the immutable release ZIP.
+- [ ] Consider code signing for a future release. The initial direct ZIP is intentionally unsigned; document that clearly and do not imply it is signed.
 
 ## Evidence reviewed in this repository
 
-- `Build-PortableRelease.ps1` copies `nemo-speech.exe` and seven native DLLs
-  into `engine/bin`, but does not copy license or notice files.
+- `Build-PortableRelease.ps1` copies `nemo-speech.exe`, seven native DLLs, and
+  the release `licenses` bundle into the portable app folder.
 - `MODEL_ARTIFACT.md` pins the downloaded model revision and SHA-256.
 - The checked-out NeMo-Speech.cpp source includes `LICENSE`, `NOTICE`, and
   `THIRD_PARTY_NOTICES.md`; those are the source-of-truth notice materials to

@@ -20,10 +20,10 @@ evidence removes KenLM from the engineering inventory for this exact build;
 the legal conclusion should remain tied to the final-artifact audit.
 
 That does **not** make a ZIP from the current builder ready to publish. The
-release script does not explicitly copy license or notice material. It also
-verifies only the presence of the local engine files, not the audited upstream
-revision, CMake configuration, or binary hashes. A later local rebuild could silently change
-the legal footprint.
+release script copies the reviewed notice and license materials into a
+`licenses` folder, and the smoke test verifies their presence. It still does
+not verify the audited upstream revision, CMake configuration, or binary
+hashes; a later local rebuild could silently change the legal footprint.
 
 The PrivateType source may be licensed under MIT while it uses these
 dependencies. MIT does not replace the dependencies' own licenses: the source

@@ -21,7 +21,7 @@ static void RenderWindows()
         throw new InvalidOperationException($"Win32 x64 INPUT must be 40 bytes; actual size was {inputSize}.");
 
     var application = new PrivateType.App.App { ShutdownMode = ShutdownMode.OnExplicitShutdown };
-    Application.LoadComponent(application, new Uri("/PrivateType.App;component/App.xaml", UriKind.Relative));
+    Application.LoadComponent(application, new Uri("/PrivateType;component/App.xaml", UriKind.Relative));
     var outputDirectory = Path.Combine(Path.GetTempPath(), "live-dictation-layout-probe");
     Directory.CreateDirectory(outputDirectory);
 

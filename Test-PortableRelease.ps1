@@ -41,6 +41,24 @@ $engineFiles = @(
     'libprotobuf.dll'
 )
 
+$noticeFiles = @(
+    'LICENSE',
+    'licenses\THIRD-PARTY-NOTICES.txt',
+    'licenses\PrivateType-MIT.txt',
+    'licenses\NeMo-Speech.cpp-APACHE-2.0.txt',
+    'licenses\NeMo-Speech.cpp-NOTICE.txt',
+    'licenses\NeMo-Speech.cpp-THIRD-PARTY-NOTICES.md',
+    'licenses\ggml-MIT.txt',
+    'licenses\cpp-httplib-MIT.txt',
+    'licenses\SentencePiece-APACHE-2.0.txt',
+    'licenses\Protobuf-BSD-3-Clause.txt',
+    'licenses\Abseil-APACHE-2.0.txt',
+    'licenses\utf8-range-MIT.txt',
+    'licenses\NAudio-MIT.txt',
+    'licenses\dotnet-LICENSE.txt',
+    'licenses\dotnet-THIRD-PARTY-NOTICES.txt'
+)
+
 try {
     Expand-Archive -LiteralPath $ArchivePath -DestinationPath $WorkingDirectory -ErrorAction Stop
     $releaseDirectory = Join-Path $WorkingDirectory 'PrivateType'
@@ -48,6 +66,9 @@ try {
     Assert-ReleaseFile (Join-Path $releaseDirectory 'PrivateType.exe')
     foreach ($engineFile in $engineFiles) {
         Assert-ReleaseFile (Join-Path $releaseDirectory "engine\bin\$engineFile")
+    }
+    foreach ($noticeFile in $noticeFiles) {
+        Assert-ReleaseFile (Join-Path $releaseDirectory $noticeFile)
     }
 
     if (Test-Path -LiteralPath (Join-Path $releaseDirectory 'models')) {

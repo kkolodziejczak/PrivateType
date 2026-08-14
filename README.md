@@ -1,69 +1,118 @@
 # PrivateType
 
-PrivateType is a private, local Windows tray app for hold-to-dictate speech input. It shows a draggable bubble while you speak, displays a live 44-band voice spectrum, and inserts finalized text into the app that was active when dictation began.
+**PrivateType is a local, hold-to-dictate speech-input app for Windows.** It
+listens only while you hold a shortcut, shows what it is hearing, and inserts
+the final text into the field that was active when dictation began.
 
-Audio and recognition remain on the computer. The speech engine listens only on `127.0.0.1`; there is no account, cloud-recognition fallback, or retained transcript history.
+Audio and recognition stay on the computer. There is no account, cloud
+recognition fallback, or retained transcript history.
 
-## Quick start
+![Live spectrum while dictating](docs/images/recording-bubble.png)
 
-1. Download and unpack the portable ZIP into a writable folder—not `Program Files`, a read-only archive, or a protected network location.
-2. Run `PrivateType.exe`.
-3. On first launch, let the app download and verify the local speech model.
-4. Open **Settings** from the tray icon or the ready bubble, choose a microphone, and confirm your shortcuts.
-5. Hold a shortcut while speaking. Release it to insert the finalized text into the original eligible text field.
+## Download and start
 
-Default shortcuts:
+1. Download `PrivateType-win-x64.zip` and its `.sha256` checksum from
+   [Releases](https://github.com/kkolodziejczak/privatetype/releases).
+2. Verify the checksum, then unpack the ZIP into a writable folder. Do not run
+   it from `Program Files`, a read-only archive, or a protected network path.
+3. Start `PrivateType.exe`.
+4. On the first launch, approve the separate local-model download and wait for
+   its verification to finish.
+5. Open **Settings** from the tray icon or ready bubble, choose a microphone,
+   and confirm your shortcuts.
 
-| Language | Shortcut |
+The first public releases use a direct, unsigned ZIP with manual updates. Use
+the SHA-256 file published beside each release and download only from this
+repository's Releases page.
+
+```powershell
+Get-FileHash .\PrivateType-win-x64.zip -Algorithm SHA256
+```
+
+The reported hash must exactly match `PrivateType-win-x64.zip.sha256`.
+
+## Use it
+
+| Language | Default shortcut |
 | --- | --- |
 | Polish | `Ctrl+Shift+R` |
 | English | `Ctrl+Shift+E` |
 
-## What to expect
+Hold a shortcut while speaking, then release it to insert the final text. The
+model loads when PrivateType starts. If it has been unloaded after the selected
+idle timeout, keep holding the shortcut while **Loading local model…** is
+shown; it will move to **Listening** when ready.
 
-- The ready bubble can be dragged. Its position is retained separately for each monitor.
-- At launch, the app begins loading the local model so the first dictation is ready sooner. After the selected idle timeout, a held shortcut shows **Loading local model…** until the model is ready; keep holding and it will move to **Listening**.
-- The 44 spectrum bars and icon react to microphone input. Their visual gain adapts to quieter speech; this does not alter the audio sent to recognition.
-- The transcript view keeps three visible lines and follows the newest text.
-- In Settings, **Start PrivateType with Windows** creates a current-user Startup entry. **Unload model after** releases the model's memory after 5, 10, 15, or 30 minutes without dictation.
+![Settings](docs/images/settings.png)
 
-## Computer requirements
+### What the app does
 
-The app is a `win-x64`, CPU-only application. These are practical recommendations, not a guarantee for every computer:
+- A draggable bubble is remembered per monitor.
+- A 44-band voice spectrum and icon react to microphone input; visual gain
+  adapts to quieter speech without changing the audio passed to recognition.
+- The live transcript keeps three visible lines and follows the newest text.
+- **Start PrivateType with Windows** creates a current-user Startup entry.
+- **Unload model after** frees model memory after 5, 10, 15, or 30 idle
+  minutes.
+- Diagnostics retain only safe warnings and errors in memory until the app
+  closes. They never include audio or dictated text.
+
+## Requirements
+
+PrivateType is a CPU-only `win-x64` app.
 
 | Resource | Minimum practical guidance | Recommended |
 | --- | --- | --- |
 | Operating system | Windows 10 or 11, 64-bit | Current Windows 11 build |
 | CPU | 64-bit x86 CPU | Modern multi-core CPU |
-| RAM | 4 GB total, with at least 2 GB available while dictating | 8 GB total or more |
-| Free disk space | 1.2 GB for the app, runtime, model, and working room | 2 GB or more |
-| Microphone | Any Windows-recording device | Headset or close microphone in a quiet room |
+| RAM | 4 GB total, at least 2 GB free while dictating | 8 GB total or more |
+| Free disk space | 1.2 GB for app, runtime, model, and working room | 2 GB or more |
+| Microphone | Any Windows recording device | Headset or close microphone in a quiet room |
 
-Measured package facts:
+The pinned Nemotron Q8_0 model is about 707 MiB. The self-contained app/runtime
+folder is about 190 MB before the model download. The current native runtime
+requires the [Microsoft Visual C++ x64 Redistributable](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist)
+if it is not already installed.
 
-- The pinned Nemotron Q8_0 model is **741,548,352 bytes** (about 707 MiB).
-- The recorded self-contained app/runtime folder is about **190 MB** before the model download.
-- On the verified test machine, the ready local engine used about **932 MiB** working set. Windows and other active apps require additional headroom.
+## Privacy, limits, and troubleshooting
 
-See [MODEL_ARTIFACT.md](MODEL_ARTIFACT.md) and [ENGINE_DECISION.md](ENGINE_DECISION.md) for the model checksum, license, benchmark context, and measured runtime evidence.
-
-## Privacy and supported targets
-
-- The app does not retain raw audio or inserted transcripts.
-- `data/settings.json` stores the selected microphone, shortcuts, bubble position, Windows startup choice, and model idle timeout.
-- Diagnostics are a bounded in-memory timeline of safe operational breadcrumbs, warnings, and errors. They disappear when the app closes. Use **Settings → View diagnostics…** to review, copy, save, or clear a report; nothing is written automatically.
-- Ordinary desktop text fields are supported. Password/secure fields, elevated applications, remote desktops, games, and apps that reject synthetic input are intentionally unsupported. If the foreground app changes while dictating, insertion is cancelled rather than redirected.
-
-## Troubleshooting
+- PrivateType does not retain raw audio or inserted transcripts.
+- `data/settings.json` stores only the selected microphone, shortcuts, bubble
+  location, Windows-startup preference, and model idle timeout.
+- The model is downloaded separately from NVIDIA; it is not included in the
+  app ZIP. See [MODEL_ARTIFACT.md](MODEL_ARTIFACT.md) for its source and
+  checksum.
+- Normal desktop text fields are supported. Password/secure fields, elevated
+  apps, remote desktops, games, and apps that reject synthetic input are not.
+  If the foreground app changes while dictating, insertion is cancelled.
 
 | Symptom | What to do |
 | --- | --- |
-| First dictation pauses at loading | Keep the shortcut held until the local model becomes ready. Later holds are immediate until the idle timeout unloads it. |
-| Text was not inserted | Check that the original target is a normal, non-elevated text field. Review the local diagnostics log for the error phase. |
-| The bubble is on another monitor | Drag the ready bubble where you want it on that monitor; the app saves that position. |
-| Recognition is weak | Choose the correct microphone in Settings and speak close to it. The visual spectrum is not an audio gain control. |
+| First dictation pauses at loading | Keep holding the shortcut until the local model is ready. |
+| Text was not inserted | Check the original target is a normal, non-elevated text field, then open **Settings → View diagnostics…**. |
+| Bubble is on another monitor | Drag the ready bubble where you want it on that monitor. |
+| Recognition is weak | Select the right microphone and speak close to it. The spectrum is not an audio-gain control. |
+| Engine will not start | Install the current Microsoft Visual C++ x64 Redistributable, then relaunch the app. |
 
-## Building and testing
+## Licenses
+
+PrivateType's own source and maintainer-owned assets are available under the
+[MIT License](LICENSE). The portable release includes a `licenses` folder and
+`THIRD-PARTY-NOTICES.txt` for NeMo-Speech.cpp, ggml, cpp-httplib,
+SentencePiece, Protobuf, Abseil, utf8-range, NAudio, and the self-contained
+.NET runtime. Open the same notices from **Settings → Open-source licenses…**.
+
+## Report a problem or contribute
+
+Please use [GitHub Issues](https://github.com/kkolodziejczak/privatetype/issues)
+for reproducible bugs and feature ideas. Do not include dictated text, raw
+audio, settings files, or diagnostic reports without first reviewing them.
+
+Read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting a change and
+[SECURITY.md](SECURITY.md) for vulnerability reporting. The future technical
+roadmap is in [TODO.md](TODO.md).
+
+## Build from source
 
 For contributors with the local engine runtime available:
 
@@ -80,6 +129,4 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\Build-PortableRelease.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\Test-PortableRelease.ps1
 ```
 
-## Agent handoff
-
-Automation and coding agents should read [AGENTS.md](AGENTS.md) before changing this project. In particular, after any behavior or UI change, rebuild, verify, stop only the old `PrivateType.App` process, launch the current executable, confirm it is running, and only then ask the user to test it.
+Agents working in this repository should follow [AGENTS.md](AGENTS.md).
