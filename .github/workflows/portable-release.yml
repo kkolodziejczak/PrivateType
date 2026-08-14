@@ -25,9 +25,10 @@ jobs:
         uses: actions/cache@v4
         with:
           path: |
+            .engine/NeMo-Speech.cpp
             .engine/vcpkg
             .engine/build-cpu-realtime-manual
-          key: native-win-x64-${{ hashFiles('Build-NemoSpeechCpu.ps1', 'patches/nemo-speech-windows-sentencepiece-absl.patch') }}
+          key: native-win-x64-v2-nemo-1118951337094db3b362fbf1b27e871696f10590-${{ hashFiles('Build-NemoSpeechCpu.ps1', 'patches/nemo-speech-windows-sentencepiece-absl.patch') }}
       - name: Build CPU speech runtime
         shell: pwsh
         run: ./Build-NemoSpeechCpu.ps1
