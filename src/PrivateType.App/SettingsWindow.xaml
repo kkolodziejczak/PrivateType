@@ -1,0 +1,344 @@
+<Window x:Class="PrivateType.App.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="PrivateType settings" Width="620" SizeToContent="Height"
+        WindowStartupLocation="CenterScreen" ResizeMode="NoResize" WindowStyle="None" AllowsTransparency="True"
+        Background="Transparent" Foreground="{DynamicResource ColorText}" FontFamily="{DynamicResource AppFont}">
+  <Window.Resources>
+    <Style TargetType="TextBlock">
+      <Setter Property="FontFamily" Value="{DynamicResource AppFont}" />
+    </Style>
+    <Style TargetType="Button">
+      <Setter Property="Foreground" Value="{DynamicResource ColorText}" />
+      <Setter Property="Background" Value="{DynamicResource ColorSurface}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource ColorDivider}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="Padding" Value="12,7" />
+      <Setter Property="Cursor" Value="Hand" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Border x:Name="ButtonBorder" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}" Padding="{TemplateBinding Padding}" CornerRadius="8">
+              <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" RecognizesAccessKey="True" />
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="ButtonBorder" Property="Background" Value="{DynamicResource ColorNeutral900}" />
+                <Setter TargetName="ButtonBorder" Property="BorderBrush" Value="{DynamicResource ColorAccent}" />
+              </Trigger>
+              <Trigger Property="IsPressed" Value="True">
+                <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.78" />
+              </Trigger>
+              <Trigger Property="IsEnabled" Value="False">
+                <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.45" />
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+    <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+      <Setter Property="Background" Value="{DynamicResource ColorAccent800}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource ColorAccent}" />
+      <Setter Property="Foreground" Value="{DynamicResource ColorAccent100}" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style x:Key="GhostButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="Foreground" Value="{DynamicResource ColorAccent300}" />
+      <Setter Property="Padding" Value="0,6" />
+    </Style>
+    <Style TargetType="CheckBox">
+      <Setter Property="Foreground" Value="{DynamicResource ColorText}" />
+      <Setter Property="Cursor" Value="Hand" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="CheckBox">
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="22" />
+                <ColumnDefinition Width="10" />
+                <ColumnDefinition Width="Auto" />
+              </Grid.ColumnDefinitions>
+              <Border x:Name="CheckBoxBorder" Grid.Column="0" Width="22" Height="22" VerticalAlignment="Center" Background="{DynamicResource ColorBg}"
+                      BorderBrush="{DynamicResource ColorAccent}" BorderThickness="2" CornerRadius="4">
+                <Path x:Name="CheckMark" Data="M3,9 L7,13 L15,4" Stroke="{DynamicResource ColorAccent100}" StrokeThickness="2" StrokeLineJoin="Round" Visibility="Collapsed" />
+              </Border>
+              <ContentPresenter Grid.Column="2" VerticalAlignment="Center" RecognizesAccessKey="True" />
+            </Grid>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsChecked" Value="True">
+                <Setter TargetName="CheckBoxBorder" Property="Background" Value="{DynamicResource ColorAccent800}" />
+                <Setter TargetName="CheckBoxBorder" Property="BorderBrush" Value="{DynamicResource ColorAccent}" />
+                <Setter TargetName="CheckMark" Property="Visibility" Value="Visible" />
+              </Trigger>
+              <Trigger Property="IsKeyboardFocused" Value="True">
+                <Setter TargetName="CheckBoxBorder" Property="BorderBrush" Value="{DynamicResource ColorAccent}" />
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+    <Style TargetType="TextBox">
+      <Setter Property="Foreground" Value="{DynamicResource ColorAccent300}" />
+      <Setter Property="Background" Value="{DynamicResource ColorBg}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource ColorDivider}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="TextBox">
+            <Border x:Name="TextBoxBorder" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="8" Padding="{TemplateBinding Padding}">
+              <ScrollViewer x:Name="PART_ContentHost" />
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsKeyboardFocused" Value="True">
+                <Setter TargetName="TextBoxBorder" Property="BorderBrush" Value="{DynamicResource ColorAccent}" />
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+    <Style x:Key="ComboBoxToggleButton" TargetType="ToggleButton">
+      <Setter Property="Foreground" Value="{DynamicResource ColorText}" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="ToggleButton">
+            <Border x:Name="ToggleBorder" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="8">
+              <ContentPresenter />
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="ToggleBorder" Property="BorderBrush" Value="{DynamicResource ColorAccent}" />
+              </Trigger>
+              <Trigger Property="IsChecked" Value="True">
+                <Setter TargetName="ToggleBorder" Property="BorderBrush" Value="{DynamicResource ColorAccent}" />
+              </Trigger>
+              <Trigger Property="IsEnabled" Value="False">
+                <Setter TargetName="ToggleBorder" Property="Opacity" Value="0.45" />
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+    <Style TargetType="ComboBox">
+      <Setter Property="Foreground" Value="{DynamicResource ColorText}" />
+      <Setter Property="Background" Value="{DynamicResource ColorBg}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource ColorDivider}" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="ComboBox">
+            <Grid>
+              <ToggleButton x:Name="ToggleButton" Style="{StaticResource ComboBoxToggleButton}" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1"
+                            IsChecked="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}">
+                <Grid>
+                  <ContentPresenter Margin="10,0,30,0" VerticalAlignment="Center" Content="{TemplateBinding SelectionBoxItem}"
+                                    ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}" />
+                  <Path HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,11,0" Fill="{DynamicResource ColorNeutral400}" Data="M0,0 L10,0 L5,6 Z" />
+                </Grid>
+              </ToggleButton>
+              <Popup x:Name="Popup" Placement="Bottom" AllowsTransparency="True" IsOpen="{TemplateBinding IsDropDownOpen}" PopupAnimation="Fade">
+                <Border MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}" Margin="0,4,0,0" Background="{DynamicResource ColorSurface}" BorderBrush="{DynamicResource ColorDivider}" BorderThickness="1" CornerRadius="8">
+                  <ScrollViewer MaxHeight="240" CanContentScroll="True">
+                    <ItemsPresenter />
+                  </ScrollViewer>
+                </Border>
+              </Popup>
+            </Grid>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+    <Style TargetType="ComboBoxItem">
+      <Setter Property="Foreground" Value="{DynamicResource ColorText}" />
+      <Setter Property="Padding" Value="10,8" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="ComboBoxItem">
+            <Border x:Name="ItemBorder" Background="Transparent" CornerRadius="6">
+              <ContentPresenter />
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsHighlighted" Value="True">
+                <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource ColorNeutral900}" />
+              </Trigger>
+              <Trigger Property="IsSelected" Value="True">
+                <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource ColorAccent800}" />
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+  </Window.Resources>
+  <Border Margin="8" Background="{DynamicResource ColorSurface}" BorderBrush="{DynamicResource ColorDivider}" BorderThickness="1" CornerRadius="16">
+    <Grid>
+      <Grid.RowDefinitions>
+        <RowDefinition Height="42" />
+        <RowDefinition Height="*" />
+      </Grid.RowDefinitions>
+      <Border Grid.Row="0" Background="{DynamicResource ColorNeutral900}" CornerRadius="15,15,0,0" MouseLeftButtonDown="DragWindow">
+        <Grid Margin="16,0,8,0">
+          <TextBlock VerticalAlignment="Center" Foreground="{DynamicResource ColorText}" Opacity="0.8" FontSize="13" Text="PrivateType — settings" TextTrimming="CharacterEllipsis" />
+          <Button Width="28" Height="28" Padding="0" HorizontalAlignment="Right" VerticalAlignment="Center" Content="×" FontSize="18"
+                  Background="Transparent" BorderBrush="Transparent" Foreground="{DynamicResource ColorNeutral400}" Click="CloseWindow" />
+        </Grid>
+      </Border>
+      <Border Grid.Row="1" Padding="22" Background="{DynamicResource ColorSurface}" CornerRadius="0,0,14,14">
+        <Grid>
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="22" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="22" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="22" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="22" />
+            <RowDefinition Height="Auto" />
+          </Grid.RowDefinitions>
+
+          <StackPanel Grid.Row="0">
+            <TextBlock FontSize="22" FontWeight="SemiBold" Text="Settings" />
+            <TextBlock Margin="0,5,0,0" Foreground="{DynamicResource ColorText}" Opacity="0.7" FontSize="14" Text="Choose your input and the shortcuts that start local dictation." />
+          </StackPanel>
+
+          <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="140" />
+              <ColumnDefinition Width="16" />
+              <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+              <TextBlock FontWeight="SemiBold" FontSize="14" Text="Microphone" />
+              <TextBlock Margin="0,3,0,0" FontSize="12" Foreground="{DynamicResource ColorText}" Opacity="0.55" Text="Used for every shortcut" />
+            </StackPanel>
+            <ComboBox x:Name="MicrophoneBox" Grid.Column="2" Height="36" Padding="8,0" AutomationProperties.Name="Microphone" SelectedValuePath="Id">
+              <ComboBox.ItemTemplate>
+                <DataTemplate>
+                  <TextBlock Foreground="{DynamicResource ColorText}" Text="{Binding DisplayName}" />
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+          </Grid>
+
+          <Grid Grid.Row="4">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="140" />
+              <ColumnDefinition Width="16" />
+              <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0" VerticalAlignment="Top">
+              <TextBlock FontWeight="SemiBold" FontSize="14" Text="Shortcuts" />
+              <TextBlock Margin="0,3,0,0" FontSize="12" Foreground="{DynamicResource ColorText}" Opacity="0.55" Text="Hold to dictate" />
+            </StackPanel>
+            <StackPanel Grid.Column="2">
+              <ItemsControl x:Name="BindingsList">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Border Margin="0,0,0,8" Padding="8" Background="{DynamicResource ColorBg}" BorderBrush="{DynamicResource ColorDivider}" BorderThickness="1" CornerRadius="8">
+                      <Grid>
+                        <Grid.ColumnDefinitions>
+                          <ColumnDefinition Width="130" />
+                          <ColumnDefinition Width="*" />
+                          <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ComboBox Grid.Column="0" Height="31" Padding="7,0" ItemsSource="{Binding SupportedLanguages}" SelectedValuePath="Language"
+                                  SelectedValue="{Binding Language, Mode=TwoWay}">
+                          <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                              <TextBlock Foreground="{DynamicResource ColorText}" Text="{Binding Label}" />
+                            </DataTemplate>
+                          </ComboBox.ItemTemplate>
+                        </ComboBox>
+                        <TextBox Grid.Column="1" Margin="8,0" Height="31" Padding="9,0" IsReadOnly="True" Text="{Binding ShortcutLabel, Mode=OneWay}" PreviewKeyDown="RecordShortcut"
+                                 ToolTip="Click, then press Ctrl+Shift plus a key." />
+                        <Button Grid.Column="2" Content="Remove" Tag="{Binding}" Click="RemoveBinding" FontSize="12" Padding="10,6" />
+                      </Grid>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <Button Style="{StaticResource GhostButton}" Width="136" HorizontalAlignment="Left" Content="+ Add shortcut" Click="AddBinding" />
+              <TextBlock Margin="0,8,0,0" Foreground="{DynamicResource ColorText}" Opacity="0.55" FontSize="12" TextWrapping="Wrap"
+                         Text="Choose Polish, English, or Automatic. Then click a shortcut and press Ctrl+Shift plus a letter, number, or function key." />
+            </StackPanel>
+          </Grid>
+
+          <Grid Grid.Row="6">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="140" />
+              <ColumnDefinition Width="16" />
+              <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0" VerticalAlignment="Top">
+              <TextBlock FontWeight="SemiBold" FontSize="14" Text="Startup &amp; resources" />
+              <TextBlock Margin="0,3,0,0" FontSize="12" Foreground="{DynamicResource ColorText}" Opacity="0.55" Text="Launch quietly, free model memory when idle" TextWrapping="Wrap" />
+            </StackPanel>
+            <StackPanel Grid.Column="2">
+              <CheckBox x:Name="StartWithWindowsCheckBox" Content="Start PrivateType with Windows" AutomationProperties.Name="Start PrivateType with Windows" />
+              <Grid Margin="0,12,0,0">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="180" />
+                </Grid.ColumnDefinitions>
+                <TextBlock VerticalAlignment="Center" FontSize="13" Foreground="{DynamicResource ColorText}" Opacity="0.8" Text="Unload model after" />
+                <ComboBox x:Name="IdleTimeoutBox" Grid.Column="1" Height="36" Padding="8,0" SelectedValuePath="Minutes" AutomationProperties.Name="Unload model after">
+                  <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                      <TextBlock Foreground="{DynamicResource ColorText}" Text="{Binding Label}" />
+                    </DataTemplate>
+                  </ComboBox.ItemTemplate>
+                </ComboBox>
+              </Grid>
+            </StackPanel>
+          </Grid>
+
+          <StackPanel Grid.Row="8">
+            <Border Padding="12" Background="{DynamicResource ColorBg}" BorderBrush="{DynamicResource ColorDivider}" BorderThickness="1" CornerRadius="8">
+              <Grid>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Orientation="Horizontal">
+                  <Border Width="44" Height="44" VerticalAlignment="Center" Background="{DynamicResource ColorAccent900}" CornerRadius="8">
+                    <Viewbox Width="28" Height="28" Margin="8">
+                      <Grid Width="32" Height="32">
+                        <Rectangle Width="2.5" Height="8" RadiusX="1.25" RadiusY="1.25" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="9.6,12,0,0" Fill="{DynamicResource ColorAccent300}" />
+                        <Rectangle Width="2.5" Height="13" RadiusX="1.25" RadiusY="1.25" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="14.6,9.5,0,0" Fill="{DynamicResource ColorAccent300}" />
+                        <Rectangle Width="2.5" Height="8" RadiusX="1.25" RadiusY="1.25" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="19.6,12,0,0" Fill="{DynamicResource ColorAccent300}" />
+                      </Grid>
+                    </Viewbox>
+                  </Border>
+                  <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                    <TextBlock FontWeight="SemiBold" FontSize="14" Text="Local speech model" />
+                    <TextBlock Margin="0,3,0,0" Foreground="{DynamicResource ColorText}" Opacity="0.55" FontSize="12" Text="Nemotron 3.5 ASR Streaming 0.6B (Q8_0)" />
+                  </StackPanel>
+                </StackPanel>
+                <Border Grid.Column="1" Padding="10,5" VerticalAlignment="Center" Background="{DynamicResource ColorAccent800}" CornerRadius="8">
+                  <TextBlock Foreground="{DynamicResource ColorAccent100}" FontSize="12" FontWeight="SemiBold" Text="Installed" />
+                </Border>
+              </Grid>
+            </Border>
+            <StackPanel Margin="0,14,0,0" Orientation="Horizontal" HorizontalAlignment="Right">
+              <TextBlock x:Name="ValidationText" MaxWidth="180" VerticalAlignment="Center" TextWrapping="Wrap" Foreground="{DynamicResource ColorAccent300}" Margin="0,0,12,0" />
+              <Button Margin="0,0,8,0" Content="Open-source licenses…" Click="OpenLicenses" />
+              <Button Margin="0,0,24,0" Content="View diagnostics…" Click="OpenDiagnostics" />
+              <Button Margin="0,0,8,0" Content="Cancel" IsCancel="True" />
+              <Button Style="{StaticResource PrimaryButton}" Content="Save changes" IsDefault="True" Click="Save" />
+            </StackPanel>
+          </StackPanel>
+        </Grid>
+      </Border>
+    </Grid>
+  </Border>
+</Window>

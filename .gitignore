@@ -1,0 +1,15 @@
+# Build and local runtime output
+.engine/
+artifacts/
+data/
+models/
+**/bin/
+**/obj/
+**/TestResults/
+
+# Visual Studio / user state
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
