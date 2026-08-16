@@ -43,6 +43,14 @@ public sealed class WindowsBoundaryTests
     }
 
     [Fact]
+    public void Targets_tray_icons_at_the_current_application_assembly()
+    {
+        Assert.Equal(
+            "/PrivateType;component/Assets/PrivateType.ready.ico",
+            TrayIconSet.ResourceUri("PrivateType.ready.ico").OriginalString);
+    }
+
+    [Fact]
     public void Keeps_the_waveform_continuously_visible_while_recording()
     {
         Assert.False(DictationBubble.RecordingWaveformBlinks);

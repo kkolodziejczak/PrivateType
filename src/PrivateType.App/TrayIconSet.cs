@@ -21,10 +21,13 @@ internal sealed class TrayIconSet : IDisposable
 
     private static Icon Load(string fileName)
     {
-        var resource = System.Windows.Application.GetResourceStream(new Uri($"pack://application:,,,/PrivateType.App;component/Assets/{fileName}"))
+        var resource = System.Windows.Application.GetResourceStream(ResourceUri(fileName))
             ?? throw new InvalidOperationException($"The tray icon resource '{fileName}' was not found.");
         using var stream = resource.Stream;
         using var icon = new Icon(stream);
         return (Icon)icon.Clone();
     }
+
+    internal static Uri ResourceUri(string fileName) =>
+        new($"/{typeof(TrayIconSet).Assembly.GetName().Name};component/Assets/{fileName}", UriKind.Relative);
 }
