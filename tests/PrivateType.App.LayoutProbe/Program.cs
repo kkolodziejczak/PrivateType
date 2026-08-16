@@ -8,6 +8,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using PrivateType.App;
 using PrivateType.Core;
+using Forms = System.Windows.Forms;
 
 var thread = new Thread(RenderWindows) { IsBackground = false };
 thread.SetApartmentState(ApartmentState.STA);
@@ -41,48 +42,54 @@ static void RenderWindows()
     Render(runtimeRequired, Path.Combine(outputDirectory, "runtime-required.png"));
 
     var panel = new DictationBubble();
-    panel.ShowReady(PortableSettings.Default);
+    panel.ShowReady(PortableSettings.Default, modelLoaded: true);
     Render(panel, Path.Combine(outputDirectory, "status-panel.png"));
 
+    var unloadedPanel = new DictationBubble();
+    unloadedPanel.ShowReady(PortableSettings.Default, modelLoaded: false);
+    Render(unloadedPanel, Path.Combine(outputDirectory, "status-panel-model-unloaded.png"));
+
     var hintPanel = new DictationBubble();
-    hintPanel.ShowReady(PortableSettings.Default);
+    hintPanel.ShowReady(PortableSettings.Default, modelLoaded: true);
     typeof(DictationBubble).GetMethod("ExpandHints", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(hintPanel, [null, null]);
     Render(hintPanel, Path.Combine(outputDirectory, "status-panel-hint.png"));
 
     var recordingPanel = new DictationBubble();
-    recordingPanel.ShowReady(PortableSettings.Default);
+    recordingPanel.ShowReady(PortableSettings.Default, modelLoaded: true);
     recordingPanel.ShowRecording(RecognitionLanguage.English);
     recordingPanel.ShowAudioMeter(new AudioMeter(0.72, Enumerable.Range(0, 44).Select(index => index is > 15 and < 28 ? 0.95 : 0.24).ToArray()));
     recordingPanel.ShowTranscript("First transcript line with enough realistic words to wrap.\nSecond transcript line.\nThird transcript line.\nFourth transcript line stays latest.");
     Render(recordingPanel, Path.Combine(outputDirectory, "status-panel-recording.png"));
 
     var quietRecordingPanel = new DictationBubble();
-    quietRecordingPanel.ShowReady(PortableSettings.Default);
+    quietRecordingPanel.ShowReady(PortableSettings.Default, modelLoaded: true);
     quietRecordingPanel.ShowRecording(RecognitionLanguage.English);
     quietRecordingPanel.ShowAudioMeter(new AudioMeter(0.05, Enumerable.Range(0, 44).Select(index => index is > 15 and < 28 ? 0.16 : 0.03).ToArray()));
     quietRecordingPanel.ShowTranscript("Quiet speech still has a readable spectrum.");
     Render(quietRecordingPanel, Path.Combine(outputDirectory, "status-panel-recording-quiet.png"));
 
     var modelLoadingPanel = new DictationBubble();
-    modelLoadingPanel.ShowReady(PortableSettings.Default);
+    modelLoadingPanel.ShowReady(PortableSettings.Default, modelLoaded: false);
     modelLoadingPanel.ShowModelLoading();
     Render(modelLoadingPanel, Path.Combine(outputDirectory, "status-panel-model-loading.png"));
 
     var finalizingPanel = new DictationBubble();
-    finalizingPanel.ShowReady(PortableSettings.Default);
+    finalizingPanel.ShowReady(PortableSettings.Default, modelLoaded: true);
     finalizingPanel.ShowRecording(RecognitionLanguage.English);
     finalizingPanel.ShowFinalizing();
     Render(finalizingPanel, Path.Combine(outputDirectory, "status-panel-finalizing.png"));
 
     var cancelledPanel = new DictationBubble();
-    cancelledPanel.ShowReady(PortableSettings.Default);
+    cancelledPanel.ShowReady(PortableSettings.Default, modelLoaded: true);
     cancelledPanel.ShowCancellation("Target window changed — dictation was cancelled.");
     Render(cancelledPanel, Path.Combine(outputDirectory, "status-panel-cancelled.png"));
 
     var errorPanel = new DictationBubble();
-    errorPanel.ShowReady(PortableSettings.Default);
+    errorPanel.ShowReady(PortableSettings.Default, modelLoaded: true);
     errorPanel.ShowError("Couldn't reach the microphone.");
     Render(errorPanel, Path.Combine(outputDirectory, "status-panel-error.png"));
+
+    VerifyPointerMonitorPlacement();
 
     Console.WriteLine($"PASS: Win32 x64 INPUT layout is {inputSize} bytes.");
     Console.WriteLine($"Rendered settings: {Path.Combine(outputDirectory, "settings.png")}");
@@ -92,6 +99,7 @@ static void RenderWindows()
     Console.WriteLine($"Rendered first-run setup: {Path.Combine(outputDirectory, "model-setup.png")}");
     Console.WriteLine($"Rendered runtime prerequisite: {Path.Combine(outputDirectory, "runtime-required.png")}");
     Console.WriteLine($"Rendered status panel: {Path.Combine(outputDirectory, "status-panel.png")}");
+    Console.WriteLine($"Rendered unloaded-model status panel: {Path.Combine(outputDirectory, "status-panel-model-unloaded.png")}");
     Console.WriteLine($"Rendered hint panel: {Path.Combine(outputDirectory, "status-panel-hint.png")}");
     Console.WriteLine($"Rendered recording panel: {Path.Combine(outputDirectory, "status-panel-recording.png")}");
     Console.WriteLine($"Rendered quiet recording panel: {Path.Combine(outputDirectory, "status-panel-recording-quiet.png")}");
@@ -99,6 +107,37 @@ static void RenderWindows()
     Console.WriteLine($"Rendered finalizing panel: {Path.Combine(outputDirectory, "status-panel-finalizing.png")}");
     Console.WriteLine($"Rendered cancelled panel: {Path.Combine(outputDirectory, "status-panel-cancelled.png")}");
     Console.WriteLine($"Rendered error panel: {Path.Combine(outputDirectory, "status-panel-error.png")}");
+}
+
+static void VerifyPointerMonitorPlacement()
+{
+    var targetScreen = Forms.Screen.FromPoint(Forms.Cursor.Position);
+    var sourceScreen = Forms.Screen.AllScreens.FirstOrDefault(
+        screen => !string.Equals(screen.DeviceName, targetScreen.DeviceName, StringComparison.OrdinalIgnoreCase));
+    if (sourceScreen is null)
+    {
+        Console.WriteLine("SKIP: Pointer-monitor transition requires at least two monitors.");
+        return;
+    }
+
+    var panel = new DictationBubble();
+    panel.ShowReady(PortableSettings.Default, modelLoaded: true);
+    panel.Left = sourceScreen.WorkingArea.Left;
+    panel.Top = sourceScreen.WorkingArea.Top;
+    panel.UpdateLayout();
+    panel.MoveToPointerScreen();
+    panel.UpdateLayout();
+
+    var center = new System.Drawing.Point(
+        (int)Math.Round(panel.Left + (panel.ActualWidth / 2)),
+        (int)Math.Round(panel.Top + (panel.ActualHeight / 2)));
+    var actualScreen = Forms.Screen.FromPoint(center);
+    panel.Close();
+
+    if (!string.Equals(actualScreen.DeviceName, targetScreen.DeviceName, StringComparison.OrdinalIgnoreCase))
+        throw new InvalidOperationException($"Bubble moved to {actualScreen.DeviceName} instead of pointer monitor {targetScreen.DeviceName}.");
+
+    Console.WriteLine($"PASS: Bubble moved from {sourceScreen.DeviceName} to pointer monitor {targetScreen.DeviceName}.");
 }
 
 static void Render(Window window, string outputPath)

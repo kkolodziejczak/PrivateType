@@ -183,6 +183,7 @@ internal sealed class DictationApplication : IDisposable
 
         RecordDiagnostic("model.standby");
         await EnsureEngineLoadedAsync();
+        ShowReadyPanel();
     }
 
     private static string DescribeReady(HotkeyAvailability availability)
@@ -344,6 +345,7 @@ internal sealed class DictationApplication : IDisposable
         shortcutHeld = true;
         var generation = ++heldGeneration;
         modelIdleTimer.Stop();
+        bubble.MoveToPointerScreen();
         if (!engine.IsRunning)
             bubble.ShowModelLoading();
         try
@@ -430,6 +432,7 @@ internal sealed class DictationApplication : IDisposable
         engineLoadTask = null;
         statusItem.Text = "Dictation ready — model unloaded";
         trayIcon.Text = $"PrivateType — {statusItem.Text}";
+        ShowReadyPanel();
         RecordDiagnostic("model.unloaded");
     }
 
@@ -487,7 +490,7 @@ internal sealed class DictationApplication : IDisposable
     private void ShowReadyPanel()
     {
         trayIcon.Icon = trayIcons.Ready;
-        bubble.ShowReady(settings);
+        bubble.ShowReady(settings, engine.IsRunning);
     }
 
     private void PresentAudioMeter(AudioMeter meter)

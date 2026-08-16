@@ -56,6 +56,26 @@ public sealed class WindowsBoundaryTests
     }
 
     [Fact]
+    public void Maps_the_bubble_to_the_same_relative_position_on_the_pointer_monitor()
+    {
+        Assert.Equal(4416, DictationBubble.MapCoordinateToWorkArea(
+            coordinate: 1856,
+            bubbleLength: 64,
+            sourceStart: 0,
+            sourceLength: 1920,
+            targetStart: 1920,
+            targetLength: 2560));
+    }
+
+    [Theory]
+    [InlineData(false, 0.45)]
+    [InlineData(true, 1.0)]
+    public void Uses_transparency_only_for_the_unloaded_ready_bubble(bool modelLoaded, double expected)
+    {
+        Assert.Equal(expected, DictationBubble.OpacityForReadyState(modelLoaded));
+    }
+
+    [Fact]
     public void Uses_forty_four_frequency_bars_for_the_live_spectrum()
     {
         Assert.Equal(44, DictationBubble.SpectrumBarCount);

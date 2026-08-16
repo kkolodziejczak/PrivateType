@@ -47,7 +47,10 @@ shown; it will move to **Listening** when ready.
 
 ### What the app does
 
-- A draggable bubble is remembered per monitor.
+- When dictation starts, the bubble moves to the monitor under the mouse while
+  keeping the same relative screen position.
+- The ready bubble is faded while the model is unloaded and fully opaque once
+  the model is loaded.
 - A 44-band voice spectrum and icon react to microphone input; visual gain
   adapts to quieter speech without changing the audio passed to recognition.
 - The live transcript keeps three visible lines and follows the newest text.

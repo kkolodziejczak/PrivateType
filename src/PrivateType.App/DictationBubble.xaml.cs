@@ -51,7 +51,7 @@ public partial class DictationBubble : Window
     public event Action? QuitRequested;
     public event Action<bool>? RecordingIndicatorChanged;
 
-    public void ShowReady(PortableSettings settings)
+    public void ShowReady(PortableSettings settings, bool modelLoaded)
     {
         if (!IsVisible)
         {
@@ -63,12 +63,28 @@ public partial class DictationBubble : Window
         recordingVisualsActive = false;
         hintCollapseTimer.Stop();
         StopRecordingIndicator();
+        BubbleShell.Opacity = OpacityForReadyState(modelLoaded);
         ApplyReadyVisuals();
         SetWidthAroundCenter(ReadyWidth);
         Hint.Text = DescribeBindings(settings.Shortcuts);
         Hint.Visibility = Visibility.Collapsed;
         WaveformBars.Visibility = Visibility.Collapsed;
         TranscriptViewport.Visibility = Visibility.Collapsed;
+    }
+
+    public void MoveToPointerScreen()
+    {
+        var sourceScreen = CurrentScreen();
+        var targetScreen = Forms.Screen.FromPoint(Forms.Cursor.Position);
+        if (string.Equals(sourceScreen.DeviceName, targetScreen.DeviceName, StringComparison.OrdinalIgnoreCase))
+            return;
+
+        var sourceWorkArea = WorkAreaFor(sourceScreen);
+        var targetWorkArea = WorkAreaFor(targetScreen);
+        var bubbleWidth = ActualWidth > 0 ? ActualWidth : Width;
+        var bubbleHeight = ActualHeight > 0 ? ActualHeight : Height;
+        Left = MapCoordinateToWorkArea(Left, bubbleWidth, sourceWorkArea.Left, sourceWorkArea.Width, targetWorkArea.Left, targetWorkArea.Width);
+        Top = MapCoordinateToWorkArea(Top, bubbleHeight, sourceWorkArea.Top, sourceWorkArea.Height, targetWorkArea.Top, targetWorkArea.Height);
     }
 
     public void ShowRecording(RecognitionLanguage language)
@@ -80,6 +96,7 @@ public partial class DictationBubble : Window
         active = true;
         recordingVisualsActive = true;
         hintCollapseTimer.Stop();
+        BubbleShell.Opacity = 1;
         ApplyRecordingVisuals();
         ResetAudioVisuals();
         SetWidthAroundCenter(ActiveWidth, selectedWorkArea);
@@ -99,6 +116,7 @@ public partial class DictationBubble : Window
         recordingVisualsActive = false;
         hintCollapseTimer.Stop();
         StopRecordingIndicator();
+        BubbleShell.Opacity = 1;
         ApplyExpandedVisuals(ModelLoadingTitle, "ColorAccent900", "ColorAccent300", "ColorAccent300");
         SetWidthAroundCenter(ActiveWidth);
         Hint.Text = ModelLoadingHint;
@@ -147,6 +165,7 @@ public partial class DictationBubble : Window
         recordingVisualsActive = false;
         hintCollapseTimer.Stop();
         StopRecordingIndicator();
+        BubbleShell.Opacity = 1;
         ApplyCancelledVisuals();
         SetWidthAroundCenter(ActiveWidth);
         Hint.Visibility = Visibility.Collapsed;
@@ -164,6 +183,7 @@ public partial class DictationBubble : Window
         recordingVisualsActive = false;
         hintCollapseTimer.Stop();
         StopRecordingIndicator();
+        BubbleShell.Opacity = 1;
         ApplyErrorVisuals();
         SetWidthAroundCenter(ActiveWidth);
         Hint.Visibility = Visibility.Collapsed;
@@ -401,6 +421,22 @@ public partial class DictationBubble : Window
 
     internal static double CenteredLeft(double left, double previousWidth, double newWidth) =>
         left - ((newWidth - previousWidth) / 2);
+
+    internal static double MapCoordinateToWorkArea(
+        double coordinate,
+        double bubbleLength,
+        double sourceStart,
+        double sourceLength,
+        double targetStart,
+        double targetLength)
+    {
+        var sourceTravel = Math.Max(0, sourceLength - bubbleLength);
+        var relativePosition = sourceTravel == 0 ? 0 : Math.Clamp((coordinate - sourceStart) / sourceTravel, 0, 1);
+        var targetTravel = Math.Max(0, targetLength - bubbleLength);
+        return targetStart + (targetTravel * relativePosition);
+    }
+
+    internal static double OpacityForReadyState(bool modelLoaded) => modelLoaded ? 1 : 0.45;
 
     private void ClampHorizontallyToWorkArea(DisplayWorkArea workArea)
     {
