@@ -9,10 +9,13 @@ internal sealed class EngineHost : IDisposable
     private const int Port = 8098;
     private readonly EngineProcessJob engineJob = new();
     private Process? process;
+    private bool ready;
 
     public Uri RealtimeEndpoint => new($"ws://127.0.0.1:{Port}/v1/realtime");
 
     public bool IsRunning => process is { HasExited: false };
+
+    public bool IsReady => IsRunning && ready;
 
     internal static EnginePrerequisiteStatus VerifyPrerequisites()
     {
@@ -47,40 +50,58 @@ internal sealed class EngineHost : IDisposable
 
     public async Task StartAsync(string modelPath, CancellationToken cancellationToken)
     {
-        if (IsRunning && await IsReadyAsync(cancellationToken))
+        if (IsReady)
             return;
 
+        if (IsRunning && await IsEndpointReadyAsync(cancellationToken))
+        {
+            ready = true;
+            return;
+        }
+
         Stop();
-        EnsureEndpointIsAvailable(await IsReadyAsync(cancellationToken));
+        EnsureEndpointIsAvailable(await IsEndpointReadyAsync(cancellationToken));
 
         var runtime = FindRuntime();
         var executable = runtime.ExecutablePath;
         if (!File.Exists(executable) || !File.Exists(modelPath))
             throw new FileNotFoundException("The local NeMo-Speech runtime or verified pinned model is missing.");
 
-        process = Process.Start(new ProcessStartInfo(executable,
-            $"serve --host 127.0.0.1 --port {Port} --threads 1 --asr-model \"{modelPath}\" --device cpu")
+        try
         {
-            UseShellExecute = false,
-            CreateNoWindow = true,
-            WorkingDirectory = runtime.WorkingDirectory
-        }) ?? throw new InvalidOperationException("Could not start the local speech runtime.");
-        engineJob.Assign(process);
+            process = Process.Start(new ProcessStartInfo(executable,
+                $"serve --host 127.0.0.1 --port {Port} --threads 1 --asr-model \"{modelPath}\" --device cpu")
+            {
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                WorkingDirectory = runtime.WorkingDirectory
+            }) ?? throw new InvalidOperationException("Could not start the local speech runtime.");
+            engineJob.Assign(process);
 
-        var deadline = DateTimeOffset.UtcNow + TimeSpan.FromSeconds(20);
-        while (DateTimeOffset.UtcNow < deadline)
-        {
-            if (process.HasExited)
-                throw new InvalidOperationException("The local speech runtime stopped before it became ready.");
-            if (await IsReadyAsync(cancellationToken))
-                return;
-            await Task.Delay(250, cancellationToken);
+            var deadline = DateTimeOffset.UtcNow + TimeSpan.FromSeconds(20);
+            while (DateTimeOffset.UtcNow < deadline)
+            {
+                if (process.HasExited)
+                    throw new InvalidOperationException("The local speech runtime stopped before it became ready.");
+                if (await IsEndpointReadyAsync(cancellationToken))
+                {
+                    ready = true;
+                    return;
+                }
+                await Task.Delay(250, cancellationToken);
+            }
+            throw new TimeoutException("The local speech runtime did not become ready within 20 seconds.");
         }
-        throw new TimeoutException("The local speech runtime did not become ready within 20 seconds.");
+        catch
+        {
+            Stop();
+            throw;
+        }
     }
 
     public void Stop()
     {
+        ready = false;
         if (process is null)
             return;
 
@@ -108,7 +129,7 @@ internal sealed class EngineHost : IDisposable
         }
     }
 
-    private static async Task<bool> IsReadyAsync(CancellationToken cancellationToken)
+    private static async Task<bool> IsEndpointReadyAsync(CancellationToken cancellationToken)
     {
         try
         {

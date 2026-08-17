@@ -9,6 +9,7 @@ namespace PrivateType.App;
 internal sealed class DictationApplication : IDisposable
 {
     private readonly EngineHost engine = new();
+    private readonly EngineLoadCoordinator engineLoads;
     private readonly HoldHotkeyHook hotkey = new();
     private readonly DictationBubble bubble = new();
     private readonly HttpModelDownloadClient downloader = new();
@@ -26,7 +27,6 @@ internal sealed class DictationApplication : IDisposable
     private ModelProvisioner? modelProvisioner;
     private PortableSettings settings = PortableSettings.Default;
     private CancellationTokenSource? provisioningCancellation;
-    private Task? engineLoadTask;
     private string? modelPath;
     private long heldGeneration;
     private bool shortcutHeld;
@@ -35,6 +35,7 @@ internal sealed class DictationApplication : IDisposable
 
     public DictationApplication()
     {
+        engineLoads = new EngineLoadCoordinator(LoadEngineAsync, () => engine.IsReady);
         sessions = new DictationSessionCoordinator(CreateSession);
         trayIcon = new Forms.NotifyIcon
         {
@@ -392,7 +393,7 @@ internal sealed class DictationApplication : IDisposable
         var generation = ++heldGeneration;
         modelIdleTimer.Stop();
         bubble.MoveToPointerScreen();
-        if (!engine.IsRunning)
+        if (!engineLoads.IsLoaded)
             bubble.ShowModelLoading();
         try
         {
@@ -418,26 +419,15 @@ internal sealed class DictationApplication : IDisposable
 
     private async Task EnsureEngineLoadedAsync()
     {
-        if (engine.IsRunning)
-            return;
-
         if (modelPath is null)
             throw new InvalidOperationException("The local speech model is not available.");
 
-        engineLoadTask ??= LoadEngineAsync(modelPath);
-        try
-        {
-            await engineLoadTask;
-        }
-        catch
-        {
-            engineLoadTask = null;
-            throw;
-        }
+        await engineLoads.EnsureLoadedAsync();
     }
 
-    private async Task LoadEngineAsync(string path)
+    private async Task LoadEngineAsync()
     {
+        var path = modelPath ?? throw new InvalidOperationException("The local speech model is not available.");
         RecordDiagnostic("model.loading");
         statusItem.Text = "Loading local model";
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(25));
@@ -452,7 +442,7 @@ internal sealed class DictationApplication : IDisposable
         shortcutHeld = false;
         heldGeneration++;
         await sessions.ReleaseAsync();
-        if (!engine.IsRunning)
+        if (!engineLoads.IsLoaded)
             ShowReadyPanel();
         ScheduleModelUnload();
     }
@@ -460,7 +450,7 @@ internal sealed class DictationApplication : IDisposable
     private void ScheduleModelUnload()
     {
         modelIdleTimer.Stop();
-        if (shortcutHeld || !engine.IsRunning)
+        if (shortcutHeld || !engineLoads.IsLoaded)
             return;
 
         modelIdleTimer.Interval = TimeSpan.FromMinutes(settings.ModelIdleTimeoutMinutes);
@@ -475,7 +465,6 @@ internal sealed class DictationApplication : IDisposable
             return;
 
         engine.Stop();
-        engineLoadTask = null;
         statusItem.Text = "Dictation ready — model unloaded";
         trayIcon.Text = $"PrivateType — {statusItem.Text}";
         ShowReadyPanel();
@@ -536,7 +525,7 @@ internal sealed class DictationApplication : IDisposable
     private void ShowReadyPanel()
     {
         trayIcon.Icon = trayIcons.Ready;
-        bubble.ShowReady(settings, engine.IsRunning);
+        bubble.ShowReady(settings, engineLoads.IsLoaded);
     }
 
     private void PresentAudioMeter(AudioMeter meter)

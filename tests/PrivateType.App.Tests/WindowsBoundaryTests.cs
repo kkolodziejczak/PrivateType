@@ -30,6 +30,65 @@ public sealed class WindowsBoundaryTests
         Assert.Contains("8098", exception.Message);
     }
 
+    [Fact]
+    public async Task Second_request_waits_for_pending_model_readiness_even_when_engine_process_is_running()
+    {
+        var ready = false;
+        var processRunning = false;
+        var loadCount = 0;
+        var readiness = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var loads = new EngineLoadCoordinator(
+            async () =>
+            {
+                loadCount++;
+                processRunning = true;
+                await readiness.Task;
+                ready = true;
+            },
+            () => ready);
+
+        var firstRequest = loads.EnsureLoadedAsync();
+        Assert.True(processRunning);
+        Assert.False(loads.IsLoaded);
+
+        var secondRequest = loads.EnsureLoadedAsync();
+
+        Assert.Equal(1, loadCount);
+        Assert.Same(firstRequest, secondRequest);
+        Assert.False(secondRequest.IsCompleted);
+
+        readiness.SetResult();
+        await Task.WhenAll(firstRequest, secondRequest);
+
+        Assert.True(loads.IsLoaded);
+    }
+
+    [Fact]
+    public async Task Failed_model_load_can_be_retried()
+    {
+        var ready = false;
+        var loadCount = 0;
+        var loads = new EngineLoadCoordinator(
+            () =>
+            {
+                loadCount++;
+                if (loadCount == 1)
+                    return Task.FromException(new TimeoutException("model readiness timed out"));
+
+                ready = true;
+                return Task.CompletedTask;
+            },
+            () => ready);
+
+        await Assert.ThrowsAsync<TimeoutException>(() => loads.EnsureLoadedAsync());
+        Assert.False(loads.IsLoaded);
+
+        await loads.EnsureLoadedAsync();
+
+        Assert.Equal(2, loadCount);
+        Assert.True(loads.IsLoaded);
+    }
+
     [Theory]
     [InlineData(false, false, "MissingEngine")]
     [InlineData(true, false, "CouldNotStart")]
