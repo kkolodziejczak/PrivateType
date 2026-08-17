@@ -251,12 +251,36 @@ static void VerifyPointerMonitorPlacement()
         return;
     }
 
+    VerifyPointerMonitorPlacementThrough(
+        "ready",
+        panel => { },
+        sourceScreen,
+        targetScreen);
+    VerifyPointerMonitorPlacementThrough(
+        "model loading",
+        panel => panel.ShowModelLoading(),
+        sourceScreen,
+        targetScreen);
+    VerifyPointerMonitorPlacementThrough(
+        "recording",
+        panel => panel.ShowRecording(RecognitionLanguage.English),
+        sourceScreen,
+        targetScreen);
+}
+
+static void VerifyPointerMonitorPlacementThrough(
+    string state,
+    Action<DictationBubble> showState,
+    Forms.Screen sourceScreen,
+    Forms.Screen targetScreen)
+{
     var panel = new DictationBubble();
     panel.ShowReady(PortableSettings.Default, modelLoaded: true);
     panel.Left = sourceScreen.WorkingArea.Left;
     panel.Top = sourceScreen.WorkingArea.Top;
     panel.UpdateLayout();
     panel.MoveToPointerScreen();
+    showState(panel);
     panel.UpdateLayout();
 
     var center = new System.Drawing.Point(
@@ -266,9 +290,9 @@ static void VerifyPointerMonitorPlacement()
     panel.Close();
 
     if (!string.Equals(actualScreen.DeviceName, targetScreen.DeviceName, StringComparison.OrdinalIgnoreCase))
-        throw new InvalidOperationException($"Bubble moved to {actualScreen.DeviceName} instead of pointer monitor {targetScreen.DeviceName}.");
+        throw new InvalidOperationException($"Bubble entered {state} on {actualScreen.DeviceName} instead of pointer monitor {targetScreen.DeviceName}.");
 
-    Console.WriteLine($"PASS: Bubble moved from {sourceScreen.DeviceName} to pointer monitor {targetScreen.DeviceName}.");
+    Console.WriteLine($"PASS: Bubble entered {state} after moving from {sourceScreen.DeviceName} to pointer monitor {targetScreen.DeviceName}.");
 }
 
 static void Render(Window window, string outputPath, Action<Window>? verify = null)
