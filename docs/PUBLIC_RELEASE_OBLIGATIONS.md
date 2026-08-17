@@ -67,9 +67,9 @@ Choose one route before packaging:
 
 - [x] Choose direct ZIP distribution with manual updates for the initial release.
 - [x] Bundle the required notice and license materials, and verify their presence in the ZIP.
-- [ ] Produce and audit the final `v1.0.0` ZIP from a clean checkout, including the exact native dependency/import inventory.
-- [ ] Run the documented clean-machine acceptance test, including the VC++ prerequisite path.
-- [ ] Publish the SHA-256 beside the immutable release ZIP.
+- [ ] Produce the final `v1.0.0` ZIP and SHA-256 in a GitHub draft release from a clean checkout, including the exact native dependency/import inventory.
+- [ ] Download the exact draft assets and run the documented clean-machine acceptance test, including the VC++ prerequisite path.
+- [ ] Publish the accepted draft without rebuilding or replacing its ZIP or SHA-256.
 - [ ] Consider code signing for a future release. The initial direct ZIP is intentionally unsigned; document that clearly and do not imply it is signed.
 
 ## Evidence reviewed in this repository
