@@ -26,6 +26,7 @@ public partial class DictationBubble : Window
     private const double ReadyWidth = 64;
     private const double HintWidth = 330;
     private const double ActiveWidth = 330;
+    private const double WorkAreaBottomClearance = 8;
     private const nint HtCaption = 2;
     private readonly DispatcherTimer hintCollapseTimer;
     private readonly AdaptiveAudioMeter adaptiveAudioMeter = new();
@@ -129,6 +130,7 @@ public partial class DictationBubble : Window
     public void ShowTranscript(string transcript)
     {
         SetTranscript(transcript);
+        ClampToWorkAreaAfterLayout();
     }
 
     public void ShowAudioMeter(AudioMeter meter)
@@ -453,7 +455,7 @@ public partial class DictationBubble : Window
     private void ClampToWorkArea(DisplayWorkArea workArea)
     {
         Left = Math.Clamp(Left, workArea.Left, workArea.Right - ActualWidth);
-        Top = BoundedTop(Top, workArea.Top, workArea.Bottom, ActualHeight);
+        Top = BoundedTop(Top, workArea.Top, workArea.Bottom - WorkAreaBottomClearance, ActualHeight);
     }
 
     internal static double BoundedTop(double top, double workAreaTop, double workAreaBottom, double height) =>

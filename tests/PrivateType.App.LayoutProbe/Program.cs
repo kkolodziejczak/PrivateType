@@ -101,6 +101,7 @@ static void RenderWindows()
     Render(errorPanel, Path.Combine(outputDirectory, "status-panel-error.png"));
 
     VerifyPointerMonitorPlacement();
+    VerifyTranscriptPreviewClearsTaskbars();
 
     Console.WriteLine($"PASS: Win32 x64 INPUT layout is {inputSize} bytes.");
     Console.WriteLine($"Rendered settings: {Path.Combine(outputDirectory, "settings.png")}");
@@ -166,6 +167,56 @@ static void VerifyModelProgressWidth(
     var expectedWidth = track.ActualWidth * downloaded / total;
     if (Math.Abs(indicator.ActualWidth - expectedWidth) > 1)
         throw new InvalidOperationException($"Model progress indicator width was {indicator.ActualWidth:F1} at {downloaded}/{total}; expected {expectedWidth:F1}.");
+}
+
+static void VerifyTranscriptPreviewClearsTaskbars()
+{
+    var previews = new[]
+    {
+        "First preview line.\nSecond preview line.\nThird preview line.",
+        "First preview line.\nSecond preview line.\nThird preview line.\nFourth preview line.",
+        "First preview line."
+    };
+
+    foreach (var screen in Forms.Screen.AllScreens)
+    {
+        foreach (var preview in previews)
+            VerifyTranscriptPreviewClearsTaskbar(screen, preview);
+    }
+
+    Console.WriteLine($"PASS: Growing transcript previews clear the taskbar on {Forms.Screen.AllScreens.Length} monitor(s).");
+}
+
+static void VerifyTranscriptPreviewClearsTaskbar(Forms.Screen screen, string preview)
+{
+    const double bottomClearance = 8;
+    var panel = new DictationBubble();
+    panel.ShowReady(PortableSettings.Default, modelLoaded: true);
+    panel.Left = screen.WorkingArea.Left + 16;
+    panel.Top = screen.WorkingArea.Bottom - panel.ActualHeight;
+    panel.UpdateLayout();
+    panel.ShowRecording(RecognitionLanguage.English);
+    FlushRender(panel);
+    var leftBeforePreview = panel.Left;
+
+    panel.ShowTranscript(preview);
+    panel.UpdateLayout();
+    FlushRender(panel);
+    var actualBottom = panel.Top + panel.ActualHeight;
+    var leftAfterPreview = panel.Left;
+    panel.Close();
+
+    var maximumBottom = screen.WorkingArea.Bottom - bottomClearance;
+    if (actualBottom > maximumBottom + 1)
+        throw new InvalidOperationException($"Transcript preview ended at {actualBottom:F1} on {screen.DeviceName}; expected at or above {maximumBottom:F1}.");
+    if (Math.Abs(leftAfterPreview - leftBeforePreview) > 1)
+        throw new InvalidOperationException($"Transcript preview moved horizontally on {screen.DeviceName}.");
+}
+
+static void FlushRender(Window window)
+{
+    window.Dispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+    window.UpdateLayout();
 }
 
 static void VerifyStartupVersionPromptChoice(bool useCurrent)
