@@ -36,7 +36,7 @@ static void RenderWindows()
     Render(new ModelSetupWindow(), Path.Combine(outputDirectory, "model-consent.png"), VerifyModelTermsLink);
     var modelSetup = new ModelSetupWindow();
     modelSetup.ShowProgress(148L * 1024 * 1024, 240L * 1024 * 1024);
-    Render(modelSetup, Path.Combine(outputDirectory, "model-setup.png"));
+    Render(modelSetup, Path.Combine(outputDirectory, "model-setup.png"), VerifyModelProgressGeometry);
     var engineMissing = new ModelSetupWindow();
     engineMissing.ShowMissingEnginePrerequisite();
     Render(engineMissing, Path.Combine(outputDirectory, "engine-missing.png"));
@@ -133,6 +133,39 @@ static void VerifyModelTermsLink(Window window)
         throw new InvalidOperationException("Model terms hyperlink could not receive keyboard focus.");
 
     Console.WriteLine("PASS: Model terms use the canonical HTTPS hyperlink and receive keyboard focus.");
+}
+
+static void VerifyModelProgressGeometry(Window window)
+{
+    var setup = (ModelSetupWindow)window;
+    var progress = (System.Windows.Controls.ProgressBar)setup.FindName("ProgressBar");
+    progress.ApplyTemplate();
+    var track = progress.Template.FindName("PART_Track", progress) as FrameworkElement
+        ?? throw new InvalidOperationException("Model progress template is missing PART_Track.");
+    var indicator = progress.Template.FindName("PART_Indicator", progress) as FrameworkElement
+        ?? throw new InvalidOperationException("Model progress template is missing PART_Indicator.");
+
+    VerifyModelProgressWidth(setup, track, indicator, downloaded: 0, total: 240);
+    VerifyModelProgressWidth(setup, track, indicator, downloaded: 148, total: 240);
+    VerifyModelProgressWidth(setup, track, indicator, downloaded: 240, total: 240);
+    setup.ShowProgress(148L * 1024 * 1024, 240L * 1024 * 1024);
+    setup.UpdateLayout();
+
+    Console.WriteLine("PASS: Model progress indicator matches 0%, partial, and complete download values.");
+}
+
+static void VerifyModelProgressWidth(
+    ModelSetupWindow setup,
+    FrameworkElement track,
+    FrameworkElement indicator,
+    long downloaded,
+    long total)
+{
+    setup.ShowProgress(downloaded * 1024 * 1024, total * 1024 * 1024);
+    setup.UpdateLayout();
+    var expectedWidth = track.ActualWidth * downloaded / total;
+    if (Math.Abs(indicator.ActualWidth - expectedWidth) > 1)
+        throw new InvalidOperationException($"Model progress indicator width was {indicator.ActualWidth:F1} at {downloaded}/{total}; expected {expectedWidth:F1}.");
 }
 
 static void VerifyStartupVersionPromptChoice(bool useCurrent)
