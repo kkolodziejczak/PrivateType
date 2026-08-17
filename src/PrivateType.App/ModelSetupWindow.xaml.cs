@@ -1,10 +1,13 @@
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Media.Animation;
+using System.Windows.Navigation;
 
 namespace PrivateType.App;
 
 public partial class ModelSetupWindow : Window
 {
+    internal static readonly Uri ModelTermsUri = new("https://openmdw.ai/license/1-1/");
     internal const string MissingEngineHeading = "Local speech engine missing";
     internal const string MissingEngineStatus = "This copy of PrivateType does not include the local speech engine.\n\nDownload and extract the complete PrivateType portable ZIP, or configure the engine when running from source.";
     internal const string EngineCouldNotStartHeading = "Local speech engine could not start";
@@ -14,8 +17,12 @@ public partial class ModelSetupWindow : Window
     public ModelSetupWindow()
     {
         InitializeComponent();
+        ModelTermsLink.NavigateUri = ModelTermsUri;
         Closing += (_, _) => { if (!completed) CancelRequested?.Invoke(); };
     }
+
+    internal static ProcessStartInfo ModelTermsBrowserStartInfo()
+        => new(ModelTermsUri.AbsoluteUri) { UseShellExecute = true };
 
     public event Action? RetryRequested;
     public event Action? CancelRequested;
@@ -83,6 +90,11 @@ public partial class ModelSetupWindow : Window
     private void Retry(object sender, RoutedEventArgs e) => RetryRequested?.Invoke();
     private void Download(object sender, RoutedEventArgs e) => DownloadRequested?.Invoke();
     private void TermsChanged(object sender, RoutedEventArgs e) => DownloadButton.IsEnabled = TermsCheckBox.IsChecked == true;
+    private void OpenModelTerms(object sender, RequestNavigateEventArgs e)
+    {
+        Process.Start(ModelTermsBrowserStartInfo());
+        e.Handled = true;
+    }
     private void Cancel(object sender, RoutedEventArgs e) => CancelRequested?.Invoke();
     private void CloseWindow(object sender, RoutedEventArgs e) => Close();
     private void DragWindow(object sender, System.Windows.Input.MouseButtonEventArgs e) { if (e.LeftButton == System.Windows.Input.MouseButtonState.Pressed) DragMove(); }

@@ -28,7 +28,9 @@
               <StackPanel>
                 <TextBlock FontWeight="SemiBold" Text="Nemotron 3.5 ASR Streaming 0.6B (Q8_0)"/>
                 <TextBlock Margin="0,4,0,0" FontSize="12" Opacity=".6" Text="About 707 MiB. Downloaded from NVIDIA on Hugging Face and kept on this computer." TextWrapping="Wrap"/>
-                <TextBlock Margin="0,6,0,0" FontSize="12" Foreground="{DynamicResource ColorAccent300}" Text="OpenMDW-1.1 model terms: openmdw.ai/license/1-1"/>
+                <TextBlock Margin="0,6,0,0" FontSize="12" Foreground="{DynamicResource ColorAccent300}">
+                  <Run Text="OpenMDW-1.1 model terms: "/><Hyperlink x:Name="ModelTermsLink" RequestNavigate="OpenModelTerms" ToolTip="Open the OpenMDW-1.1 license in your default browser">openmdw.ai/license/1-1</Hyperlink>
+                </TextBlock>
               </StackPanel>
             </Border>
             <CheckBox x:Name="TermsCheckBox" Margin="0,12,0,0" Checked="TermsChanged" Unchecked="TermsChanged"><TextBlock Width="350" TextWrapping="Wrap" Text="I understand that this downloads a separate local model under OpenMDW-1.1 terms."/></CheckBox>

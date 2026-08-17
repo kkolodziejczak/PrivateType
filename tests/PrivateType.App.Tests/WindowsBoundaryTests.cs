@@ -51,6 +51,15 @@ public sealed class WindowsBoundaryTests
     }
 
     [Fact]
+    public void Opens_model_terms_with_https_in_the_default_browser()
+    {
+        var startInfo = ModelSetupWindow.ModelTermsBrowserStartInfo();
+
+        Assert.Equal("https://openmdw.ai/license/1-1/", startInfo.FileName);
+        Assert.True(startInfo.UseShellExecute);
+    }
+
+    [Fact]
     public void Quotes_the_current_executable_for_the_per_user_Windows_startup_entry()
     {
         Assert.Equal("\"C:\\Program Files\\PrivateType\\PrivateType.exe\"", WindowsStartupRegistration.Quote("C:\\Program Files\\PrivateType\\PrivateType.exe"));

@@ -33,7 +33,7 @@ static void RenderWindows()
         Path.Combine(outputDirectory, "settings.png"));
     Render(new DiagnosticsWindow(new InMemoryDiagnostics()), Path.Combine(outputDirectory, "diagnostics-empty.png"));
     Render(new OpenSourceLicensesWindow(), Path.Combine(outputDirectory, "open-source-licenses.png"));
-    Render(new ModelSetupWindow(), Path.Combine(outputDirectory, "model-consent.png"));
+    Render(new ModelSetupWindow(), Path.Combine(outputDirectory, "model-consent.png"), VerifyModelTermsLink);
     var modelSetup = new ModelSetupWindow();
     modelSetup.ShowProgress(148L * 1024 * 1024, 240L * 1024 * 1024);
     Render(modelSetup, Path.Combine(outputDirectory, "model-setup.png"));
@@ -123,6 +123,18 @@ static void RenderWindows()
     Console.WriteLine($"Rendered error panel: {Path.Combine(outputDirectory, "status-panel-error.png")}");
 }
 
+static void VerifyModelTermsLink(Window window)
+{
+    var link = window.FindName("ModelTermsLink") as System.Windows.Documents.Hyperlink
+        ?? throw new InvalidOperationException("Model terms were not rendered as a hyperlink.");
+    if (link.NavigateUri != new Uri("https://openmdw.ai/license/1-1/"))
+        throw new InvalidOperationException($"Model terms hyperlink targets an unexpected URI: {link.NavigateUri}");
+    if (!link.Focus() || !link.IsKeyboardFocused)
+        throw new InvalidOperationException("Model terms hyperlink could not receive keyboard focus.");
+
+    Console.WriteLine("PASS: Model terms use the canonical HTTPS hyperlink and receive keyboard focus.");
+}
+
 static void VerifyStartupVersionPromptChoice(bool useCurrent)
 {
     var prompt = new StartupVersionPromptWindow(new Version(2, 4, 0), new Version(1, 9, 3));
@@ -175,11 +187,12 @@ static void VerifyPointerMonitorPlacement()
     Console.WriteLine($"PASS: Bubble moved from {sourceScreen.DeviceName} to pointer monitor {targetScreen.DeviceName}.");
 }
 
-static void Render(Window window, string outputPath)
+static void Render(Window window, string outputPath, Action<Window>? verify = null)
 {
     window.ShowInTaskbar = false;
     window.Show();
     window.UpdateLayout();
+    verify?.Invoke(window);
     var width = Math.Max(1, (int)Math.Ceiling(window.ActualWidth));
     var height = Math.Max(1, (int)Math.Ceiling(window.ActualHeight));
     var bitmap = new RenderTargetBitmap(width, height, 96, 96, PixelFormats.Pbgra32);
