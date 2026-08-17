@@ -170,10 +170,20 @@ internal sealed class DictationApplication : IDisposable
 
     private static void ShowModelDownloadOrRuntimeRequirement(ModelSetupWindow window)
     {
-        if (EngineHost.TryVerifyPrerequisites(out var message))
-            window.ShowDownloadConsent();
-        else
-            window.ShowRuntimePrerequisite(message);
+        switch (EngineHost.VerifyPrerequisites())
+        {
+            case EnginePrerequisiteStatus.Ready:
+                window.ShowDownloadConsent();
+                break;
+            case EnginePrerequisiteStatus.MissingEngine:
+                window.ShowMissingEnginePrerequisite();
+                break;
+            case EnginePrerequisiteStatus.CouldNotStart:
+                window.ShowEngineStartPrerequisite();
+                break;
+            default:
+                throw new InvalidOperationException("Unknown local engine prerequisite state.");
+        }
     }
 
     private async Task ProvisionModelAsync(ModelSetupWindow window)

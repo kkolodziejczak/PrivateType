@@ -30,6 +30,26 @@ public sealed class WindowsBoundaryTests
         Assert.Contains("8098", exception.Message);
     }
 
+    [Theory]
+    [InlineData(false, false, "MissingEngine")]
+    [InlineData(true, false, "CouldNotStart")]
+    [InlineData(true, true, "Ready")]
+    public void Distinguishes_a_missing_engine_from_an_engine_that_cannot_start(
+        bool executableExists,
+        bool versionProbeSucceeded,
+        string expected)
+    {
+        Assert.Equal(expected, EngineHost.ClassifyPrerequisites(executableExists, versionProbeSucceeded).ToString());
+    }
+
+    [Fact]
+    public void Recommends_Visual_Cpp_only_when_the_engine_exists_but_cannot_start()
+    {
+        Assert.DoesNotContain("Visual C++", ModelSetupWindow.MissingEngineStatus);
+        Assert.Contains("complete PrivateType portable ZIP", ModelSetupWindow.MissingEngineStatus);
+        Assert.Contains("Visual C++", ModelSetupWindow.EngineCouldNotStartStatus);
+    }
+
     [Fact]
     public void Quotes_the_current_executable_for_the_per_user_Windows_startup_entry()
     {

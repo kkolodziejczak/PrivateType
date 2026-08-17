@@ -14,14 +14,11 @@ internal sealed class EngineHost : IDisposable
 
     public bool IsRunning => process is { HasExited: false };
 
-    internal static bool TryVerifyPrerequisites(out string message)
+    internal static EnginePrerequisiteStatus VerifyPrerequisites()
     {
         var runtime = FindRuntime();
         if (!File.Exists(runtime.ExecutablePath))
-        {
-            message = "The bundled local speech runtime is missing.";
-            return false;
-        }
+            return ClassifyPrerequisites(executableExists: false, versionProbeSucceeded: false);
 
         try
         {
@@ -32,18 +29,21 @@ internal sealed class EngineHost : IDisposable
                 WorkingDirectory = runtime.WorkingDirectory
             });
             if (probe is not null && probe.WaitForExit(5000) && probe.ExitCode == 0)
-            {
-                message = string.Empty;
-                return true;
-            }
+                return ClassifyPrerequisites(executableExists: true, versionProbeSucceeded: true);
         }
         catch (System.ComponentModel.Win32Exception)
         {
         }
 
-        message = "The bundled local speech runtime could not start.";
-        return false;
+        return ClassifyPrerequisites(executableExists: true, versionProbeSucceeded: false);
     }
+
+    internal static EnginePrerequisiteStatus ClassifyPrerequisites(bool executableExists, bool versionProbeSucceeded)
+        => !executableExists
+            ? EnginePrerequisiteStatus.MissingEngine
+            : versionProbeSucceeded
+                ? EnginePrerequisiteStatus.Ready
+                : EnginePrerequisiteStatus.CouldNotStart;
 
     public async Task StartAsync(string modelPath, CancellationToken cancellationToken)
     {
@@ -144,4 +144,11 @@ internal sealed class EngineHost : IDisposable
     }
 
     private sealed record EngineRuntime(string ExecutablePath, string WorkingDirectory);
+}
+
+internal enum EnginePrerequisiteStatus
+{
+    Ready,
+    MissingEngine,
+    CouldNotStart
 }

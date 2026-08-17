@@ -37,9 +37,12 @@ static void RenderWindows()
     var modelSetup = new ModelSetupWindow();
     modelSetup.ShowProgress(148L * 1024 * 1024, 240L * 1024 * 1024);
     Render(modelSetup, Path.Combine(outputDirectory, "model-setup.png"));
-    var runtimeRequired = new ModelSetupWindow();
-    runtimeRequired.ShowRuntimePrerequisite("The bundled local speech runtime could not start.");
-    Render(runtimeRequired, Path.Combine(outputDirectory, "runtime-required.png"));
+    var engineMissing = new ModelSetupWindow();
+    engineMissing.ShowMissingEnginePrerequisite();
+    Render(engineMissing, Path.Combine(outputDirectory, "engine-missing.png"));
+    var engineCouldNotStart = new ModelSetupWindow();
+    engineCouldNotStart.ShowEngineStartPrerequisite();
+    Render(engineCouldNotStart, Path.Combine(outputDirectory, "engine-could-not-start.png"));
     Render(
         new StartupVersionPromptWindow(new Version(2, 4, 0), new Version(1, 9, 3)),
         Path.Combine(outputDirectory, "startup-version-prompt.png"));
@@ -105,7 +108,8 @@ static void RenderWindows()
     Console.WriteLine($"Rendered open-source licenses: {Path.Combine(outputDirectory, "open-source-licenses.png")}");
     Console.WriteLine($"Rendered model consent: {Path.Combine(outputDirectory, "model-consent.png")}");
     Console.WriteLine($"Rendered first-run setup: {Path.Combine(outputDirectory, "model-setup.png")}");
-    Console.WriteLine($"Rendered runtime prerequisite: {Path.Combine(outputDirectory, "runtime-required.png")}");
+    Console.WriteLine($"Rendered missing engine prerequisite: {Path.Combine(outputDirectory, "engine-missing.png")}");
+    Console.WriteLine($"Rendered engine start prerequisite: {Path.Combine(outputDirectory, "engine-could-not-start.png")}");
     Console.WriteLine($"Rendered startup version prompt: {Path.Combine(outputDirectory, "startup-version-prompt.png")}");
     Console.WriteLine($"Rendered unknown startup version prompt: {Path.Combine(outputDirectory, "startup-version-prompt-unknown.png")}");
     Console.WriteLine($"Rendered status panel: {Path.Combine(outputDirectory, "status-panel.png")}");
