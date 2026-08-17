@@ -37,6 +37,153 @@ public sealed class WindowsBoundaryTests
     }
 
     [Fact]
+    public void Reads_the_executable_from_a_quoted_startup_command()
+    {
+        Assert.Equal(
+            "C:\\Program Files\\PrivateType\\PrivateType.exe",
+            WindowsStartupRegistration.ExecutablePathFrom("\"C:\\Program Files\\PrivateType\\PrivateType.exe\" --ignored"));
+    }
+
+    [Fact]
+    public void Describes_known_and_unknown_versions_without_exposing_paths()
+    {
+        Assert.Equal("PrivateType 2.4.1", StartupVersionPromptWindow.VersionLabel(new Version(2, 4, 1)));
+        Assert.Equal("PrivateType (version unknown)", StartupVersionPromptWindow.VersionLabel(null));
+    }
+
+    [Fact]
+    public void Leaves_windows_startup_disabled_when_no_dictation_app_is_registered()
+    {
+        Assert.Equal(
+            StartupOwnershipDecision.LeaveDisabled,
+            StartupOwnershipPolicy.Decide(
+                hasPrivateTypeRegistration: false,
+                hasLegacyRegistration: false,
+                registeredExecutablePath: null,
+                registeredVersion: null,
+                currentExecutablePath: "C:\\Apps\\PrivateType\\PrivateType.exe",
+                currentVersion: new Version(2, 0)));
+    }
+
+    [Fact]
+    public void Claims_windows_startup_from_the_legacy_application()
+    {
+        Assert.Equal(
+            StartupOwnershipDecision.ClaimCurrent,
+            StartupOwnershipPolicy.Decide(
+                hasPrivateTypeRegistration: false,
+                hasLegacyRegistration: true,
+                registeredExecutablePath: "C:\\Apps\\LiveDictation\\LiveDictation.App.exe",
+                registeredVersion: null,
+                currentExecutablePath: "C:\\Apps\\PrivateType\\PrivateType.exe",
+                currentVersion: new Version(1, 0)));
+    }
+
+    [Theory]
+    [InlineData(2, 0, 1, 9)]
+    [InlineData(2, 0, 2, 0)]
+    public void Automatically_claims_windows_startup_for_the_same_or_a_newer_version(
+        int currentMajor,
+        int currentMinor,
+        int registeredMajor,
+        int registeredMinor)
+    {
+        Assert.Equal(
+            StartupOwnershipDecision.ClaimCurrent,
+            StartupOwnershipPolicy.Decide(
+                hasPrivateTypeRegistration: true,
+                hasLegacyRegistration: false,
+                registeredExecutablePath: "C:\\Apps\\PrivateType-v1\\PrivateType.exe",
+                registeredVersion: new Version(registeredMajor, registeredMinor),
+                currentExecutablePath: "C:\\Apps\\PrivateType-v2\\PrivateType.exe",
+                currentVersion: new Version(currentMajor, currentMinor)));
+    }
+
+    [Fact]
+    public void Asks_before_a_deliberate_downgrade_reclaims_windows_startup()
+    {
+        Assert.Equal(
+            StartupOwnershipDecision.ConfirmCurrent,
+            StartupOwnershipPolicy.Decide(
+                hasPrivateTypeRegistration: true,
+                hasLegacyRegistration: false,
+                registeredExecutablePath: "C:\\Apps\\PrivateType-v2\\PrivateType.exe",
+                registeredVersion: new Version(2, 0),
+                currentExecutablePath: "C:\\Apps\\PrivateType-v1\\PrivateType.exe",
+                currentVersion: new Version(1, 5)));
+    }
+
+    [Fact]
+    public void Asks_when_either_portable_version_is_unknown()
+    {
+        Assert.Equal(
+            StartupOwnershipDecision.ConfirmCurrent,
+            StartupOwnershipPolicy.Decide(
+                hasPrivateTypeRegistration: true,
+                hasLegacyRegistration: false,
+                registeredExecutablePath: "C:\\Apps\\PrivateType-unknown\\PrivateType.exe",
+                registeredVersion: null,
+                currentExecutablePath: "C:\\Apps\\PrivateType-local\\PrivateType.exe",
+                currentVersion: new Version(1, 0)));
+    }
+
+    [Fact]
+    public void Keeps_the_startup_entry_when_it_already_targets_the_running_copy()
+    {
+        Assert.Equal(
+            StartupOwnershipDecision.KeepRegistered,
+            StartupOwnershipPolicy.Decide(
+                hasPrivateTypeRegistration: true,
+                hasLegacyRegistration: false,
+                registeredExecutablePath: "C:\\Apps\\PrivateType\\PrivateType.exe",
+                registeredVersion: null,
+                currentExecutablePath: "c:\\apps\\privatetype\\PrivateType.exe",
+                currentVersion: null));
+    }
+
+    [Theory]
+    [InlineData(false, false, "NoChange")]
+    [InlineData(true, true, "NoChange")]
+    [InlineData(false, true, "ClaimCurrent")]
+    [InlineData(true, false, "Disable")]
+    public void Changes_startup_ownership_only_when_the_user_changes_the_setting(
+        bool wasEnabled,
+        bool requestedEnabled,
+        string expected)
+    {
+        Assert.Equal(expected, StartupPreferencePolicy.DecideUpdate(wasEnabled, requestedEnabled).ToString());
+    }
+
+    [Fact]
+    public void Restores_both_startup_entries_exactly_when_settings_save_fails()
+    {
+        var registration = new FakeStartupRegistration("private-before", "legacy-before");
+
+        Assert.Throws<InvalidOperationException>(() => StartupPreferenceTransaction.Apply(
+            StartupPreferenceUpdate.ClaimCurrent,
+            registration,
+            "C:\\Apps\\PrivateType-new\\PrivateType.exe",
+            () => throw new InvalidOperationException("save failed")));
+
+        Assert.Equal("private-before", registration.PrivateTypeCommand);
+        Assert.Equal("legacy-before", registration.LegacyCommand);
+    }
+
+    [Fact]
+    public void Reports_when_the_previous_startup_entries_cannot_be_restored()
+    {
+        var registration = new FakeStartupRegistration("private-before", "legacy-before") { FailRestore = true };
+
+        var exception = Assert.Throws<StartupRegistrationRestoreException>(() => StartupPreferenceTransaction.Apply(
+            StartupPreferenceUpdate.Disable,
+            registration,
+            "C:\\Apps\\PrivateType-old\\PrivateType.exe",
+            () => throw new InvalidOperationException("save failed")));
+
+        Assert.Contains("could not be restored", exception.Message);
+    }
+
+    [Fact]
     public void Assigns_the_local_engine_to_a_job_that_ends_with_the_app()
     {
         Assert.Equal(EngineProcessJob.KillOnJobClose, EngineProcessJob.AppOwnedEngineLimitFlags);
@@ -197,5 +344,35 @@ public sealed class WindowsBoundaryTests
     public void Maps_each_stage_two_recognition_language_to_the_local_engine(RecognitionLanguage language, string expected)
     {
         Assert.Equal(expected, RealtimeRecognizer.ToEngineLanguage(language));
+    }
+
+    private sealed class FakeStartupRegistration(string? privateTypeCommand, string? legacyCommand) : IStartupRegistrationWriter
+    {
+        public string? PrivateTypeCommand { get; private set; } = privateTypeCommand;
+        public string? LegacyCommand { get; private set; } = legacyCommand;
+        public bool FailRestore { get; init; }
+
+        public StartupRegistrationSnapshot Capture() => new(PrivateTypeCommand, LegacyCommand);
+
+        public void Claim(string executablePath)
+        {
+            PrivateTypeCommand = WindowsStartupRegistration.Quote(executablePath);
+            LegacyCommand = null;
+        }
+
+        public void Disable()
+        {
+            PrivateTypeCommand = null;
+            LegacyCommand = null;
+        }
+
+        public void Restore(StartupRegistrationSnapshot snapshot)
+        {
+            if (FailRestore)
+                throw new InvalidOperationException("restore failed");
+
+            PrivateTypeCommand = snapshot.PrivateTypeCommand;
+            LegacyCommand = snapshot.LegacyCommand;
+        }
     }
 }

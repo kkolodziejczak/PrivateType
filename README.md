@@ -25,6 +25,14 @@ The first public releases use a direct, unsigned ZIP with manual updates. Use
 the SHA-256 file published beside each release and download only from this
 repository's Releases page.
 
+To update, close PrivateType, unpack the new ZIP, and start the new
+`PrivateType.exe` once. If Windows startup is already enabled, the same or a
+newer version automatically becomes the startup copy. Starting an older or
+unversioned copy remains supported: PrivateType asks before changing the
+registered startup version, so you can deliberately roll back. Disabling
+Windows startup removes both current PrivateType and obsolete LiveDictation
+entries without touching other startup applications.
+
 ```powershell
 Get-FileHash .\PrivateType-win-x64.zip -Algorithm SHA256
 ```

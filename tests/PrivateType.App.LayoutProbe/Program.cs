@@ -40,6 +40,14 @@ static void RenderWindows()
     var runtimeRequired = new ModelSetupWindow();
     runtimeRequired.ShowRuntimePrerequisite("The bundled local speech runtime could not start.");
     Render(runtimeRequired, Path.Combine(outputDirectory, "runtime-required.png"));
+    Render(
+        new StartupVersionPromptWindow(new Version(2, 4, 0), new Version(1, 9, 3)),
+        Path.Combine(outputDirectory, "startup-version-prompt.png"));
+    Render(
+        new StartupVersionPromptWindow(null, null),
+        Path.Combine(outputDirectory, "startup-version-prompt-unknown.png"));
+    VerifyStartupVersionPromptChoice(useCurrent: false);
+    VerifyStartupVersionPromptChoice(useCurrent: true);
 
     var panel = new DictationBubble();
     panel.ShowReady(PortableSettings.Default, modelLoaded: true);
@@ -98,6 +106,8 @@ static void RenderWindows()
     Console.WriteLine($"Rendered model consent: {Path.Combine(outputDirectory, "model-consent.png")}");
     Console.WriteLine($"Rendered first-run setup: {Path.Combine(outputDirectory, "model-setup.png")}");
     Console.WriteLine($"Rendered runtime prerequisite: {Path.Combine(outputDirectory, "runtime-required.png")}");
+    Console.WriteLine($"Rendered startup version prompt: {Path.Combine(outputDirectory, "startup-version-prompt.png")}");
+    Console.WriteLine($"Rendered unknown startup version prompt: {Path.Combine(outputDirectory, "startup-version-prompt-unknown.png")}");
     Console.WriteLine($"Rendered status panel: {Path.Combine(outputDirectory, "status-panel.png")}");
     Console.WriteLine($"Rendered unloaded-model status panel: {Path.Combine(outputDirectory, "status-panel-model-unloaded.png")}");
     Console.WriteLine($"Rendered hint panel: {Path.Combine(outputDirectory, "status-panel-hint.png")}");
@@ -107,6 +117,27 @@ static void RenderWindows()
     Console.WriteLine($"Rendered finalizing panel: {Path.Combine(outputDirectory, "status-panel-finalizing.png")}");
     Console.WriteLine($"Rendered cancelled panel: {Path.Combine(outputDirectory, "status-panel-cancelled.png")}");
     Console.WriteLine($"Rendered error panel: {Path.Combine(outputDirectory, "status-panel-error.png")}");
+}
+
+static void VerifyStartupVersionPromptChoice(bool useCurrent)
+{
+    var prompt = new StartupVersionPromptWindow(new Version(2, 4, 0), new Version(1, 9, 3));
+    prompt.Loaded += (_, _) =>
+    {
+        var keepButton = (System.Windows.Controls.Button)prompt.FindName("KeepButton");
+        if (!keepButton.IsKeyboardFocused)
+            throw new InvalidOperationException("The safe startup-version choice did not receive initial keyboard focus.");
+
+        var buttonName = useCurrent ? "UseButton" : "KeepButton";
+        var selectedButton = (System.Windows.Controls.Button)prompt.FindName(buttonName);
+        prompt.Dispatcher.BeginInvoke(() => selectedButton.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Button.ClickEvent)));
+    };
+
+    var result = prompt.ShowDialog();
+    if (result != useCurrent)
+        throw new InvalidOperationException($"Startup-version prompt returned {result} for {useCurrent}.");
+
+    Console.WriteLine($"PASS: Startup-version prompt returned {result} for {(useCurrent ? "Use this version" : "Keep registered version")}.");
 }
 
 static void VerifyPointerMonitorPlacement()

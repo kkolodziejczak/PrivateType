@@ -85,8 +85,7 @@ internal sealed class DictationApplication : IDisposable
             LegacyDiagnosticsCleanup.DeleteKnownLogs(PortablePaths.DataDirectory, diagnostics);
             settingsStore = new PortableSettingsStore(PortablePaths.DataDirectory);
             var loaded = settingsStore.Load();
-            settings = loaded.Settings;
-            ApplyStartupPreference(settings.StartWithWindows);
+            settings = ReconcileStartupPreference(loaded.Settings);
             modelProvisioner = new ModelProvisioner(PortablePaths.ModelsDirectory, PinnedModel.Manifest, downloader);
             if (loaded.Warning is not null)
                 trayIcon.ShowBalloonTip(5000, "PrivateType", loaded.Warning, Forms.ToolTipIcon.Warning);
@@ -101,6 +100,60 @@ internal sealed class DictationApplication : IDisposable
         catch (Exception exception)
         {
             ShowStartupFailure(exception.Message);
+        }
+    }
+
+    private PortableSettings ReconcileStartupPreference(PortableSettings loadedSettings)
+    {
+        try
+        {
+            var registration = windowsStartup.Capture();
+            if (!registration.HasPrivateTypeRegistration && !registration.HasLegacyRegistration)
+                return loadedSettings with { StartWithWindows = false };
+
+            if (registration.HasPrivateTypeRegistration && registration.HasLegacyRegistration)
+            {
+                windowsStartup.RemoveLegacy();
+                registration = registration with { LegacyCommand = null };
+            }
+
+            var currentExecutablePath = ExecutablePath();
+            var registeredTarget = windowsStartup.ReadTarget(registration);
+            var currentVersion = WindowsStartupRegistration.VersionOf(currentExecutablePath);
+            var decision = StartupOwnershipPolicy.Decide(
+                registration.HasPrivateTypeRegistration,
+                registration.HasLegacyRegistration,
+                registeredTarget.ExecutablePath,
+                registeredTarget.Version,
+                currentExecutablePath,
+                currentVersion);
+
+            if (decision == StartupOwnershipDecision.ClaimCurrent)
+            {
+                windowsStartup.Claim(currentExecutablePath);
+                RecordDiagnostic("startup.claimed");
+            }
+            else if (decision == StartupOwnershipDecision.ConfirmCurrent)
+            {
+                var prompt = new StartupVersionPromptWindow(registeredTarget.Version, currentVersion);
+                if (prompt.ShowDialog() == true)
+                {
+                    windowsStartup.Claim(currentExecutablePath);
+                    RecordDiagnostic("startup.claimed.confirmed");
+                }
+                else
+                {
+                    RecordDiagnostic("startup.claim.declined");
+                }
+            }
+
+            return loadedSettings with { StartWithWindows = true };
+        }
+        catch (Exception exception)
+        {
+            RecordDiagnostic("startup.failed", exception);
+            trayIcon.ShowBalloonTip(5000, "PrivateType", $"Windows startup setting could not be updated: {exception.Message}", Forms.ToolTipIcon.Warning);
+            return loadedSettings;
         }
     }
 
@@ -228,10 +281,14 @@ internal sealed class DictationApplication : IDisposable
             return;
         }
 
+        var startupUpdate = StartupPreferencePolicy.DecideUpdate(settings.StartWithWindows, newSettings.StartWithWindows);
         try
         {
-            windowsStartup.Apply(newSettings.StartWithWindows, ExecutablePath());
-            settingsStore.Save(newSettings);
+            StartupPreferenceTransaction.Apply(
+                startupUpdate,
+                windowsStartup,
+                ExecutablePath(),
+                () => settingsStore.Save(newSettings));
             settings = newSettings;
             statusItem.Text = DescribeReady(availability);
             trayIcon.Text = $"PrivateType — {statusItem.Text}";
@@ -241,14 +298,7 @@ internal sealed class DictationApplication : IDisposable
         }
         catch (Exception exception)
         {
-            try
-            {
-                windowsStartup.Apply(settings.StartWithWindows, ExecutablePath());
-            }
-            catch
-            {
-            }
-
+            RecordDiagnostic("settings.save.failed", exception);
             hotkey.Suspend();
             RestoreHotkeys(settings.Shortcuts);
             trayIcon.ShowBalloonTip(5000, "PrivateType", $"Settings were not saved: {exception.Message}", Forms.ToolTipIcon.Error);
@@ -275,20 +325,6 @@ internal sealed class DictationApplication : IDisposable
     {
         var window = new DiagnosticsWindow(diagnostics) { Owner = owner };
         window.ShowDialog();
-    }
-
-    private void ApplyStartupPreference(bool enabled)
-    {
-        try
-        {
-            windowsStartup.Apply(enabled, ExecutablePath());
-            RecordDiagnostic(enabled ? "startup.enabled" : "startup.disabled");
-        }
-        catch (Exception exception)
-        {
-            RecordDiagnostic("startup.failed", exception);
-            trayIcon.ShowBalloonTip(5000, "PrivateType", $"Windows startup setting could not be updated: {exception.Message}", Forms.ToolTipIcon.Warning);
-        }
     }
 
     private static string ExecutablePath() =>

@@ -1,9 +1,16 @@
 [CmdletBinding()]
 param(
-    [string] $OutputDirectory
+    [string] $OutputDirectory,
+    [string] $Version = '0.0.0'
 )
 
 $ErrorActionPreference = 'Stop'
+
+$parsedVersion = [Version]::new()
+if (![Version]::TryParse($Version, [ref] $parsedVersion)) {
+    throw "Release version must be numeric, for example 1.2.3: $Version"
+}
+$numericVersion = '{0}.{1}.{2}.{3}' -f $parsedVersion.Major, $parsedVersion.Minor, [Math]::Max(0, $parsedVersion.Build), [Math]::Max(0, $parsedVersion.Revision)
 
 function Copy-ReleaseFile {
     param(
@@ -109,7 +116,7 @@ $outputCreated = $false
 try {
     New-Item -ItemType Directory -Force -Path $publishDirectory | Out-Null
     $outputCreated = $true
-    & dotnet publish $appProject --configuration Release --runtime win-x64 --self-contained true --output $publishDirectory -p:PublishSingleFile=false -p:DebugType=None -p:DebugSymbols=false
+    & dotnet publish $appProject --configuration Release --runtime win-x64 --self-contained true --output $publishDirectory -p:PublishSingleFile=false -p:DebugType=None -p:DebugSymbols=false "-p:Version=$numericVersion" "-p:FileVersion=$numericVersion" "-p:AssemblyVersion=$numericVersion"
     if ($LASTEXITCODE -ne 0) {
         throw "dotnet publish failed (exit code $LASTEXITCODE)."
     }

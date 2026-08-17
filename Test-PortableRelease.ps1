@@ -1,7 +1,8 @@
 [CmdletBinding()]
 param(
     [string] $ArchivePath,
-    [string] $WorkingDirectory
+    [string] $WorkingDirectory,
+    [string] $ExpectedVersion
 )
 
 $ErrorActionPreference = 'Stop'
@@ -63,7 +64,20 @@ try {
     Expand-Archive -LiteralPath $ArchivePath -DestinationPath $WorkingDirectory -ErrorAction Stop
     $releaseDirectory = Join-Path $WorkingDirectory 'PrivateType'
 
-    Assert-ReleaseFile (Join-Path $releaseDirectory 'PrivateType.exe')
+    $executablePath = Join-Path $releaseDirectory 'PrivateType.exe'
+    Assert-ReleaseFile $executablePath
+    if (![string]::IsNullOrWhiteSpace($ExpectedVersion)) {
+        $expected = [Version]::new()
+        $actual = [Version]::new()
+        $actualText = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($executablePath).FileVersion
+        if (![Version]::TryParse($ExpectedVersion, [ref] $expected)) {
+            throw "Expected version must be numeric, for example 1.2.3: $ExpectedVersion"
+        }
+        $expected = [Version]::new($expected.Major, $expected.Minor, [Math]::Max(0, $expected.Build), [Math]::Max(0, $expected.Revision))
+        if (![Version]::TryParse($actualText, [ref] $actual) -or $actual -ne $expected) {
+            throw "Portable executable version mismatch. Expected $expected; actual $actualText."
+        }
+    }
     foreach ($engineFile in $engineFiles) {
         Assert-ReleaseFile (Join-Path $releaseDirectory "engine\bin\$engineFile")
     }
