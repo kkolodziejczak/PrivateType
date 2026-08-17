@@ -2,9 +2,9 @@
 
 ## What the ZIP contains
 
-`Build-PortableRelease.ps1` creates a self-contained `win-x64` application folder and ZIP. It includes the .NET runtime and the local NeMo-Speech CPU runtime, but deliberately excludes the speech model.
+`Build-PortableRelease.ps1` creates a versioned `win-x64` application folder and ZIP. The extracted folder keeps a prominent native `PrivateType.exe` launcher and a short start-here document at the top level. The self-contained .NET application, local NeMo-Speech CPU runtime, data, models, and notices live under `app`. The ZIP deliberately excludes the speech model.
 
-The model is downloaded on first run into `models/` beside the executable. Once that download is verified, later launches use that local file; the application does not have a cloud-recognition fallback.
+The model is downloaded on first run into `app/models/` beside the real application executable. Once that download is verified, later launches use that local file; the application does not have a cloud-recognition fallback.
 
 ## Install and use
 
@@ -13,12 +13,12 @@ The model is downloaded on first run into `models/` beside the executable. Once 
 3. Open **Settings** from the tray or ready bubble to select a microphone and shortcuts.
 4. Hold a configured shortcut to dictate, then release it to insert only finalized text into the original eligible target.
 
-The complete folder is portable. After the initial verified model download, move the whole folder, including `models/` and `data/`, to retain the downloaded model and settings.
+The complete versioned folder is portable. After the initial verified model download, move the whole folder, including `app/models/` and `app/data/`, to retain the downloaded model and settings.
 
 ## Privacy and supported targets
 
 - Audio and recognition stay on the computer. The recognizer is a child process bound to `127.0.0.1`; there is no account, telemetry, transcript history, or cloud fallback.
-- The application does not retain audio or inserted transcripts. Its portable `data/settings.json` stores only the selected microphone, shortcut bindings, and bubble position.
+- The application does not retain audio or inserted transcripts. Its portable `app/data/settings.json` stores only the selected microphone, shortcut bindings, and bubble position.
 - Unicode insertion is supported for ordinary desktop text fields. Elevated applications, secure/password fields, remote desktops, games, and applications that reject synthetic input are intentionally unsupported. The application cancels instead of redirecting text after a foreground-target change.
 
 ## Model and runtime notices
@@ -32,18 +32,18 @@ The complete folder is portable. After the initial verified model download, move
 Build from a checkout containing the verified local engine runtime:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\Build-PortableRelease.ps1 -Version 1.0.0
+powershell -NoProfile -ExecutionPolicy Bypass -File .\Build-PortableRelease.ps1 -Version 1.0.2
 ```
 
 Verify a freshly created archive without overwriting an existing directory:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\Test-PortableRelease.ps1 -ExpectedVersion 1.0.0
+powershell -NoProfile -ExecutionPolicy Bypass -File .\Test-PortableRelease.ps1 -ExpectedVersion 1.0.2
 ```
 
-The smoke script validates a clean unpack, required engine files, absence of a bundled model, and whole-folder relocation. It does not download the model or launch the tray application. Before a release handoff, manually complete first-run download, offline second launch, relocation launch, Notepad insertion, browser-textarea insertion, focus-change cancellation, and hotkey cleanup using a disposable writable folder.
+The smoke script validates the top-level launcher, embedded application version, clean unpack, required engine files, absence of a bundled model, and whole-folder relocation. It does not download the model or launch the tray application. Before a release handoff, manually complete first-run download, offline second launch, relocation launch, Notepad insertion, browser-textarea insertion, focus-change cancellation, and hotkey cleanup using a disposable writable folder.
 
-Pushing a version tag such as `v1.0.0` builds the versioned ZIP and checksum and creates a GitHub draft release. Download and test those exact draft assets on a clean supported Windows installation before publishing the draft. Do not rebuild or replace an accepted ZIP between acceptance and publication.
+Pushing a version tag such as `v1.0.2` requires a matching `.github/release-notes/v1.0.2.md`, builds `PrivateType-1.0.2-win-x64.zip` and its checksum, and creates a GitHub draft release from those polished notes. Download and test those exact draft assets on a clean supported Windows installation before publishing the draft. Do not rebuild or replace an accepted ZIP between acceptance and publication.
 
 ## Recorded package evidence
 

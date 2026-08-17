@@ -80,10 +80,11 @@ by the user and is governed by its own OpenMDW-1.1 terms.
 }
 
 if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
-    $OutputDirectory = Join-Path $PSScriptRoot 'artifacts\PrivateType-win-x64'
+    $OutputDirectory = Join-Path $PSScriptRoot "artifacts\PrivateType-$Version-win-x64"
 }
 
 $appProject = Join-Path $PSScriptRoot 'src\PrivateType.App\PrivateType.App.csproj'
+$launcherProject = Join-Path $PSScriptRoot 'src\PrivateType.Launcher\PrivateType.Launcher.csproj'
 $engineRoot = Join-Path $PSScriptRoot '.engine\NeMo-Speech.cpp'
 $vcpkgRoot = Join-Path $PSScriptRoot '.engine\vcpkg'
 $runtimeSource = Join-Path $PSScriptRoot '.engine\build-cpu-realtime-manual\bin'
@@ -98,8 +99,17 @@ $requiredEngineFiles = @(
     'libprotobuf.dll'
 )
 
+$publishDirectory = Join-Path $OutputDirectory "PrivateType $Version"
+$appPublishDirectory = Join-Path $publishDirectory 'app'
+$launcherPublishDirectory = Join-Path $OutputDirectory '.launcher-publish'
+$engineDestination = Join-Path $appPublishDirectory 'engine\bin'
+$archivePath = "$OutputDirectory.zip"
+
 if (Test-Path -LiteralPath $OutputDirectory) {
     throw "Release output already exists and will not be overwritten: $OutputDirectory"
+}
+if (Test-Path -LiteralPath $archivePath) {
+    throw "Archive already exists and will not be overwritten: $archivePath"
 }
 
 foreach ($file in $requiredEngineFiles) {
@@ -108,38 +118,59 @@ foreach ($file in $requiredEngineFiles) {
     }
 }
 
-$publishDirectory = Join-Path $OutputDirectory 'PrivateType'
-$engineDestination = Join-Path $publishDirectory 'engine\bin'
-$archivePath = "$OutputDirectory.zip"
 $outputCreated = $false
+$archiveCreated = $false
 
 try {
-    New-Item -ItemType Directory -Force -Path $publishDirectory | Out-Null
+    New-Item -ItemType Directory -Force -Path $appPublishDirectory | Out-Null
     $outputCreated = $true
-    & dotnet publish $appProject --configuration Release --runtime win-x64 --self-contained true --output $publishDirectory -p:PublishSingleFile=false -p:DebugType=None -p:DebugSymbols=false "-p:Version=$numericVersion" "-p:FileVersion=$numericVersion" "-p:AssemblyVersion=$numericVersion"
+    & dotnet publish $appProject --configuration Release --runtime win-x64 --self-contained true --output $appPublishDirectory -p:PublishSingleFile=false -p:DebugType=None -p:DebugSymbols=false "-p:Version=$numericVersion" "-p:FileVersion=$numericVersion" "-p:AssemblyVersion=$numericVersion"
     if ($LASTEXITCODE -ne 0) {
-        throw "dotnet publish failed (exit code $LASTEXITCODE)."
+        throw "PrivateType application publish failed (exit code $LASTEXITCODE)."
     }
+
+    & dotnet publish $launcherProject --configuration Release --runtime win-x64 --self-contained true --output $launcherPublishDirectory -p:DebugType=None -p:DebugSymbols=false "-p:Version=$numericVersion" "-p:FileVersion=$numericVersion" "-p:AssemblyVersion=$numericVersion"
+    if ($LASTEXITCODE -ne 0) {
+        throw "PrivateType launcher publish failed (exit code $LASTEXITCODE)."
+    }
+    Copy-Item -LiteralPath (Join-Path $launcherPublishDirectory 'PrivateType.exe') -Destination (Join-Path $publishDirectory 'PrivateType.exe')
+    Remove-Item -LiteralPath $launcherPublishDirectory -Recurse -Force
 
     New-Item -ItemType Directory -Force -Path $engineDestination | Out-Null
     foreach ($file in $requiredEngineFiles) {
         Copy-Item -LiteralPath (Join-Path $runtimeSource $file) -Destination $engineDestination
     }
-    Add-ReleaseNotices -PublishDirectory $publishDirectory -EngineRoot $engineRoot -VcpkgRoot $vcpkgRoot
+    Add-ReleaseNotices -PublishDirectory $appPublishDirectory -EngineRoot $engineRoot -VcpkgRoot $vcpkgRoot
+
+    @"
+PrivateType $Version
+===================
+
+Double-click PrivateType.exe to start the application.
+
+Keep this complete folder together. The app folder contains the local runtime,
+speech engine, downloaded model, settings, and open-source license notices.
+
+PrivateType performs speech recognition locally and does not retain audio or
+dictated text. The speech model is downloaded and verified on first launch.
+
+Project and release information:
+https://github.com/kkolodziejczak/PrivateType
+"@ | Set-Content -LiteralPath (Join-Path $publishDirectory 'README - Start here.txt') -Encoding utf8
 
     if (!(Test-Path -LiteralPath (Join-Path $publishDirectory 'PrivateType.exe'))) {
-        throw 'Portable app executable was not published.'
+        throw 'Portable launcher executable was not published.'
+    }
+    if (!(Test-Path -LiteralPath (Join-Path $appPublishDirectory 'PrivateType.exe'))) {
+        throw 'Portable application executable was not published.'
     }
     if (!(Test-Path -LiteralPath (Join-Path $engineDestination 'nemo-speech.exe'))) {
         throw 'Portable engine executable was not copied.'
     }
-    if (Test-Path -LiteralPath (Join-Path $publishDirectory 'models')) {
+    if (Test-Path -LiteralPath (Join-Path $appPublishDirectory 'models')) {
         throw 'Portable release must not include a downloaded model.'
     }
-    if (Test-Path -LiteralPath $archivePath) {
-        throw "Archive already exists and will not be overwritten: $archivePath"
-    }
-
+    $archiveCreated = $true
     Compress-Archive -LiteralPath $publishDirectory -DestinationPath $archivePath -CompressionLevel Optimal
     $folderBytes = (Get-ChildItem -LiteralPath $publishDirectory -Recurse -File | Measure-Object -Property Length -Sum).Sum
     $archiveBytes = (Get-Item -LiteralPath $archivePath).Length
@@ -148,7 +179,7 @@ try {
     Write-Host "ZIP bytes: $archiveBytes"
 }
 catch {
-    if (Test-Path -LiteralPath $archivePath) {
+    if ($archiveCreated -and (Test-Path -LiteralPath $archivePath)) {
         Remove-Item -LiteralPath $archivePath -Force
     }
     if ($outputCreated -and (Test-Path -LiteralPath $OutputDirectory)) {

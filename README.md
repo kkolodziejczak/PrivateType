@@ -11,11 +11,13 @@ recognition fallback, or retained transcript history.
 
 ## Download and start
 
-1. Download `PrivateType-win-x64.zip` and its `.sha256` checksum from
+1. Download the versioned `PrivateType-<version>-win-x64.zip` and its
+   `.sha256` checksum from
    [Releases](https://github.com/kkolodziejczak/privatetype/releases).
 2. Verify the checksum, then unpack the ZIP into a writable folder. Do not run
    it from `Program Files`, a read-only archive, or a protected network path.
-3. Start `PrivateType.exe`.
+3. Open the extracted versioned folder and start the clearly visible
+   `PrivateType.exe`. Technical runtime files are kept inside `app`.
 4. On the first launch, approve the separate local-model download and wait for
    its verification to finish.
 5. Open **Settings** from the tray icon or ready bubble, choose a microphone,
@@ -34,10 +36,11 @@ Windows startup removes both current PrivateType and obsolete LiveDictation
 entries without touching other startup applications.
 
 ```powershell
-Get-FileHash .\PrivateType-win-x64.zip -Algorithm SHA256
+$version = '1.0.2'
+Get-FileHash ".\PrivateType-$version-win-x64.zip" -Algorithm SHA256
 ```
 
-The reported hash must exactly match `PrivateType-win-x64.zip.sha256`.
+The reported hash must exactly match the accompanying `.zip.sha256` file.
 
 ## Use it
 
@@ -88,7 +91,7 @@ if it is not already installed.
 ## Privacy, limits, and troubleshooting
 
 - PrivateType does not retain raw audio or inserted transcripts.
-- `data/settings.json` stores only the selected microphone, shortcuts, bubble
+- `app/data/settings.json` stores only the selected microphone, shortcuts, bubble
   location, Windows-startup preference, and model idle timeout.
 - The model is downloaded separately from NVIDIA; it is not included in the
   app ZIP. See [MODEL_ARTIFACT.md](MODEL_ARTIFACT.md) for its source and
@@ -108,8 +111,8 @@ if it is not already installed.
 ## Licenses
 
 PrivateType's own source and maintainer-owned assets are available under the
-[MIT License](LICENSE). The portable release includes a `licenses` folder and
-`THIRD-PARTY-NOTICES.txt` for NeMo-Speech.cpp, ggml, cpp-httplib,
+[MIT License](LICENSE). The portable release includes complete notices in
+`app/licenses`, including `THIRD-PARTY-NOTICES.txt` for NeMo-Speech.cpp, ggml, cpp-httplib,
 SentencePiece, Protobuf, Abseil, utf8-range, NAudio, and the self-contained
 .NET runtime. Open the same notices from **Settings → Open-source licenses…**.
 

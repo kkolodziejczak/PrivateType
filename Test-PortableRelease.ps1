@@ -2,13 +2,13 @@
 param(
     [string] $ArchivePath,
     [string] $WorkingDirectory,
-    [string] $ExpectedVersion
+    [string] $ExpectedVersion = '0.0.0'
 )
 
 $ErrorActionPreference = 'Stop'
 
 if ([string]::IsNullOrWhiteSpace($ArchivePath)) {
-    $ArchivePath = Join-Path $PSScriptRoot 'artifacts\PrivateType-win-x64.zip'
+    $ArchivePath = Join-Path $PSScriptRoot "artifacts\PrivateType-$ExpectedVersion-win-x64.zip"
 }
 
 if ([string]::IsNullOrWhiteSpace($WorkingDirectory)) {
@@ -62,41 +62,52 @@ $noticeFiles = @(
 
 try {
     Expand-Archive -LiteralPath $ArchivePath -DestinationPath $WorkingDirectory -ErrorAction Stop
-    $releaseDirectory = Join-Path $WorkingDirectory 'PrivateType'
+    $releaseDirectory = Join-Path $WorkingDirectory "PrivateType $ExpectedVersion"
 
-    $executablePath = Join-Path $releaseDirectory 'PrivateType.exe'
+    $launcherPath = Join-Path $releaseDirectory 'PrivateType.exe'
+    $startHerePath = Join-Path $releaseDirectory 'README - Start here.txt'
+    $executablePath = Join-Path $releaseDirectory 'app\PrivateType.exe'
+    Assert-ReleaseFile $launcherPath
+    Assert-ReleaseFile $startHerePath
     Assert-ReleaseFile $executablePath
+    $unexpectedTopLevelEntries = Get-ChildItem -LiteralPath $releaseDirectory | Where-Object Name -NotIn @('PrivateType.exe', 'README - Start here.txt', 'app')
+    if ($unexpectedTopLevelEntries) {
+        throw "Portable release has unexpected top-level entries: $($unexpectedTopLevelEntries.Name -join ', ')"
+    }
     if (![string]::IsNullOrWhiteSpace($ExpectedVersion)) {
         $expected = [Version]::new()
         $actual = [Version]::new()
-        $actualText = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($executablePath).FileVersion
         if (![Version]::TryParse($ExpectedVersion, [ref] $expected)) {
             throw "Expected version must be numeric, for example 1.2.3: $ExpectedVersion"
         }
         $expected = [Version]::new($expected.Major, $expected.Minor, [Math]::Max(0, $expected.Build), [Math]::Max(0, $expected.Revision))
-        if (![Version]::TryParse($actualText, [ref] $actual) -or $actual -ne $expected) {
-            throw "Portable executable version mismatch. Expected $expected; actual $actualText."
+        foreach ($versionedExecutable in @($launcherPath, $executablePath)) {
+            $actualText = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($versionedExecutable).FileVersion
+            if (![Version]::TryParse($actualText, [ref] $actual) -or $actual -ne $expected) {
+                throw "Portable executable version mismatch for $versionedExecutable. Expected $expected; actual $actualText."
+            }
         }
     }
     foreach ($engineFile in $engineFiles) {
-        Assert-ReleaseFile (Join-Path $releaseDirectory "engine\bin\$engineFile")
+        Assert-ReleaseFile (Join-Path $releaseDirectory "app\engine\bin\$engineFile")
     }
     foreach ($noticeFile in $noticeFiles) {
-        Assert-ReleaseFile (Join-Path $releaseDirectory $noticeFile)
+        Assert-ReleaseFile (Join-Path $releaseDirectory "app\$noticeFile")
     }
 
-    if (Test-Path -LiteralPath (Join-Path $releaseDirectory 'models')) {
+    if (Test-Path -LiteralPath (Join-Path $releaseDirectory 'app\models')) {
         throw 'Portable archive must not contain a downloaded model.'
     }
 
     $relocatedRoot = Join-Path $WorkingDirectory 'relocated'
-    $relocatedDirectory = Join-Path $relocatedRoot 'PrivateType'
+    $relocatedDirectory = Join-Path $relocatedRoot "PrivateType $ExpectedVersion"
     New-Item -ItemType Directory -Path $relocatedRoot | Out-Null
     Move-Item -LiteralPath $releaseDirectory -Destination $relocatedRoot
 
     Assert-ReleaseFile (Join-Path $relocatedDirectory 'PrivateType.exe')
-    Assert-ReleaseFile (Join-Path $relocatedDirectory 'engine\bin\nemo-speech.exe')
-    if (Test-Path -LiteralPath (Join-Path $relocatedDirectory 'models')) {
+    Assert-ReleaseFile (Join-Path $relocatedDirectory 'app\PrivateType.exe')
+    Assert-ReleaseFile (Join-Path $relocatedDirectory 'app\engine\bin\nemo-speech.exe')
+    if (Test-Path -LiteralPath (Join-Path $relocatedDirectory 'app\models')) {
         throw 'Relocated portable archive unexpectedly contains a downloaded model.'
     }
 

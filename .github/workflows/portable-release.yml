@@ -42,21 +42,26 @@ jobs:
           dotnet run --project ./tests/PrivateType.App.LayoutProbe/PrivateType.App.LayoutProbe.csproj --configuration Release
 
       - name: Build and verify portable ZIP
+        id: package
         shell: pwsh
         run: |
           $version = if ($env:GITHUB_REF_NAME -match '^v(\d+\.\d+\.\d+(?:\.\d+)?)(?:[-+].+)?$') { $Matches[1] } else { '0.0.0' }
+          $archiveName = "PrivateType-$version-win-x64.zip"
+          $archivePath = "./artifacts/$archiveName"
           ./Build-PortableRelease.ps1 -Version $version
           ./Test-PortableRelease.ps1 -ExpectedVersion $version
-          $hash = (Get-FileHash ./artifacts/PrivateType-win-x64.zip -Algorithm SHA256).Hash.ToLowerInvariant()
-          "$hash  PrivateType-win-x64.zip" | Set-Content ./artifacts/PrivateType-win-x64.zip.sha256 -NoNewline
+          $hash = (Get-FileHash $archivePath -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  $archiveName" | Set-Content "$archivePath.sha256" -NoNewline
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "archive_name=$archiveName" >> $env:GITHUB_OUTPUT
 
       - name: Upload portable artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: PrivateType-win-x64
+          name: PrivateType-${{ steps.package.outputs.version }}-win-x64
           path: |
-            artifacts/PrivateType-win-x64.zip
-            artifacts/PrivateType-win-x64.zip.sha256
+            artifacts/${{ steps.package.outputs.archive_name }}
+            artifacts/${{ steps.package.outputs.archive_name }}.sha256
           if-no-files-found: error
 
       - name: Create GitHub draft release
@@ -64,4 +69,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         shell: pwsh
-        run: gh release create $env:GITHUB_REF_NAME ./artifacts/PrivateType-win-x64.zip ./artifacts/PrivateType-win-x64.zip.sha256 --draft --generate-notes
+        run: |
+          $notesPath = ".github/release-notes/$env:GITHUB_REF_NAME.md"
+          if (!(Test-Path -LiteralPath $notesPath -PathType Leaf)) {
+            throw "Release notes are required before tagging: $notesPath"
+          }
+          $archivePath = "./artifacts/${{ steps.package.outputs.archive_name }}"
+          gh release create $env:GITHUB_REF_NAME $archivePath "$archivePath.sha256" --draft --verify-tag --title "PrivateType $env:GITHUB_REF_NAME" --notes-file $notesPath
