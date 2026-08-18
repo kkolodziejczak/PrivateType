@@ -2,13 +2,13 @@
 
 ## Purpose
 
-Add a private, user-owned vocabulary that biases the pinned local Nemotron recognizer toward desired words and phrases, expand explicit recognition from Polish/English to every locale the pinned model can transcribe without fine-tuning, and provide an optional quick-teach workflow for the immediately preceding dictation.
+Add a private, user-owned vocabulary that biases the pinned local Nemotron recognizer toward desired words and phrases, expand explicit recognition from Polish/English to every locale the pinned model can transcribe without fine-tuning, support simple offline vocabulary-pack sharing, and provide an optional quick-teach workflow for the immediately preceding dictation.
 
 The feature must preserve PrivateType's defining behavior: hold-to-dictate, local processing, no cloud fallback, no retained transcript history, no transcript rewriting, and no model load unless recognition proof specifically requires it.
 
 ## Agreed decisions
 
-- [x] Maintain one personal vocabulary, not named domain profiles.
+- [x] Maintain one personal vocabulary plus separately named, enableable installed packs; do not turn personal vocabulary into named profiles.
 - [x] Vocabulary has `Shared` and base-language scopes.
 - [x] A base-language scope applies to every regional locale for that language.
 - [x] Explicit recognition uses Shared plus the selected locale's base-language vocabulary.
@@ -22,7 +22,15 @@ The feature must preserve PrivateType's defining behavior: hold-to-dictate, loca
 - [x] The teach dialog preselects the dictation's base language, or Shared after Automatic, while allowing the user to change the scope.
 - [x] Teaching changes future recognition only; it never rewrites or copies over already injected text.
 - [x] The last transcript exists only in memory until the next dictation begins, the teach dialog is saved/dismissed, or the app exits.
-- [x] Persist only the desired vocabulary entry, its scope, and influence.
+- [x] Personal vocabulary and quick teach persist only the desired entry, its scope, and influence; never persist the misheard wording.
+- [x] Import and export packs manually; PrivateType never downloads, discovers, or synchronizes packs.
+- [x] A share file is a top-level JSON array of `{ "phrase", "weight" }` entries. `weight` is optional and defaults to `normal`.
+- [x] Share files contain no pack ID, version, author, attribution, license, provenance, locale, or update metadata.
+- [x] The filename supplies the proposed pack name; the user chooses one Shared/base-language scope during import.
+- [x] Imported packs are separately enabled, disabled, edited, exported, renamed, and removed. Editing changes only the installed local copy.
+- [x] Export from personal vocabulary includes only entries explicitly selected by the user from the currently visible scope and shows a final preview.
+- [x] Personal vocabulary wins over an identical phrase from packs; otherwise the strongest enabled-pack influence wins.
+- [x] Curated example pack files may live in a dedicated repository directory with CI validation, but they are downloads only and are not bundled into releases.
 - [x] Preserve Polish and English default shortcuts and migrate existing settings without loss.
 - [x] Keep the application UI in English; UI localization is separate work.
 - [x] Prove and calibrate word boosting before building the production UI.
@@ -49,6 +57,7 @@ The implementation is pinned to the repository's current artifacts:
 | Composition root | [DictationApplication.cs](src/PrivateType.App/DictationApplication.cs) | Creates sessions, owns Settings and bubble events, and suspends hotkeys around modal Settings. |
 | Bubble actions | [DictationBubble.xaml](src/PrivateType.App/DictationBubble.xaml) | Settings and Quit only. |
 | Settings layout | [SettingsWindow.xaml](src/PrivateType.App/SettingsWindow.xaml) | Fixed-width, auto-height, single-page form; unsuitable for an unbounded vocabulary list. |
+| Vocabulary sharing | None | No pack parser, installed-pack state, file picker flow, export writer, repository directory, or validation command exists. |
 | Privacy statement | [README.md](README.md) | No retained transcript history; settings currently described as containing no vocabulary. |
 | UI proof | [PrivateType.App.LayoutProbe](tests/PrivateType.App.LayoutProbe) | Renders current setup, bubble, and Settings states; must be extended for every new state. |
 
@@ -61,6 +70,7 @@ The repository is clean at planning time. This plan and [the annotated UI mock](
 - **Dictating user:** selects an exact recognition locale through a shortcut and optionally maintains vocabulary.
 - **Settings editor:** validates and atomically persists shortcuts and vocabulary.
 - **Vocabulary composer:** chooses the entries applicable to one recognition request and resolves duplicates.
+- **Vocabulary-pack importer/exporter:** previews and validates bounded local JSON arrays without network access.
 - **Realtime recognizer:** serializes calibrated phrase groups into the pinned WebSocket protocol.
 - **Dictation session:** recognizes, injects, and announces one finalized transcript without retaining history.
 - **Ephemeral transcript buffer:** owns the single last teachable transcript and its destruction rules.
@@ -69,7 +79,8 @@ The repository is clean at planning time. This plan and [the annotated UI mock](
 ### Inputs
 
 - Exact locale code selected by a shortcut, such as `pl-PL`, `en-US`, `es-ES`, or `auto`.
-- Locally stored entries: desired phrase, `shared` or base-language scope, and influence.
+- Locally stored personal and enabled-pack entries: desired phrase, `shared` or base-language scope, and influence.
+- A manually selected local `.privatetype-vocabulary.json` file containing only a bounded entry array.
 - PCM16 microphone audio for the active held shortcut.
 - One finalized transcript held temporarily for quick teaching.
 
@@ -78,6 +89,7 @@ The repository is clean at planning time. This plan and [the annotated UI mock](
 - A realtime `session.update` containing the exact locale and zero to three calibrated `speech_contexts` groups.
 - Final text injected into the originally captured eligible target.
 - Versioned local settings containing stable locale codes and vocabulary entries.
+- Installed pack collections stored locally, plus explicitly exported JSON arrays containing only reviewed phrases and weights.
 - An optional new vocabulary entry derived from a transient selection.
 
 ### State and ownership
@@ -87,6 +99,7 @@ The repository is clean at planning time. This plan and [the annotated UI mock](
 | Supported locale catalog | Core language catalog | Static for the pinned model/release. |
 | Shortcut locale codes | Portable settings | Persistent, local, atomic save. |
 | Vocabulary entries | Portable settings | Persistent, local, atomic save. |
+| Installed pack name, scope, enabled state, and entries | Portable settings | Persistent, local, atomic save; no link to the source file. |
 | Calibrated influence mapping | One recognizer configuration owner | Static for the pinned runtime/model; established by Stage 1. |
 | Active recognition request | Dictation session / recognizer | One held shortcut. |
 | Last teachable transcript | Ephemeral transcript buffer | At most one result; never serialized or logged. |
@@ -98,6 +111,7 @@ The repository is clean at planning time. This plan and [the annotated UI mock](
 - Start and communicate with the loopback-only local engine.
 - Inject Unicode text into the captured foreground target.
 - Atomically replace `data/settings.json` after successful validation.
+- Read a user-selected local pack file and write an explicitly selected export destination.
 - Display local modal Settings/Teach windows.
 
 ### Failure behavior
@@ -105,6 +119,8 @@ The repository is clean at planning time. This plan and [the annotated UI mock](
 - Unknown locale or vocabulary scope: reject settings with a local validation message; never silently substitute Auto.
 - Legacy settings migration failure: preserve the existing safe fallback and warning behavior; never partially rewrite the file.
 - Invalid or oversized vocabulary: keep the editor open and do not truncate.
+- Invalid/oversized pack import or duplicate installed name: show a content-free validation result and do not mutate settings; offer a unique local name rather than inferring an update.
+- Pack export failure: leave settings unchanged and keep the reviewed selection available for retry.
 - Engine rejection of `speech_contexts`: fail the calibration stage; do not ship a non-functional UI.
 - Settings write failure from Teach: keep the dialog and ephemeral transcript for retry; do not update in-memory settings.
 - Empty or failed dictation: no teachable result; Teach remains disabled.
@@ -177,6 +193,32 @@ sequenceDiagram
     App->>App: Restore hotkeys
 ```
 
+### Vocabulary-pack import/export sequence
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant UI as Vocabulary settings
+    participant File as Local JSON file
+    participant Codec as Pack codec/validator
+    participant Store as PortableSettingsStore
+
+    alt import
+        User->>UI: Choose local pack file
+        UI->>File: Read bounded content
+        File-->>Codec: JSON entry array
+        Codec-->>UI: Validated preview or safe error
+        User->>UI: Choose scope, name, and enabled state
+        UI->>Store: Atomically install local collection
+    else export
+        User->>UI: Select reviewed entries
+        UI->>Codec: Serialize phrase + symbolic weight only
+        UI->>User: Show final export preview
+        User->>UI: Choose destination
+        UI->>File: Write one JSON array atomically
+    end
+```
+
 ## UI mock contract
 
 Use [docs/VOCABULARY_UI_MOCK.md](docs/VOCABULARY_UI_MOCK.md) as the interaction template.
@@ -237,6 +279,16 @@ public sealed record VocabularyEntry(
     string Phrase,
     string Scope,
     VocabularyInfluence Influence);
+
+public sealed record InstalledVocabularyPack(
+    string Name,
+    string Scope,
+    bool IsEnabled,
+    IReadOnlyList<VocabularyPackEntry> Entries);
+
+public sealed record VocabularyPackEntry(
+    string Phrase,
+    VocabularyInfluence Influence);
 ```
 
 Persistence contract:
@@ -246,7 +298,7 @@ Persistence contract:
 - `Scope` is `shared` or a base-language code present in the catalog.
 - Legacy files without a schema version are parsed as schema 1. Map numeric `Language` values `0 -> pl-PL`, `1 -> en-US`, and `2 -> auto` while preserving microphone, shortcut keys, panel position, startup choice, and idle timeout.
 - Perform migration in memory on load. Write version 2 only on the next successful normal save; do not mutate a readable legacy file merely by starting the app.
-- Missing vocabulary migrates to an empty list.
+- Missing vocabulary and installed packs migrate to empty lists.
 - Unknown legacy enum values and malformed files retain the current safe-default warning behavior.
 - Keep the existing temporary-file plus replace transaction for all saves.
 - Split catalog, settings domain/validation, and serialization/migration into focused files; do not turn `PortableSettings.cs` into a catch-all.
@@ -265,6 +317,7 @@ Illustrative version 2 JSON:
     { "Phrase": "MVVM", "Scope": "shared", "Influence": "Normal" },
     { "Phrase": "dependency injection", "Scope": "en", "Influence": "Low" }
   ],
+  "InstalledVocabularyPacks": [],
   "ModelIdleTimeoutMinutes": 10
 }
 ```
@@ -329,7 +382,50 @@ public sealed record RecognitionRequest(
 
 The `0.0` is deliberately not a proposed production value. Stage 1 must replace the pending mapping with three proven positive values before Stage 3 proceeds.
 
-### 5. Ephemeral transcript ownership
+### 5. Shareable vocabulary-pack contract
+
+The share format is intentionally not a package manifest. It is a UTF-8 JSON array whose entries contain a desired phrase and an optional symbolic weight:
+
+```json
+[
+  { "phrase": "MVVM", "weight": "strong" },
+  { "phrase": "dependency injection" },
+  { "phrase": "array", "weight": "low" }
+]
+```
+
+File contract:
+
+- Use the extension `.privatetype-vocabulary.json`; the base filename proposes the installed pack name.
+- The top level must be an array. Each item must be an object with required string `phrase` and optional `weight` (`low`, `normal`, or `strong`); omitted weight means `normal`.
+- Reject unknown properties, duplicate normalized phrases, malformed JSON, non-UTF-8 content, and values that fail the normal phrase validator. Accept UTF-8 with or without its optional byte-order mark.
+- A share file contains no scope. Import requires the user to choose exactly one Shared/base-language scope, applied to every entry.
+- A share file contains no executable content, path, URL, ID, version, author, attribution, license, provenance, transcript, or settings payload.
+- Require a regular file no larger than 64 KiB selected by the user; never follow content-provided paths and never perform network access.
+- Show the proposed name, selected scope, every normalized phrase, effective weight, and validation counts before installation. Do not persist until the user confirms.
+- Installed pack names are unique ordinally. A collision does not imply an update; propose a unique local suffix and let the user edit it before confirmation.
+- Imported data is copied into the versioned settings model. It has no live relationship to its source file and no automatic update behavior.
+- Editing an installed pack edits that local collection directly. Removing it deletes only the installed collection after confirmation, never the source file.
+- Export personal entries only from the currently selected scope. The user explicitly selects entries and reviews the exact phrase/weight array before choosing a destination.
+- Exporting an installed pack serializes its entire local entry array after the same preview. Scope, enabled state, and local name are not written into the file.
+- Write exports through a temporary file and atomic replace/create in the chosen directory; a failure leaves the prior destination and application state intact.
+- Personal and installed-pack entries share one bounded validation budget: at most 200 total persisted entries, 120 UTF-16 code units per phrase, and 16 KiB normalized phrase UTF-8 payload. Import that would exceed it is rejected without truncation.
+
+Composition contract:
+
+- Compose applicable personal entries plus entries from enabled packs whose scope is Shared or matches the explicit locale's base language. Automatic uses Shared personal entries and Shared enabled packs only.
+- For an exact phrase collision, an applicable personal entry wins regardless of weight. If only packs collide, emit the strongest influence once; ties are immaterial and must remain deterministic.
+- Disabled packs never contribute contexts. Enabling a pack validates the complete global budget before settings are saved.
+
+Repository contract:
+
+- Curated examples live under `vocabulary-packs/` and use the exact production file format.
+- Add a repository validator that calls the same parser/validator used by the app. CI checks every curated file for extension, UTF-8, schema, limits, normalized duplicates, and deterministic canonical serialization.
+- Repository pack files are never copied into the application output or portable release. README may link to the directory and explain manual download/import.
+- Repository review and the repository's contribution/license policy govern curated files; the runtime format carries no trust or licensing claims.
+- This plan does not invent an initial domain pack. Add curated content only when its phrases have been intentionally reviewed as public repository data.
+
+### 6. Ephemeral transcript ownership
 
 Introduce a small testable owner, not a general history service:
 
@@ -356,7 +452,7 @@ Required semantics:
 - The buffer has no file APIs, diagnostic APIs, history collection, timestamps, or transcript enumeration.
 - Bubble menu enabled state derives only from `HasValue`; menu text never includes transcript content.
 
-### 6. Word-range selection
+### 7. Word-range selection
 
 Create a Unicode-aware word-span tokenizer/selector that returns source offsets without persisting heard text.
 
@@ -376,6 +472,7 @@ Create a Unicode-aware word-span tokenizer/selector that returns source offsets 
 - **Privacy:** vocabulary is private settings data. Transcript and vocabulary contents are forbidden in diagnostics, logs, exceptions, documentation evidence, screenshots, and committed fixtures.
 - **Engine lifecycle:** keep the model unloaded in normal unit/layout tests. Only Stage 1 and the final live acceptance check may load it.
 - **No network at runtime:** locale and base-language catalogs ship with the app.
+- **Manual sharing only:** import/export uses explicit local file pickers; no URL field, discovery catalog, updater, synchronization, or bundled pack is added.
 - **No silent fallback:** invalid explicit locale is a settings error, not Auto.
 - **No transcript mutation:** phrase biasing changes decoder likelihood only; the final transcript is injected as returned.
 - **No application targeting expansion:** secure/elevated/ineligible target rules remain unchanged.
@@ -395,9 +492,10 @@ Create a Unicode-aware word-span tokenizer/selector that returns source offsets 
 3. Inspect the probe before executing it, as required by repository instructions.
 4. Use only non-sensitive, test-purpose audio in a temporary directory. Never commit audio or transcript output.
 5. Run baseline and candidate boosts against explicit English, explicit Polish containing English technical terms, and unrelated control audio.
-6. Record only aggregate counts and the chosen numeric mappings below; do not record phrases, transcripts, audio paths, or dictated text.
-7. Delete temporary audio after the run and verify no probe output entered repository files.
-8. Stop if capability or safety criteria fail; do not start Stage 2 under the assumption that UI can compensate.
+6. Send a generated non-sensitive boundary payload proving whether 200 phrases and 16 KiB normalized phrase text are accepted; record the lower proven limit if not.
+7. Record only aggregate counts, payload limits, and the chosen numeric mappings below; do not record phrases, transcripts, audio paths, or dictated text.
+8. Delete temporary audio after the run and verify no probe output entered repository files.
+9. Stop if capability or safety criteria fail; do not start Stage 2 under the assumption that UI can compensate.
 
 **Risk Manifest:** Required — external provider behavior and private audio are involved.
 
@@ -407,9 +505,10 @@ Create a Unicode-aware word-span tokenizer/selector that returns source offsets 
 
 | ID | Risk | Canonical owner | Consumers |
 |---|---|---|---|
-| R1 | The documented API may not materially bias this pinned RNN-T path. | Engine probe protocol client | Stages 3 and 5 |
+| R1 | The documented API may not materially bias this pinned RNN-T path. | Engine probe protocol client | Stages 3, 4, and 6 |
 | R2 | Influence values may improve target terms while inserting them into unrelated speech. | Calibration matrix and acceptance rule | Realtime recognizer mapping |
 | R3 | Probe inputs/results may expose private dictated content. | Probe CLI and execution protocol | Implementer, verification report |
+| R4 | The planned combined personal/pack phrase budget may exceed the pinned provider's request limit. | Engine probe boundary matrix | vocabulary validator and composer |
 
 #### States and Variants
 
@@ -418,6 +517,7 @@ Create a Unicode-aware word-span tokenizer/selector that returns source offsets 
 | R1 | no contexts, one context, three grouped contexts; `en-US`, `pl-PL` | baseline and biased requests | server error, ignored context, malformed session update |
 | R2 | candidate Low/Normal/Strong values; target and unrelated controls | repeated A/B matrix | non-monotonic influence, false insertion, no measurable gain |
 | R3 | temp input, console result, aggregate evidence, cleanup | local-only execution | committed audio/text, diagnostic capture, undeleted temp files |
+| R4 | 200 phrases; 16 KiB normalized phrase payload; grouped across three influences | generated boundary request -> pinned engine | rejection, timeout, undocumented lower cap |
 
 #### Proof
 
@@ -426,6 +526,7 @@ Create a Unicode-aware word-span tokenizer/selector that returns source offsets 
 | R1 | pinned `/v1/realtime` | probe request with a known invalid context shape, then valid shape | invalid is rejected; valid completes and changes target-term outcomes versus baseline | Pending |
 | R2 | candidate mapping | target/control matrix with no mapping selected | chosen levels are ordered by influence, improve target recognition, and Strong inserts boosted terms in no more than 1 of 20 unrelated controls | Pending |
 | R3 | repo and temp state | pre-run clean status and temp inventory | post-run repository has no audio/transcript artifacts and temp inputs are removed | Pending |
+| R4 | pinned `/v1/realtime` | generated boundary payload | request completes or lower accepted count/bytes are recorded before Stage 3 limits are frozen | Pending |
 
 #### Budget and Environment
 
@@ -434,12 +535,13 @@ Create a Unicode-aware word-span tokenizer/selector that returns source offsets 
 | R1 | NeMo-Speech.cpp `1118951…` + pinned Q8_0 model | API documents `speech_contexts`; PrivateType does not send it | exact local artifact proof | Pending |
 | R2 | boost numbers | no safe model-specific range documented | three distinct positive values; Strong control false-insertion <= 1/20 | Pending |
 | R3 | evaluation data | repo forbids private audio/transcripts in artifacts | temporary local data only; aggregate counts only | Pending |
+| R4 | phrase-context payload | no model-specific limit established | prove 200 phrases/16 KiB or revise every downstream validator/budget consistently | Pending |
 
 **Tests/proof:** probe unit tests, successful engine completion for baseline and biased requests, aggregate A/B matrix, `git status --short`, and explicit temp cleanup verification.
 
-**Stop conditions:** runtime rejects or ignores valid contexts; no candidate improves target recognition; influence levels cannot be ordered; Strong exceeds the control false-insertion threshold; model/runtime pins differ; private data would need to be committed.
+**Stop conditions:** runtime rejects or ignores valid contexts; no candidate improves target recognition; influence levels cannot be ordered; Strong exceeds the control false-insertion threshold; no safe bounded phrase payload can be established; model/runtime pins differ; private data would need to be committed.
 
-**Implementation prompt:** Implement Stage 1 only. Create the failing probe tests first, use the exact pinned local artifacts, run the privacy-bounded A/B matrix, record only aggregate final facts and calibrated mappings in this plan, clean temporary inputs, and stop on any stop condition.
+**Implementation prompt:** Implement Stage 1 only. Create the failing probe tests first, use the exact pinned local artifacts, run the privacy-bounded A/B and generated payload-boundary matrices, record only aggregate final facts, proven limits, and calibrated mappings in this plan, clean temporary inputs, and stop on any stop condition.
 
 Stage 1 acceptance:
 
@@ -447,6 +549,7 @@ Stage 1 acceptance:
 - [ ] Aggregate evidence shows useful target-term improvement over baseline.
 - [ ] Low/Normal/Strong map to three recorded, distinct, positive values satisfying the control threshold.
 - [ ] English and Polish-with-English-terms paths are both exercised.
+- [ ] The 200-phrase/16-KiB context budget is proven or every downstream planned limit is revised to the lower proven boundary.
 - [ ] No audio, transcript, phrase list, or sensitive path is committed or logged.
 - [ ] The repository remains working and the probe is excluded from portable release output.
 
@@ -545,7 +648,7 @@ Stage 2 acceptance:
 4. Add failing recognizer session JSON tests for empty, explicit-locale, Auto, and all three influence groups.
 5. Implement vocabulary domain owners and session composition before UI.
 6. Extend recognizer request/serialization using the calibrated mapping and `speech_contexts` only.
-7. Build the Settings navigation and Vocabulary page from the mock as a focused control/view model; keep persistence and composition outside code-behind.
+7. Build the Settings navigation and Stage 3 Personal Vocabulary page from the mock as a focused control/view model, excluding the Stage 4 pack/import/export controls; keep persistence and composition outside code-behind.
 8. Open Settings on Vocabulary when requested from the bubble's generic `Vocabulary…` action; do not add Teach yet.
 9. Extend LayoutProbe for every Stage 3 mock state and run `$verify-ui-quality` before handoff.
 
@@ -611,15 +714,107 @@ Stage 3 acceptance:
 - [ ] `Vocabulary…` opens the approved Settings page.
 - [ ] Every Stage 3 mock state passes LayoutProbe and UI-quality verification.
 
-## Stage 4: Ephemeral quick teaching from the bubble
+## Stage 4: Simple offline vocabulary-pack sharing
+
+**Goal:** Let users install, manage, and export named local vocabulary collections through a deliberately small weighted-entry JSON format, with no network, identity, versioning, or hidden metadata.
+
+**Dependencies:** Stage 3 personal vocabulary validation, composition, settings persistence, and UI shell complete.
+
+**Allowed files/modules:** pack entry/installed-pack domain types; bounded JSON codec and atomic exporter; vocabulary composition/validation extensions; version-2 settings DTO/store; Vocabulary page controls/view models and local file dialogs; repository `vocabulary-packs/` directory, validator, and targeted CI workflow; Core/App tests; LayoutProbe; mock and README pack documentation.
+
+**Do not change:** recognition model/runtime pins, calibrated influence mapping, transcript retention, bubble Teach action, target injection, cloud/network behavior, settings schema version, UI localization, or automatic update/synchronization behavior.
+
+**Required sequence:**
+
+1. Add failing codec tests for the exact array schema, optional/default weights, UTF-8 with/without BOM, normalization, unknown fields, duplicates, malformed/oversized input, and content-free errors.
+2. Add failing settings round-trip/atomic-failure tests for pack name, scope, enabled state, entries, editing, renaming, and removal.
+3. Add failing import orchestration tests proving preview-before-confirmation, explicit scope, unique-name collision handling, cancel/no-mutation, and source-file independence.
+4. Extend failing composer tests for disabled packs, locale applicability, personal-over-pack precedence, strongest-pack duplicate resolution, deterministic output, and the combined budget.
+5. Add failing export tests for selected personal entries from one visible scope, complete installed-pack export, optional-weight canonical JSON, preview/cancel, and atomic destination failure.
+6. Implement the shared pack codec/validator first, then installed persistence/composition, then import/export orchestration. Keep file dialogs and code-behind free of domain rules.
+7. Add `vocabulary-packs/` contributor guidance and a validator that reuses the production codec; run it from targeted CI whenever pack files, the codec, or validator change, and explicitly exclude the directory from release output.
+8. Implement the Personal/Installed packs UI, import preview, export selection/preview, empty/error/collision states, and destructive removal confirmation from the approved mock.
+9. Extend LayoutProbe for every Stage 4 mock state and run `$verify-ui-quality` before handoff.
+10. Update README with the exact simple schema, manual workflow, offline guarantee, scope-at-import rule, and repository-download-only policy.
+
+**Risk Manifest:** Required — untrusted local files, persistent private data, destructive removal, cross-source precedence, and file writes cross boundaries.
+
+### Risk Manifest
+
+#### Risks and Owners
+
+| ID | Risk | Canonical owner | Consumers |
+|---|---|---|---|
+| R1 | Malformed, hostile, or oversized JSON causes unbounded reads, ambiguous interpretation, path misuse, or sensitive errors. | bounded pack codec/validator | import UI and repository validator |
+| R2 | Import/edit/remove partially mutates installed state or mistakes a same-name file for an update. | pack transaction orchestrator + atomic settings store | Vocabulary view model and composer |
+| R3 | Pack scope, enabled state, duplicate precedence, or aggregate limits send the wrong phrases or exceed provider budgets. | pure `VocabularyComposer` + vocabulary validator | session factory and recognizer |
+| R4 | Export writes unreviewed/private settings, corrupts an existing destination, or leaks scope/metadata beyond the simple schema. | selection model + atomic pack exporter | personal and installed-pack views |
+| R5 | Pack UI obscures source/scope/enabled state, makes destructive removal accidental, or becomes inaccessible at scale. | pack view models/controls + approved mock | Settings shell and LayoutProbe |
+
+#### States and Variants
+
+| ID | States or variants | Required paths | Failure edges |
+|---|---|---|---|
+| R1 | valid; missing/default weight; malformed; unknown field; duplicate; non-UTF-8; byte/count/payload boundaries | picker -> bounded read -> parse -> normalize -> preview | partial parse, silent ignore, content in error, content-controlled path |
+| R2 | new unique name; name collision; cancel; confirm; edit; rename; disable; remove-confirm/cancel; save failure | preview -> transaction -> atomic save -> refresh | inferred update, partial memory mutation, source deletion, lost pack |
+| R3 | Shared/matching/nonmatching; Auto; disabled; personal collision; pack collision; limit boundary | settings -> validate -> compose -> request | disabled contribution, weaker/wrong owner wins, silent truncation |
+| R4 | no selection; selected visible-scope entries; installed pack; preview cancel/confirm; new/existing destination; write failure | select -> serialize -> preview -> atomic write | whole-settings export, hidden entries, partial overwrite, metadata leakage |
+| R5 | empty/list/expanded editor; import valid/error/collision; export selection/preview; removal confirmation; max-scroll | mouse, keyboard, automation, DPI/text scale | unclear enabled state, clipped content, irreversible single action |
+
+#### Persistence
+
+| ID | Invariant | Enforcement | Transaction boundary | Concurrency |
+|---|---|---|---|---|
+| R2 | one complete validated settings replacement; imported pack has no source-file linkage; removal affects installed state only | immutable candidate + injected store failures | existing temp-file replacement | hotkeys suspended while modal Settings saves |
+| R4 | export contains only reviewed phrase/weight entries; existing destination remains intact on failure | pure serializer + temporary sibling file + replace/create | one chosen destination | one modal export operation on UI dispatcher |
+
+#### Proof
+
+| ID | Public seam | Planned red test | Expected observation | Final evidence |
+|---|---|---|---|---|
+| R1 | `VocabularyPackCodec.Parse` | schema/encoding/size/adversarial boundary matrix | exact accept/reject behavior, bounded read, errors contain no phrases | Pending |
+| R2 | import/edit/remove transaction | cancel and injected save-failure matrix | settings/memory unchanged until successful atomic commit; source untouched | Pending |
+| R3 | `Compose(personal, packs, locale)` | applicability/precedence/budget matrix | personal wins, strongest enabled pack otherwise, exact deterministic groups | Pending |
+| R4 | selection + `ExportAsync` | selected-scope, preview, cancel, replace-failure tests | canonical simple array only; destination atomic; app state unchanged | Pending |
+| R5 | Settings + LayoutProbe | every approved pack state | complete keyboard-accessible flow and confirmed removal; PASS UI gate | Pending |
+
+#### Budget and Environment
+
+| ID | File, module, provider, or tool | Current fact | Planned limit or required proof | Final fact |
+|---|---|---|---|---|
+| R1 | local share file | no import boundary today | regular UTF-8 file up to 64 KiB; top-level array; 200 entries; 120 chars/phrase; 16 KiB phrase payload | Pending |
+| R3 | recognizer contexts | Stage 3 owns calibrated payload | combined personal + installed packs remain inside the proven 200-entry/16-KiB budget; no truncation | Pending |
+| R4 | filesystem export | existing app does not export vocabulary | explicit destination; temporary sibling + atomic completion; no source/settings mutation | Pending |
+| R5 | Vocabulary Settings control | Stage 3 has personal editor only | focused Personal/Installed packs views; bounded scroll; all mock states in LayoutProbe | Pending |
+
+**Tests/proof:** Core codec/settings/composer/export tests, App import/export/transaction/UI tests, repository validator over `vocabulary-packs/`, LayoutProbe, affected Core/App projects, `$verify-ui-quality`, release-content assertion, `git diff --check`, and path/link validation.
+
+**Stop conditions:** the runtime/provider cannot safely accept the combined planned budget; parser cannot enforce a bounded deterministic schema; an import/export error reveals content; file replacement is not atomic on the supported target; removal can touch the source file; UI needs automatic download/update or hidden metadata to function.
+
+**Implementation prompt:** Implement Stage 4 only. Begin with failing codec, transaction, precedence, and export proofs; add the minimal weighted-entry array format and local pack management; reuse one validator in app and repository CI; prove preview/atomic/privacy/release-exclusion behavior; run UI-quality verification; stop on any stop condition.
+
+Stage 4 acceptance:
+
+- [ ] A user can manually import a validated `.privatetype-vocabulary.json` array after reviewing every phrase/effective weight and choosing one scope, unique local name, and enabled state.
+- [ ] Missing `weight` imports as Normal; only Low/Normal/Strong are accepted; no numeric boost is exposed.
+- [ ] Installed packs can be enabled, disabled, renamed, edited locally, exported, and removed with confirmation.
+- [ ] There is no network access, discovery, synchronization, ID, version, provenance, attribution, license, or automatic update behavior.
+- [ ] Personal entries override identical pack entries; otherwise the strongest applicable enabled-pack entry wins once.
+- [ ] Personal export includes only explicitly selected entries from the visible scope and both export paths show the exact final array before an atomic write.
+- [ ] Invalid/oversized imports and failed settings/export writes cause no truncation, partial mutation, sensitive error, or source-file change.
+- [ ] Repository example files use the production format, pass the shared validator, and are absent from application/release output.
+- [ ] Targeted CI invokes the shared validator for relevant pack/codec/validator changes.
+- [ ] Every Stage 4 mock state passes LayoutProbe and UI-quality verification.
+
+## Stage 5: Ephemeral quick teaching from the bubble
 
 **Goal:** Let the user teach a desired word or contiguous phrase from the immediately previous dictation without persistent transcript history or modification of already injected text.
 
-**Dependencies:** Stage 3 vocabulary upsert/persistence seam complete.
+**Dependencies:** Stage 4 complete; Stage 3 personal-vocabulary upsert/persistence seam remains the save destination.
 
 **Allowed files/modules:** finalized-result contract/session event; ephemeral buffer; Unicode word-span selection domain; `DictationApplication` orchestration; bubble menu and events; separate Teach window/view model; Core/App tests; LayoutProbe; README privacy text.
 
-**Do not change:** final text injection, target eligibility, clipboard, transcript rewriting, persistent history, diagnostics payload, automatic teach display, named profiles, or recognition engine behavior.
+**Do not change:** final text injection, target eligibility, clipboard, transcript rewriting, persistent history, diagnostics payload, automatic teach display, installed packs/import/export, or recognition engine behavior.
 
 **Required sequence:**
 
@@ -629,7 +824,7 @@ Stage 3 acceptance:
 4. Add failing bubble Teach enabled-state and modal hotkey suspension/restoration tests.
 5. Implement the finalized-result event and the single-value buffer; clear synchronously before new dictation begins.
 6. Implement bubble actions and the separate Teach dialog from the mock.
-7. Route save through the Stage 3 vocabulary upsert and atomic settings store. Update in-memory settings only after persistence succeeds.
+7. Route save through the Stage 3 personal-vocabulary upsert and atomic settings store. Quick teach never edits or targets an installed pack. Update in-memory settings only after persistence succeeds.
 8. Ensure Cancel/window-close consumes the transcript; save failure retains it for retry.
 9. Extend LayoutProbe for every Teach/bubble state and run `$verify-ui-quality`.
 10. Update README privacy/settings/use text without including sample transcripts.
@@ -684,9 +879,9 @@ Stage 3 acceptance:
 
 **Stop conditions:** transcript content reaches diagnostics/files except the desired term; next dictation can begin without clearing previous content; save failure loses retry state or diverges settings; contiguous selection cannot be made keyboard accessible; workflow requires editing the target application.
 
-**Implementation prompt:** Implement Stage 4 only. Start with failing privacy/lifecycle/selection tests, add the one-value buffer and finalized event, implement the on-demand bubble/Teach flow exactly as mocked, prove failure recovery and hotkey restoration, run UI-quality verification, and stop on any stop condition.
+**Implementation prompt:** Implement Stage 5 only. Start with failing privacy/lifecycle/selection tests, add the one-value buffer and finalized event, implement the on-demand bubble/Teach flow exactly as mocked, prove failure recovery and hotkey restoration, run UI-quality verification, and stop on any stop condition.
 
-Stage 4 acceptance:
+Stage 5 acceptance:
 
 - [ ] Teach is enabled only for one non-empty last result and appears only on demand.
 - [ ] The previous result is cleared before the next dictation starts and on every agreed terminal path.
@@ -695,13 +890,13 @@ Stage 4 acceptance:
 - [ ] Only the desired entry persists; heard text and transcript never enter settings or diagnostics.
 - [ ] Save failure supports retry without partial in-memory update.
 - [ ] Already injected text and clipboard remain untouched.
-- [ ] Every Stage 4 mock state passes LayoutProbe and UI-quality verification.
+- [ ] Every Stage 5 mock state passes LayoutProbe and UI-quality verification.
 
-## Stage 5: Full-system verification and user documentation
+## Stage 6: Full-system verification and user documentation
 
 **Goal:** Verify the complete affected surface, update user-first documentation, and prove the portable build remains private and functional.
 
-**Dependencies:** Stages 1–4 complete with reconciled evidence.
+**Dependencies:** Stages 1–5 complete with reconciled evidence.
 
 **Allowed files/modules:** tests/probes and documentation; production repairs must return to and satisfy the owning earlier stage's manifest rather than being hidden in this stage.
 
@@ -710,43 +905,46 @@ Stage 4 acceptance:
 **Required sequence:**
 
 1. Re-run affected Core and Windows test projects.
-2. Run the complete LayoutProbe and inspect every existing and new rendered state.
-3. Run `$verify-ui-quality` against the mock, existing design references, realistic non-sensitive content, keyboard access, supported DPI/text scales, and complete state transitions.
-4. Run the live local-model acceptance matrix with model loading limited to the relevant checks; record only aggregate non-sensitive evidence.
-5. Update README usage, language availability, vocabulary behavior, settings storage, troubleshooting, and exact ephemeral-transcript privacy statement.
-6. Build and verify the portable release using repository scripts, after inspecting them as required.
-7. Verify no audio/transcript artifacts, debug controls, sample vocabulary, stale enum references, or broken paths remain.
-8. Relaunch the exact built PrivateType executable before requesting user acceptance, following [AGENTS.md](AGENTS.md).
+2. Run the repository pack validator over every curated share file and verify deterministic output.
+3. Run the complete LayoutProbe and inspect every existing and new rendered state.
+4. Run `$verify-ui-quality` against the mock, existing design references, realistic non-sensitive content, keyboard access, supported DPI/text scales, and complete state transitions.
+5. Run the live local-model acceptance matrix with model loading limited to the relevant checks; record only aggregate non-sensitive evidence.
+6. Update README usage, language availability, vocabulary behavior, manual pack workflow, settings storage, troubleshooting, and exact ephemeral-transcript privacy statement.
+7. Build and verify the portable release using repository scripts, after inspecting them as required; assert `vocabulary-packs/` is absent from the output.
+8. Verify no audio/transcript artifacts, debug controls, unintended sample vocabulary in production/output, stale enum references, or broken paths remain.
+9. Relaunch the exact built PrivateType executable before requesting user acceptance, following [AGENTS.md](AGENTS.md).
 
 **Risk Manifest:** Not required — this stage adds no new production behavior; defects must be repaired and re-proved under the earlier stage that owns the risk.
 
-**Tests/proof:** all affected `dotnet test` projects, `PrivateType.App.LayoutProbe`, UI-quality PASS, `git diff --check`, path/link validation, portable build/test scripts, exact-process relaunch, manual end-to-end acceptance.
+**Tests/proof:** all affected `dotnet test` projects, repository pack validator, `PrivateType.App.LayoutProbe`, UI-quality PASS, `git diff --check`, path/link validation, portable build/test scripts and pack-exclusion assertion, exact-process relaunch, manual end-to-end acceptance.
 
 **Stop conditions:** any prior risk evidence is Pending; UI gate is FAIL/BLOCKED; portable verification fails; README contradicts runtime behavior; sensitive artifacts exist; the exact built app cannot be relaunched.
 
-**Implementation prompt:** Implement Stage 5 only. Reconcile all prior evidence, run full code/UI/live/portable verification, update user-first documentation, route defects back to their owning stage, relaunch the exact verified build, and stop on any stop condition.
+**Implementation prompt:** Implement Stage 6 only. Reconcile all prior evidence, run full code/UI/live/portable verification, update user-first documentation, route defects back to their owning stage, relaunch the exact verified build, and stop on any stop condition.
 
-Stage 5 acceptance:
+Stage 6 acceptance:
 
 - [ ] All affected Core and App tests pass.
 - [ ] LayoutProbe covers and passes all existing and new states.
 - [ ] `$verify-ui-quality` reports PASS with evidence.
 - [ ] Live aggregate acceptance confirms calibrated vocabulary for explicit English, explicit Polish with English technical terms, and Automatic Shared-only behavior.
-- [ ] README accurately explains 32 locales, defaults, vocabulary persistence, and ephemeral quick teaching.
-- [ ] Portable release verification passes and contains no test probe/private artifacts.
-- [ ] No obsolete enum/hard-coded language path, sample vocabulary, debug UI, stale link, or private evidence remains.
+- [ ] README accurately explains 32 locales, defaults, vocabulary persistence, simple manual pack sharing, and ephemeral quick teaching.
+- [ ] Every curated repository share file passes the production validator.
+- [ ] Portable release verification passes and contains no curated packs, test probe, or private artifacts.
+- [ ] No obsolete enum/hard-coded language path, unintended production sample vocabulary, debug UI, stale link, or private evidence remains.
 - [ ] The verified executable is relaunched before user testing.
 
 ## Test strategy
 
 | Layer | Primary risks covered | Required examples |
 |---|---|---|
-| Pure Core unit tests | catalog identity, migration, vocabulary validation/composition, buffer lifetime, word ranges | exact locale sets; schema-1 mapping; Shared/base/Auto matrix; Unicode/case; lifecycle terminal paths |
-| App boundary tests | hotkey/request mapping, JSON session payload, modal save/hotkey behavior, menu enabled state | empty and three-group contexts; invalid locale; store failure; Teach unavailable/available |
-| LayoutProbe | visual hierarchy, bounded layout, complete states, automation hooks | every state enumerated in the mock at supported DPI/text scales |
+| Pure Core unit tests | catalog identity, migration, vocabulary/pack validation and composition, pack codec/export, buffer lifetime, word ranges | exact locale sets; schema-1 mapping; Shared/base/Auto matrix; pack schema/precedence; Unicode/case; lifecycle terminal paths |
+| App boundary tests | hotkey/request mapping, JSON session payload, modal save/hotkey behavior, import/export transactions, menu enabled state | empty and three-group contexts; invalid locale; pack preview/cancel/failure; Teach unavailable/available |
+| LayoutProbe | visual hierarchy, bounded layout, complete states, automation hooks | every personal/pack/teach state enumerated in the mock at supported DPI/text scales |
 | Engine probe | pinned provider capability and calibration | baseline/Low/Normal/Strong target and unrelated controls for English and Polish code-switching |
-| Manual app acceptance | complete hold/release/inject/settings/teach flow | explicit locale, Auto, vocabulary save, next-dictation clear, no target rewrite |
-| Portable verification | packaging and privacy footprint | no probe/audio/transcript fixture; app starts from relocated release; model remains separate |
+| Repository pack validation | share-file contract and release exclusion | every curated JSON file parses canonically; pack directory absent from app output |
+| Manual app acceptance | complete hold/release/inject/settings/import/export/teach flow | explicit locale, Auto, vocabulary save, local pack round-trip, next-dictation clear, no target rewrite |
+| Portable verification | packaging and privacy footprint | no curated pack/probe/audio/transcript fixture; app starts from relocated release; model remains separate |
 
 No test or evidence artifact may contain captured microphone audio or real dictated text. Synthetic strings used solely to exercise tokenization must be clearly non-sensitive and invented for the test.
 
@@ -757,7 +955,10 @@ No test or evidence artifact may contain captured microphone audio or real dicta
 | Select exact locale | locale catalog + Settings shortcut editor | catalog tests + selector LayoutProbe |
 | Load old settings | versioned settings migrator | schema-1 preservation tests |
 | Persist vocabulary | validator + atomic settings store | round-trip, boundary, and injected-failure tests |
+| Import a pack | bounded pack codec + import transaction | schema/size/preview/cancel/name-collision tests |
+| Manage installed packs | settings store + pack view model | enable/edit/rename/remove atomicity tests + LayoutProbe |
 | Choose applicable terms | `VocabularyComposer` | explicit/base/Auto/duplicate matrix |
+| Export selected terms | selection model + pack exporter | exact reviewed array + destination-failure tests |
 | Map influence | one calibrated mapping owner | Stage 1 aggregate matrix + serializer tests |
 | Start ASR | recognition request + `RealtimeRecognizer` | semantic JSON tests + pinned engine probe |
 | Finalize/inject | existing `DictationSession` path plus result event | existing injection tests + new event tests |
@@ -785,8 +986,9 @@ Do not leave compatibility aliases or dead enum adapters after schema migration 
 
 ## Explicit non-goals
 
-- Named or built-in domain profiles such as Software, Medical, or Legal.
-- Import/export/synchronization of vocabulary.
+- Built-in or automatically enabled domain packs such as Software, Medical, or Legal.
+- Network pack discovery/download, synchronization, automatic updates, repository browsing inside the app, or release-bundled packs.
+- Pack IDs, versions, provenance/fork tracking, attribution/license fields, per-entry scope, or raw numeric weights in the share format.
 - Persistent transcript history or more than one in-memory last result.
 - Saving misrecognized text or correction pairs.
 - Rewriting prior injected text, controlling another app's caret, or using the clipboard.
@@ -803,8 +1005,9 @@ Do not leave compatibility aliases or dead enum adapters after schema migration 
 1. Stage 1 must prove capability and produce calibrated values.
 2. Stage 2 introduces stable locale identity and migration independently of vocabulary.
 3. Stage 3 adds persistent vocabulary and decoder biasing using Stage 1/2 contracts.
-4. Stage 4 adds the privacy-sensitive quick-teach workflow on top of the proven vocabulary save seam.
-5. Stage 5 performs full-system documentation, release verification, relaunch, and user acceptance.
+4. Stage 4 adds simple offline pack import/export and installed-pack composition on top of Stage 3.
+5. Stage 5 adds the privacy-sensitive quick-teach workflow, saving only into personal vocabulary.
+6. Stage 6 performs full-system documentation, release verification, relaunch, and user acceptance.
 
 Do not parallelize production stages: each later stage consumes contracts and evidence from the previous stage. Within a stage, independent test, catalog, or layout work may run in parallel only after its canonical owners are fixed.
 
@@ -818,6 +1021,8 @@ The feature is done only when:
 - Automatic plus exactly 32 explicit locales are usable through shortcuts;
 - old valid settings migrate without loss;
 - vocabulary composition and calibrated phrase biasing work end to end;
+- simple weighted-entry packs import/export only through explicit local actions, remain separately manageable, obey precedence/scope rules, and never add network/update behavior;
+- curated repository packs pass the production validator and are not bundled into application releases;
 - quick teach retains at most one transcript for the agreed lifetime and persists only the desired entry;
 - no transcript rewriting, persistent history, private diagnostics, or cloud behavior exists;
 - all affected code, UI, live engine, path, and portable-release gates pass;

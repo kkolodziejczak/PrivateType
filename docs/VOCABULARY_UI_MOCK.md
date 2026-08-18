@@ -7,7 +7,7 @@ This is the interaction template for the PrivateType vocabulary and expanded-lan
 - **Authoritative:** navigation, field meanings, available actions, selection behavior, privacy text, enabled/disabled states, and keyboard/accessibility expectations.
 - **Directional:** exact pixel sizes, wrapping, and spacing. The implementation must reuse PrivateType's existing colors, typography, rounded surfaces, and frameless-window treatment, then pass the repository layout probe and UI-quality verification.
 - **Sample data only:** `MVVM`, `PrivateType`, `PostgreSQL`, and the example transcript. Do not ship these as built-in vocabulary and do not use real dictated text in fixtures, screenshots, documentation, or diagnostics.
-- **Implementation boundary:** this mock does not authorize transcript history, correction-pair replacement, automatic rewriting of injected text, named profiles, import/export, or UI localization.
+- **Implementation boundary:** this mock authorizes only explicit local import/export of the simple weighted-entry pack format described below. It does not authorize transcript history, correction-pair replacement, automatic rewriting of injected text, network discovery/download, synchronization/updates, bundled packs, or UI localization.
 
 The existing visual references remain [settings.png](images/settings.png) and [recording-bubble.png](images/recording-bubble.png).
 
@@ -63,33 +63,37 @@ Selector rules:
 - Type-ahead search matches display name and locale code (`Spanish`, `es-ES`).
 - The saved value is the stable locale code, never the display label or list index.
 
-## Vocabulary page
+## Vocabulary page — Personal
 
 <!--
 Sample rows below communicate density and row behavior only. They are not a built-in software profile.
 The real view binds to the user's locally stored vocabulary.
 -->
 
+The drawing shows the final Stage 4 surface. Stage 3 first ships the personal phrase/scope/influence editor without the Personal/Installed packs navigation, Import action, export checkboxes, or Export action. Stage 4 adds those controls without changing Stage 3 editing semantics.
+
 ```text
 ┌────────────────────────────────────────────────────────────────────────┐
 │ Vocabulary                                                             │
 │ Help the local model recognize names, acronyms, and specialist terms.  │
 │                                                                        │
+│ [ Personal ]  [ Installed packs ]              [ Import pack… ]       │
+│                                                                        │
 │ Vocabulary scope                                                       │
 │ [ Shared across languages                                         ▾ ]  │
 │ Used with every recognition language.                                  │
 │                                                                        │
-│ Phrase                                      Influence                   │
-│ ┌──────────────────────────────────────┐   ┌───────────────────────┐   │
-│ │ MVVM                                 │   │ Normal              ▾ │ — │
-│ └──────────────────────────────────────┘   └───────────────────────┘   │
-│ ┌──────────────────────────────────────┐   ┌───────────────────────┐   │
-│ │ PrivateType                          │   │ Strong              ▾ │ — │
-│ └──────────────────────────────────────┘   └───────────────────────┘   │
+│   Phrase                                    Influence                   │
+│ ┌─┬────────────────────────────────────┐   ┌───────────────────────┐   │
+│ │☐│ MVVM                               │   │ Normal              ▾ │ — │
+│ └─┴────────────────────────────────────┘   └───────────────────────┘   │
+│ ┌─┬────────────────────────────────────┐   ┌───────────────────────┐   │
+│ │☑│ PrivateType                        │   │ Strong              ▾ │ — │
+│ └─┴────────────────────────────────────┘   └───────────────────────┘   │
 │                                                                        │
-│ + Add phrase                                                           │
+│ + Add phrase                                [ Export selected… ]       │
 │                                                                        │
-│ Terms remain on this computer in settings.json.                        │
+│ Terms remain local unless you explicitly export selected entries.      │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -103,6 +107,8 @@ Vocabulary-scope behavior:
 - Influence is selected per entry as `Low`, `Normal`, or `Strong`; new rows default to `Normal`.
 - Saving an exact existing phrase in the same scope updates its influence instead of creating a duplicate.
 - The editor never asks for or persists the incorrectly recognized wording.
+- Selection checkboxes affect export only; they do not enable/disable recognition entries.
+- `Export selected…` is disabled until at least one row in the visible scope is selected. Changing scope clears the selection so hidden entries cannot be exported accidentally.
 
 Empty state:
 
@@ -122,6 +128,101 @@ Validation behavior:
 - Blank phrases, line breaks/control characters, over-limit values, and exact duplicates in one scope cannot be saved.
 - Hitting a vocabulary count or payload budget explains the limit without truncating or silently discarding entries.
 - Removing a row is reversible until `Save changes` is pressed.
+
+## Vocabulary page — Installed packs
+
+```text
+┌────────────────────────────────────────────────────────────────────────┐
+│ Vocabulary                                                             │
+│ Help the local model recognize names, acronyms, and specialist terms.  │
+│                                                                        │
+│ [ Personal ]  [ Installed packs ]              [ Import pack… ]       │
+│                                                                        │
+│ ┌────────────────────────────────────────────────────────────────────┐ │
+│ │ ☑ Software development                                             │ │
+│ │   English · 24 entries                                             │ │
+│ │                             [Edit] [Export…] [Remove…]              │ │
+│ └────────────────────────────────────────────────────────────────────┘ │
+│ ┌────────────────────────────────────────────────────────────────────┐ │
+│ │ ☐ Product names                                                    │ │
+│ │   Shared across languages · 8 entries                              │ │
+│ │                             [Edit] [Export…] [Remove…]              │ │
+│ └────────────────────────────────────────────────────────────────────┘ │
+│                                                                        │
+│ Enabled packs can influence future recognition.                        │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+Installed-pack behavior:
+
+- The leading checkbox enables or disables the complete pack. Disabled packs remain editable and exportable but never contribute recognition contexts.
+- Each pack has one editable local name and one Shared/base-language scope applying to all its entries.
+- `Edit` opens the same phrase/influence row editor used for personal vocabulary, plus editable Name and Scope fields. Saving changes the installed local collection directly; there is no upstream link, version, update, or fork.
+- Installed names are ordinally unique. Rename validation remains inline and never exposes phrase contents in an error.
+- `Remove…` requires confirmation naming the pack and removes only the installed collection after Settings is successfully saved. It never deletes or modifies the file originally imported.
+- Empty state explains that packs are manually downloaded or received, then imported from a local file. It contains no online gallery or download action.
+
+## Import pack preview
+
+```text
+┌────────────────────────────────────────────────────────────────────────┐
+│ Import vocabulary pack                                             ×  │
+├────────────────────────────────────────────────────────────────────────┤
+│ File: software-development.privatetype-vocabulary.json                 │
+│                                                                        │
+│ Local pack name                                                        │
+│ [ Software development                                               ] │
+│ Scope                            Enabled after import                    │
+│ [ English                    ▾ ] [✓]                                   │
+│                                                                        │
+│ 24 valid entries · omitted weights use Normal                          │
+│ ┌────────────────────────────────────────────────────────────────────┐ │
+│ │ MVVM                                                     Strong    │ │
+│ │ dependency injection                                     Normal    │ │
+│ │ array                                                    Low       │ │
+│ │ …                                                                  │ │
+│ └────────────────────────────────────────────────────────────────────┘ │
+│                                                                        │
+│ This copies the reviewed entries locally. It does not link or update.  │
+│                                                [Cancel] [Import pack]  │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+Import behavior:
+
+- The file picker accepts `.privatetype-vocabulary.json`; choosing a file performs a bounded read and validation before this preview opens.
+- The preview lists every normalized phrase and effective Low/Normal/Strong weight. It never silently skips, repairs, or truncates entries.
+- The filename supplies the proposed editable local name. If that name is installed already, suggest a unique suffix such as `Software development (2)` and keep confirmation disabled until the name is valid.
+- Scope must be explicitly selected; no scope exists inside the file. Enabled defaults on but remains user-selectable.
+- Cancel and window close make no settings changes. `Import pack` commits one complete candidate through the normal atomic Settings save.
+- Invalid JSON, encoding, fields, weights, duplicates, or limits show a content-free error with no partial preview or installation.
+
+## Export selection and preview
+
+Personal export begins with the checked rows from the currently visible scope. Installed-pack export includes the complete selected pack. Both routes then show the exact outgoing array before opening the destination picker:
+
+```text
+┌────────────────────────────────────────────────────────────────────────┐
+│ Export vocabulary pack                                             ×  │
+├────────────────────────────────────────────────────────────────────────┤
+│ 2 entries will be written. Scope and pack settings are not included.   │
+│                                                                        │
+│ ┌────────────────────────────────────────────────────────────────────┐ │
+│ │ [                                                                ]│ │
+│ │ Exact formatted JSON array appears in this read-only preview.      │ │
+│ │ [                                                                ]│ │
+│ └────────────────────────────────────────────────────────────────────┘ │
+│                                                                        │
+│                                       [Cancel] [Choose destination…]   │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+Export behavior:
+
+- The preview contains only `phrase` and symbolic `weight`; no scope, enabled state, name, settings, transcript, IDs, versions, provenance, attribution, or license metadata.
+- `weight` may be omitted only when its effective value is Normal; Low and Strong are always explicit. Serialization is deterministic.
+- Cancel/window close writes nothing. Destination failure leaves an existing file intact and keeps the preview available for retry.
+- The default filename ends with `.privatetype-vocabulary.json`; the user controls the destination and may rename it.
 
 ## Bubble menu
 
@@ -183,6 +284,7 @@ Selection contract:
 8. Influence defaults to Normal and remains user-selectable.
 9. `Save term` is disabled until a range and valid desired term exist.
 10. Saving affects future dictations only. It does not copy text to the clipboard or modify text already injected into another application.
+11. Saving always adds or updates personal vocabulary in the chosen scope; quick teach never edits an installed pack.
 
 Privacy and failure behavior:
 
@@ -194,18 +296,37 @@ Privacy and failure behavior:
 
 ## Required rendered states
 
-The implementation must extend `tests/PrivateType.App.LayoutProbe` and visually inspect all affected states:
+The implementation must extend `tests/PrivateType.App.LayoutProbe` and visually inspect all affected states by their owning plan stage:
+
+Stage 2:
 
 1. General Settings with the 32-locale selector closed and open.
-2. Vocabulary page: empty Shared scope.
-3. Vocabulary page: populated Shared scope.
-4. Vocabulary page: populated base-language scope with long Unicode phrases.
-5. Vocabulary page: inline validation and maximum-content scrolling.
-6. Bubble menu with Teach disabled.
-7. Bubble menu with Teach enabled.
-8. Teach dialog with no selection.
-9. Teach dialog with one selected word.
-10. Teach dialog with a selected multi-word range and edited desired phrase.
-11. Teach dialog persistence-error state with no sensitive text in the error.
+
+Stage 3:
+
+1. Personal vocabulary: empty Shared scope.
+2. Personal vocabulary: populated base-language scope with long Unicode phrases.
+3. Personal vocabulary: inline validation and maximum-content scrolling.
+
+Stage 4:
+
+1. Final Personal view: populated scope with no export selection.
+2. Final Personal view: selected long Unicode phrases with Export enabled.
+3. Installed packs: empty state.
+4. Installed packs: mixed enabled/disabled cards and maximum-content scrolling.
+5. Installed pack editor: renamed/scoped content and inline validation.
+6. Import preview: valid file with omitted/default and explicit weights.
+7. Import preview: name collision and content-free validation-error states.
+8. Export preview: selected personal entries and complete installed-pack variants.
+9. Pack removal confirmation and injected persistence-error state.
+
+Stage 5:
+
+1. Bubble menu with Teach disabled.
+2. Bubble menu with Teach enabled.
+3. Teach dialog with no selection.
+4. Teach dialog with one selected word.
+5. Teach dialog with a selected multi-word range and edited desired phrase.
+6. Teach dialog persistence-error state with no sensitive text in the error.
 
 Every state must be checked at the repository-supported DPI/text scales and with keyboard-only navigation, visible focus, readable contrast, no clipped controls, and no debug/sample data left in production.
