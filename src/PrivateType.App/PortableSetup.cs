@@ -40,17 +40,24 @@ internal static class PortablePaths
 
     internal static void EnsureWritable(string baseDirectory)
     {
-        var dataDirectory = DataDirectoryFor(baseDirectory);
-        Directory.CreateDirectory(dataDirectory);
-        var probe = Path.Combine(dataDirectory, $".write-probe-{Guid.NewGuid():N}");
         try
         {
-            File.WriteAllText(probe, string.Empty);
+            var dataDirectory = DataDirectoryFor(baseDirectory);
+            Directory.CreateDirectory(dataDirectory);
+            var probe = Path.Combine(dataDirectory, $".write-probe-{Guid.NewGuid():N}");
+            try
+            {
+                File.WriteAllText(probe, string.Empty);
+            }
+            finally
+            {
+                if (File.Exists(probe))
+                    File.Delete(probe);
+            }
         }
-        finally
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
-            if (File.Exists(probe))
-                File.Delete(probe);
+            throw new IOException("PrivateType needs a writable portable folder.", exception);
         }
     }
 

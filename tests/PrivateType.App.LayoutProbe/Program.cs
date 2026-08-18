@@ -23,6 +23,8 @@ thread.Join();
 
 static void RenderWindows()
 {
+    WindowsTaskbarIdentity.Apply();
+
     var inputSize = Marshal.SizeOf<NativeMethods.Input>();
     if (inputSize != 40)
         throw new InvalidOperationException($"Win32 x64 INPUT must be 40 bytes; actual size was {inputSize}.");

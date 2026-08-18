@@ -7,6 +7,31 @@ namespace PrivateType.App.Tests;
 
 public sealed class WindowsBoundaryTests
 {
+    [Fact]
+    public void Uses_a_stable_explicit_identity_for_every_portable_version()
+    {
+        Assert.Equal("PrivateType.PrivateType", WindowsTaskbarIdentity.AppUserModelId);
+
+        string? appliedIdentity = null;
+        WindowsTaskbarIdentity.Apply(identity =>
+        {
+            appliedIdentity = identity;
+            return 0;
+        });
+
+        Assert.Equal(WindowsTaskbarIdentity.AppUserModelId, appliedIdentity);
+    }
+
+    [Fact]
+    public void Reports_a_shortcut_conflict_without_unrelated_storage_guidance()
+    {
+        var message = HoldHotkeyHook.NoAvailableShortcutMessage;
+
+        Assert.Contains("another PrivateType copy", message, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("writable", message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(message, DictationApplication.StartupFailureMessage(message));
+    }
+
     [Theory]
     [InlineData(0x3000u, 0x2000u, true)]
     [InlineData(0x2000u, 0x2000u, false)]

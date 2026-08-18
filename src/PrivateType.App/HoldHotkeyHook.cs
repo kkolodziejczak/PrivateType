@@ -7,6 +7,8 @@ namespace PrivateType.App;
 
 internal sealed class HoldHotkeyHook : IDisposable
 {
+    internal const string NoAvailableShortcutMessage = "No dictation shortcut is available. Close another PrivateType copy that may be using the configured shortcuts, then try again.";
+
     private const int WhKeyboardLl = 13;
     private const int VkControl = 0x11;
     private const int VkShift = 0x10;
@@ -28,7 +30,7 @@ internal sealed class HoldHotkeyHook : IDisposable
         {
             reservation.Dispose();
             reservation = null;
-            throw new Win32Exception("Nie można zarezerwować żadnego skrótu dyktowania.");
+            throw new Win32Exception(NoAvailableShortcutMessage);
         }
         configuredHotkeys = hotkeys;
 

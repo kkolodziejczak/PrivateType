@@ -91,6 +91,18 @@ public sealed class ModelStoragePolicyTests : IDisposable
     }
 
     [Fact]
+    public void Explains_writable_portable_storage_only_when_the_data_directory_is_unusable()
+    {
+        var appBase = Path.Combine(root, "release", "app");
+        Directory.CreateDirectory(appBase);
+        File.WriteAllText(Path.Combine(appBase, "data"), "not a directory");
+
+        var exception = Assert.Throws<IOException>(() => PortablePaths.EnsureWritable(appBase));
+
+        Assert.Equal("PrivateType needs a writable portable folder.", exception.Message);
+    }
+
+    [Fact]
     public void Explains_shared_default_and_portable_local_override_in_setup_copy()
     {
         Assert.Contains("shared", ModelSetupWindow.StorageNotice(ModelStorageMode.Shared), StringComparison.OrdinalIgnoreCase);

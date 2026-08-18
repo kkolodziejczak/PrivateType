@@ -368,12 +368,14 @@ internal sealed class DictationApplication : IDisposable
     {
         statusItem.Text = "Setup error";
         Wpf.MessageBox.Show(
-            $"{message}\n\nPrivateType needs a writable portable folder.",
+            StartupFailureMessage(message),
             "PrivateType setup error",
             Wpf.MessageBoxButton.OK,
             Wpf.MessageBoxImage.Error);
         Wpf.Application.Current.Shutdown();
     }
+
+    internal static string StartupFailureMessage(string message) => message;
 
     private DictationSession CreateSession(RecognitionLanguage language)
     {

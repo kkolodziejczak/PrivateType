@@ -8,6 +8,7 @@ public partial class App : System.Windows.Application
 
     protected override void OnStartup(StartupEventArgs e)
     {
+        WindowsTaskbarIdentity.Apply();
         base.OnStartup(e);
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
         application = new DictationApplication();
