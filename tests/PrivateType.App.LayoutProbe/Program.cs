@@ -10,6 +10,12 @@ using PrivateType.App;
 using PrivateType.Core;
 using Forms = System.Windows.Forms;
 
+if (args.Length >= 3 && string.Equals(args[0], "--cache-worker", StringComparison.OrdinalIgnoreCase))
+{
+    RunCacheWorker(args[1], args[2], args.Length >= 4 && string.Equals(args[3], "--offline", StringComparison.OrdinalIgnoreCase));
+    return;
+}
+
 var thread = new Thread(RenderWindows) { IsBackground = false };
 thread.SetApartmentState(ApartmentState.STA);
 thread.Start();
@@ -33,7 +39,12 @@ static void RenderWindows()
         Path.Combine(outputDirectory, "settings.png"));
     Render(new DiagnosticsWindow(new InMemoryDiagnostics()), Path.Combine(outputDirectory, "diagnostics-empty.png"));
     Render(new OpenSourceLicensesWindow(), Path.Combine(outputDirectory, "open-source-licenses.png"));
-    Render(new ModelSetupWindow(), Path.Combine(outputDirectory, "model-consent.png"), VerifyModelTermsLink);
+    var sharedModelSetup = new ModelSetupWindow();
+    sharedModelSetup.ShowDownloadConsent();
+    Render(sharedModelSetup, Path.Combine(outputDirectory, "model-consent-shared.png"), VerifyModelTermsLinkAndSharedCopy);
+    var portableModelSetup = new ModelSetupWindow();
+    portableModelSetup.ShowDownloadConsent(ModelStorageMode.Portable);
+    Render(portableModelSetup, Path.Combine(outputDirectory, "model-consent-portable.png"), VerifyPortableCopy);
     var modelSetup = new ModelSetupWindow();
     modelSetup.ShowProgress(148L * 1024 * 1024, 240L * 1024 * 1024);
     Render(modelSetup, Path.Combine(outputDirectory, "model-setup.png"), VerifyModelProgressGeometry);
@@ -107,7 +118,8 @@ static void RenderWindows()
     Console.WriteLine($"Rendered settings: {Path.Combine(outputDirectory, "settings.png")}");
     Console.WriteLine($"Rendered empty diagnostics: {Path.Combine(outputDirectory, "diagnostics-empty.png")}");
     Console.WriteLine($"Rendered open-source licenses: {Path.Combine(outputDirectory, "open-source-licenses.png")}");
-    Console.WriteLine($"Rendered model consent: {Path.Combine(outputDirectory, "model-consent.png")}");
+    Console.WriteLine($"Rendered shared model consent: {Path.Combine(outputDirectory, "model-consent-shared.png")}");
+    Console.WriteLine($"Rendered portable model consent: {Path.Combine(outputDirectory, "model-consent-portable.png")}");
     Console.WriteLine($"Rendered first-run setup: {Path.Combine(outputDirectory, "model-setup.png")}");
     Console.WriteLine($"Rendered missing engine prerequisite: {Path.Combine(outputDirectory, "engine-missing.png")}");
     Console.WriteLine($"Rendered engine start prerequisite: {Path.Combine(outputDirectory, "engine-could-not-start.png")}");
@@ -124,7 +136,27 @@ static void RenderWindows()
     Console.WriteLine($"Rendered error panel: {Path.Combine(outputDirectory, "status-panel-error.png")}");
 }
 
-static void VerifyModelTermsLink(Window window)
+static void RunCacheWorker(string cacheDirectory, string markerPath, bool offline)
+{
+    var payload = "synthetic two-process model"u8.ToArray();
+    var manifest = new ModelManifest(
+        "process-test",
+        new Uri("https://example.test/process-model"),
+        "process-model.gguf",
+        payload.Length,
+        Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(payload)));
+    IModelDownloadClient downloader = offline
+        ? new OfflineFailDownloader()
+        : new ProcessMarkerDownloader(payload, markerPath);
+    var provisioner = new ModelProvisioner(cacheDirectory, manifest, downloader);
+    var modelPath = provisioner.EnsureAvailableAsync(null, CancellationToken.None).GetAwaiter().GetResult();
+    if (!provisioner.IsAvailable())
+        throw new InvalidOperationException($"Process worker did not produce a verified model: {modelPath}");
+
+    Console.WriteLine($"PASS: synthetic {(offline ? "offline " : string.Empty)}cache worker reused/promoted {modelPath}");
+}
+
+static void VerifyModelTermsLinkAndSharedCopy(Window window)
 {
     var link = window.FindName("ModelTermsLink") as System.Windows.Documents.Hyperlink
         ?? throw new InvalidOperationException("Model terms were not rendered as a hyperlink.");
@@ -133,7 +165,20 @@ static void VerifyModelTermsLink(Window window)
     if (!link.Focus() || !link.IsKeyboardFocused)
         throw new InvalidOperationException("Model terms hyperlink could not receive keyboard focus.");
 
+    var storageNotice = (System.Windows.Controls.TextBlock)window.FindName("StorageNoticeText");
+    if (!storageNotice.Text.Contains("shared", StringComparison.OrdinalIgnoreCase))
+        throw new InvalidOperationException("Shared model setup copy does not explain shared storage.");
+
     Console.WriteLine("PASS: Model terms use the canonical HTTPS hyperlink and receive keyboard focus.");
+}
+
+static void VerifyPortableCopy(Window window)
+{
+    var storageNotice = (System.Windows.Controls.TextBlock)window.FindName("StorageNoticeText");
+    if (!storageNotice.Text.Contains("app\\models", StringComparison.OrdinalIgnoreCase))
+        throw new InvalidOperationException("Portable model setup copy does not explain the app\\models opt-in.");
+
+    Console.WriteLine("PASS: Portable model setup copy explains the explicit app\\models opt-in.");
 }
 
 static void VerifyModelProgressGeometry(Window window)
@@ -342,4 +387,24 @@ static void VerifyWindowIcon(Window window)
 {
     if (window.Icon is null)
         throw new InvalidOperationException($"{window.GetType().Name} did not resolve the PrivateType window icon.");
+}
+
+sealed class ProcessMarkerDownloader(byte[] payload, string markerPath) : IModelDownloadClient
+{
+    public async Task DownloadAsync(Uri source, Stream destination, IProgress<long>? progress, CancellationToken cancellationToken)
+    {
+        await Task.Delay(350, cancellationToken);
+        await using (var marker = new FileStream(markerPath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite))
+        await using (var writer = new StreamWriter(marker))
+            await writer.WriteLineAsync("download");
+
+        await destination.WriteAsync(payload, cancellationToken);
+        progress?.Report(payload.Length);
+    }
+}
+
+sealed class OfflineFailDownloader : IModelDownloadClient
+{
+    public Task DownloadAsync(Uri source, Stream destination, IProgress<long>? progress, CancellationToken cancellationToken)
+        => Task.FromException(new InvalidOperationException("Offline cache worker attempted an unexpected download."));
 }

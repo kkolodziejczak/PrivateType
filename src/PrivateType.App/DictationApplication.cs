@@ -82,12 +82,13 @@ internal sealed class DictationApplication : IDisposable
     {
         try
         {
+            var modelStorage = ModelStoragePolicy.Resolve(PinnedModel.Manifest);
             PortablePaths.EnsureWritable();
             LegacyDiagnosticsCleanup.DeleteKnownLogs(PortablePaths.DataDirectory, diagnostics);
             settingsStore = new PortableSettingsStore(PortablePaths.DataDirectory);
             var loaded = settingsStore.Load();
             settings = ReconcileStartupPreference(loaded.Settings);
-            modelProvisioner = new ModelProvisioner(PortablePaths.ModelsDirectory, PinnedModel.Manifest, downloader);
+            modelProvisioner = new ModelProvisioner(modelStorage.Directory, PinnedModel.Manifest, downloader);
             if (loaded.Warning is not null)
                 trayIcon.ShowBalloonTip(5000, "PrivateType", loaded.Warning, Forms.ToolTipIcon.Warning);
             if (!MicrophoneCatalog.Enumerate().Any(microphone => microphone.Id == settings.MicrophoneId))
@@ -96,7 +97,7 @@ internal sealed class DictationApplication : IDisposable
             if (modelProvisioner.IsAvailable())
                 await ConfigureReadyAsync(modelProvisioner.ModelPath);
             else
-                ShowModelSetup();
+                ShowModelSetup(modelStorage);
         }
         catch (Exception exception)
         {
@@ -158,36 +159,36 @@ internal sealed class DictationApplication : IDisposable
         }
     }
 
-    private void ShowModelSetup()
+    private void ShowModelSetup(ModelStorageLocation modelStorage)
     {
         statusItem.Text = "Model setup required";
         var window = new ModelSetupWindow();
-        window.RetryRequested += () => ShowModelDownloadOrRuntimeRequirement(window);
-        window.DownloadRequested += () => _ = ProvisionModelAsync(window);
+        window.RetryRequested += () => ShowModelDownloadOrRuntimeRequirement(window, modelStorage.Mode);
+        window.DownloadRequested += () => _ = ProvisionModelAsync(window, modelStorage.Mode);
         window.CancelRequested += () => Wpf.Application.Current.Shutdown();
         window.Show();
-        ShowModelDownloadOrRuntimeRequirement(window);
+        ShowModelDownloadOrRuntimeRequirement(window, modelStorage.Mode);
     }
 
-    private static void ShowModelDownloadOrRuntimeRequirement(ModelSetupWindow window)
+    private static void ShowModelDownloadOrRuntimeRequirement(ModelSetupWindow window, ModelStorageMode storageMode)
     {
         switch (EngineHost.VerifyPrerequisites())
         {
             case EnginePrerequisiteStatus.Ready:
-                window.ShowDownloadConsent();
+                window.ShowDownloadConsent(storageMode);
                 break;
             case EnginePrerequisiteStatus.MissingEngine:
-                window.ShowMissingEnginePrerequisite();
+                window.ShowMissingEnginePrerequisite(storageMode);
                 break;
             case EnginePrerequisiteStatus.CouldNotStart:
-                window.ShowEngineStartPrerequisite();
+                window.ShowEngineStartPrerequisite(storageMode);
                 break;
             default:
                 throw new InvalidOperationException("Unknown local engine prerequisite state.");
         }
     }
 
-    private async Task ProvisionModelAsync(ModelSetupWindow window)
+    private async Task ProvisionModelAsync(ModelSetupWindow window, ModelStorageMode storageMode)
     {
         if (modelProvisioner is null || provisioningCancellation is not null)
             return;
@@ -195,7 +196,7 @@ internal sealed class DictationApplication : IDisposable
         provisioningCancellation = new CancellationTokenSource();
         try
         {
-            var progress = new Progress<long>(downloaded => window.ShowProgress(downloaded, PinnedModel.Manifest.ExpectedBytes));
+            var progress = new Progress<long>(downloaded => window.ShowProgress(downloaded, PinnedModel.Manifest.ExpectedBytes, storageMode));
             var modelPath = await modelProvisioner.EnsureAvailableAsync(progress, provisioningCancellation.Token);
             window.CloseAfterSuccess();
             await StartEngineAfterProvisioningAsync(modelPath);

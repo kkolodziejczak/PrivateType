@@ -33,14 +33,16 @@ internal static class MicrophoneCatalog
 
 internal static class PortablePaths
 {
-    internal static string DataDirectory => Path.Combine(AppContext.BaseDirectory, "data");
-    internal static string ModelsDirectory => Path.Combine(AppContext.BaseDirectory, "models");
+    internal static string DataDirectory => DataDirectoryFor(AppContext.BaseDirectory);
 
     internal static void EnsureWritable()
+        => EnsureWritable(AppContext.BaseDirectory);
+
+    internal static void EnsureWritable(string baseDirectory)
     {
-        Directory.CreateDirectory(DataDirectory);
-        Directory.CreateDirectory(ModelsDirectory);
-        var probe = Path.Combine(DataDirectory, $".write-probe-{Guid.NewGuid():N}");
+        var dataDirectory = DataDirectoryFor(baseDirectory);
+        Directory.CreateDirectory(dataDirectory);
+        var probe = Path.Combine(dataDirectory, $".write-probe-{Guid.NewGuid():N}");
         try
         {
             File.WriteAllText(probe, string.Empty);
@@ -51,6 +53,9 @@ internal static class PortablePaths
                 File.Delete(probe);
         }
     }
+
+    private static string DataDirectoryFor(string baseDirectory)
+        => Path.Combine(Path.GetFullPath(baseDirectory), "data");
 }
 
 internal static class PinnedModel

@@ -149,7 +149,9 @@ PrivateType $Version
 Double-click PrivateType.exe to start the application.
 
 Keep this complete folder together. The app folder contains the local runtime,
-speech engine, downloaded model, settings, and open-source license notices.
+speech engine, portable settings, and open-source license notices. By default,
+the verified model is shared in the current Windows user's PrivateType cache;
+create app\\models before first launch to opt into portable-local model storage.
 
 PrivateType performs speech recognition locally and does not retain audio or
 dictated text. The speech model is downloaded and verified on first launch.

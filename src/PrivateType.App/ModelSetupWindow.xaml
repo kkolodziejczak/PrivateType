@@ -37,6 +37,7 @@
           </StackPanel>
           <ProgressBar x:Name="ProgressBar" Margin="0,12,0,0" Height="8" Minimum="0" Maximum="100" Visibility="Collapsed"/>
           <TextBlock x:Name="ProgressCaption" Margin="0,8,0,0" FontSize="12" Opacity=".55"/>
+          <TextBlock x:Name="StorageNoticeText" Margin="0,12,0,0" FontSize="12" Opacity=".55" TextWrapping="Wrap"/>
           <TextBlock Margin="0,12,0,0" FontSize="12" Opacity=".55" Text="The model stays on this computer. Your voice is processed locally."/>
           <StackPanel Margin="0,22,0,0" Orientation="Horizontal" HorizontalAlignment="Right">
             <Button x:Name="DownloadButton" Style="{StaticResource PrimaryButton}" Margin="0,0,8,0" Content="Download model" IsEnabled="False" Click="Download"/>

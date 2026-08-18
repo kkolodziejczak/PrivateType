@@ -23,6 +23,13 @@ recognition fallback, or retained transcript history.
 5. Open **Settings** from the tray icon or ready bubble, choose a microphone,
    and confirm your shortcuts.
 
+By default, the verified model is stored once in the current Windows user's
+`%LOCALAPPDATA%\\PrivateType\\models\\<sha256>` cache and is reused by
+cache-aware PrivateType versions. To keep a release self-contained, create an
+empty `app\\models` directory in the extracted folder before its first launch;
+that deliberate directory selects portable-local mode. Existing v1.0.2 or other
+release-folder models are never scanned, moved, linked, overwritten, or deleted.
+
 The first public releases use a direct, unsigned ZIP with manual updates. Use
 the SHA-256 file published beside each release and download only from this
 repository's Releases page.
@@ -96,6 +103,12 @@ if it is not already installed.
 - The model is downloaded separately from NVIDIA; it is not included in the
   app ZIP. See [MODEL_ARTIFACT.md](MODEL_ARTIFACT.md) for its source and
   checksum.
+- The shared cache contains only the verified public model and its coordination
+  files. Settings remain in the release's `app/data`; audio, transcripts, and
+  diagnostics are never copied into the shared cache.
+- Removing an old release folder is a manual cleanup choice. New cache-aware
+  versions do not migrate or deduplicate its local model automatically, so an
+  older v1.0.2 installation can continue to roll back independently.
 - Normal desktop text fields are supported. Password/secure fields, elevated
   apps, remote desktops, games, and apps that reject synthetic input are not.
   If the foreground app changes while dictating, insertion is cancelled.

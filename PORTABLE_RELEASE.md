@@ -2,18 +2,31 @@
 
 ## What the ZIP contains
 
-`Build-PortableRelease.ps1` creates a versioned `win-x64` application folder and ZIP. The extracted folder keeps a prominent native `PrivateType.exe` launcher and a short start-here document at the top level. The self-contained .NET application, local NeMo-Speech CPU runtime, data, models, and notices live under `app`. The ZIP deliberately excludes the speech model.
+`Build-PortableRelease.ps1` creates a versioned `win-x64` application folder and ZIP. The extracted folder keeps a prominent native `PrivateType.exe` launcher and a short start-here document at the top level. The self-contained .NET application, local NeMo-Speech CPU runtime, portable data, and notices live under `app`. The ZIP deliberately excludes the speech model.
 
-The model is downloaded on first run into `app/models/` beside the real application executable. Once that download is verified, later launches use that local file; the application does not have a cloud-recognition fallback.
+By default, the model is downloaded on first run into the current Windows user's
+`%LOCALAPPDATA%\\PrivateType\\models\\<lowercase-sha256>` shared cache. Once
+verified, cache-aware PrivateType versions reuse that artifact without another
+download. The application does not have a cloud-recognition fallback.
 
 ## Install and use
 
 1. Unpack the ZIP into a writable folder. Do not run it from a read-only archive, Program Files, or a protected network location.
-2. Launch `PrivateType.exe` and allow the initial local-model download to finish. The application verifies the file before activating it.
+2. For a self-contained release, create an empty `app\\models` directory before
+   first launch. This explicit directory selects portable-local mode; otherwise
+   the shared per-user cache is used. Launch `PrivateType.exe` and allow the
+   initial local-model download to finish. The application verifies the file
+   before activating it.
 3. Open **Settings** from the tray or ready bubble to select a microphone and shortcuts.
 4. Hold a configured shortcut to dictate, then release it to insert only finalized text into the original eligible target.
 
-The complete versioned folder is portable. After the initial verified model download, move the whole folder, including `app/models/` and `app/data/`, to retain the downloaded model and settings.
+In portable-local mode, the complete versioned folder is portable: after the
+initial verified model download, move the whole folder, including `app/models/`
+and `app/data/`, to retain the downloaded model and settings. In the default
+shared mode, moving the folder retains settings but the model remains in the
+per-user cache. Existing v1.0.2 or other release folders are not scanned or
+migrated, so they remain independent rollback copies until you remove them
+manually.
 
 ## Privacy and supported targets
 
