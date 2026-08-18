@@ -93,7 +93,8 @@ public sealed class PortableSetupTests : IDisposable
         await Assert.ThrowsAsync<InvalidDataException>(() => provisioner.EnsureAvailableAsync(null, CancellationToken.None));
 
         Assert.False(provisioner.IsAvailable());
-        Assert.Empty(Directory.GetFiles(directory));
+        Assert.False(File.Exists(provisioner.ModelPath));
+        Assert.Empty(Directory.EnumerateFiles(directory, "*.partial", SearchOption.TopDirectoryOnly));
     }
 
     [Fact]
@@ -105,7 +106,8 @@ public sealed class PortableSetupTests : IDisposable
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => provisioner.EnsureAvailableAsync(null, new CancellationTokenSource().Token));
         Assert.False(provisioner.IsAvailable());
-        Assert.Empty(Directory.GetFiles(directory));
+        Assert.False(File.Exists(provisioner.ModelPath));
+        Assert.Empty(Directory.EnumerateFiles(directory, "*.partial", SearchOption.TopDirectoryOnly));
 
         var retry = new ModelProvisioner(directory, manifest, new FakeDownloader(payload));
         Assert.Equal(retry.ModelPath, await retry.EnsureAvailableAsync(null, CancellationToken.None));

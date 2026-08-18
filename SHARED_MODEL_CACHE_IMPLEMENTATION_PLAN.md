@@ -175,6 +175,7 @@ Stage 1 acceptance:
 - Thermo-nuclear quality review: round 1 **no crucial findings**. Residual non-crucial note: unusual non-local filesystem backends were not separately exercised; the supported contract is Windows local filesystem storage.
 - UI-quality gate: **PASS**. Shared and portable consent/progress states rendered with synthetic copy; hyperlink keyboard focus, geometry, existing monitor/taskbar states, and clean-production sweep passed.
 - Verification: Core 40/40, App 71/71, full LayoutProbe pass after final repairs, `git diff --check` pass, portable 1.0.2 smoke pass, and two-process race/offline reuse pass with exactly one synthetic download marker and one verified artifact.
+- Claude Code review: an initial Claude Opus 5/high pass returned 19 broad findings. Confirmed verifier, coordinator, setup-order, documentation, and boundary-test defects were repaired; plan-conflicting legacy cleanup/fallback/automatic-GC suggestions were explicitly triaged. A focused repair pass returned nine findings, including one high-severity unreadable-artifact deletion risk; every finding was addressed by distinguishing missing/invalid artifacts from unreadable ones, preserving original failure results during partial cleanup, retaining a read-only lock sentinel, correcting the first visible setup state, and strengthening regression assertions. Final repair proof is Core 49/49, App 72/72, full LayoutProbe/UI-quality pass, and repeated two-process/offline reuse.
 
 ## Test Strategy
 

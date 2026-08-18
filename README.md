@@ -24,11 +24,14 @@ recognition fallback, or retained transcript history.
    and confirm your shortcuts.
 
 By default, the verified model is stored once in the current Windows user's
-`%LOCALAPPDATA%\\PrivateType\\models\\<sha256>` cache and is reused by
+`%LOCALAPPDATA%\PrivateType\models\<sha256>` cache and is reused by
 cache-aware PrivateType versions. To keep a release self-contained, create an
-empty `app\\models` directory in the extracted folder before its first launch;
+empty `app\models` directory in the extracted folder before its first launch;
 that deliberate directory selects portable-local mode. Existing v1.0.2 or other
 release-folder models are never scanned, moved, linked, overwritten, or deleted.
+After closing every PrivateType version, model directories under that shared
+cache can be deleted to reclaim space; a cache-aware version will download its
+pinned model again the next time it needs it.
 
 The first public releases use a direct, unsigned ZIP with manual updates. Use
 the SHA-256 file published beside each release and download only from this

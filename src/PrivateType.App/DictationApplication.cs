@@ -166,6 +166,7 @@ internal sealed class DictationApplication : IDisposable
         window.RetryRequested += () => ShowModelDownloadOrRuntimeRequirement(window, modelStorage.Mode);
         window.DownloadRequested += () => _ = ProvisionModelAsync(window, modelStorage.Mode);
         window.CancelRequested += () => Wpf.Application.Current.Shutdown();
+        window.SetStorageMode(modelStorage.Mode);
         window.Show();
         ShowModelDownloadOrRuntimeRequirement(window, modelStorage.Mode);
     }

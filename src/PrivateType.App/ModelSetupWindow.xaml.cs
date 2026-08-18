@@ -27,6 +27,9 @@ public partial class ModelSetupWindow : Window
     internal static string StorageNotice(ModelStorageMode mode)
         => mode == ModelStorageMode.Portable ? PortableStorageNotice : SharedStorageNotice;
 
+    internal void SetStorageMode(ModelStorageMode mode)
+        => StorageNoticeText.Text = StorageNotice(mode);
+
     internal static ProcessStartInfo ModelTermsBrowserStartInfo()
         => new(ModelTermsUri.AbsoluteUri) { UseShellExecute = true };
 
@@ -54,7 +57,7 @@ public partial class ModelSetupWindow : Window
 
     private void ShowPrerequisiteActions(ModelStorageMode storageMode)
     {
-        StorageNoticeText.Text = StorageNotice(storageMode);
+        SetStorageMode(storageMode);
         ConsentPanel.Visibility = Visibility.Collapsed;
         ProgressBar.Visibility = Visibility.Collapsed;
         ProgressCaption.Text = "The model will not download until the local speech engine is ready.";
@@ -68,7 +71,7 @@ public partial class ModelSetupWindow : Window
     {
         HeadingText.Text = "Download local dictation";
         StatusText.Text = "Download the local speech model before using dictation.";
-        StorageNoticeText.Text = StorageNotice(storageMode);
+        SetStorageMode(storageMode);
         ConsentPanel.Visibility = Visibility.Visible;
         ProgressBar.Visibility = Visibility.Collapsed;
         ProgressCaption.Text = string.Empty;
@@ -87,7 +90,7 @@ public partial class ModelSetupWindow : Window
         ConsentPanel.Visibility = Visibility.Collapsed;
         DownloadButton.Visibility = Visibility.Collapsed;
         ProgressBar.Visibility = Visibility.Visible;
-        StorageNoticeText.Text = StorageNotice(storageMode);
+        SetStorageMode(storageMode);
         ProgressCaption.Text = $"{downloaded / 1024d / 1024d:F0} MB of {total / 1024d / 1024d:F0} MB";
         ProgressBar.Value = total == 0 ? 0 : Math.Min(100, downloaded * 100d / total);
         ProgressBar.BeginAnimation(OpacityProperty, new DoubleAnimation(1, 0.75, TimeSpan.FromSeconds(0.8)) { AutoReverse = true, RepeatBehavior = RepeatBehavior.Forever });

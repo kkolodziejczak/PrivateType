@@ -33,11 +33,11 @@ public sealed class ModelCacheCoordinator
                 var stream = new FileStream(
                     lockPath,
                     FileMode.OpenOrCreate,
-                    FileAccess.ReadWrite,
+                    FileAccess.Read,
                     FileShare.None,
                     bufferSize: 1,
                     FileOptions.Asynchronous);
-                return new LockLease(stream, lockPath);
+                return new LockLease(stream);
             }
             catch (IOException exception) when (IsContention(exception))
             {
@@ -56,19 +56,11 @@ public sealed class ModelCacheCoordinator
         return errorCode is 32 or 33;
     }
 
-    private sealed class LockLease(FileStream stream, string lockPath) : IAsyncDisposable
+    private sealed class LockLease(FileStream stream) : IAsyncDisposable
     {
         public ValueTask DisposeAsync()
         {
             stream.Dispose();
-            try
-            {
-                File.Delete(lockPath);
-            }
-            catch (IOException)
-            {
-                // Another waiter may already hold the next lease.
-            }
             return ValueTask.CompletedTask;
         }
     }

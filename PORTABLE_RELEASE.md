@@ -5,14 +5,14 @@
 `Build-PortableRelease.ps1` creates a versioned `win-x64` application folder and ZIP. The extracted folder keeps a prominent native `PrivateType.exe` launcher and a short start-here document at the top level. The self-contained .NET application, local NeMo-Speech CPU runtime, portable data, and notices live under `app`. The ZIP deliberately excludes the speech model.
 
 By default, the model is downloaded on first run into the current Windows user's
-`%LOCALAPPDATA%\\PrivateType\\models\\<lowercase-sha256>` shared cache. Once
+`%LOCALAPPDATA%\PrivateType\models\<lowercase-sha256>` shared cache. Once
 verified, cache-aware PrivateType versions reuse that artifact without another
 download. The application does not have a cloud-recognition fallback.
 
 ## Install and use
 
 1. Unpack the ZIP into a writable folder. Do not run it from a read-only archive, Program Files, or a protected network location.
-2. For a self-contained release, create an empty `app\\models` directory before
+2. For a self-contained release, create an empty `app\models` directory before
    first launch. This explicit directory selects portable-local mode; otherwise
    the shared per-user cache is used. Launch `PrivateType.exe` and allow the
    initial local-model download to finish. The application verifies the file
@@ -27,6 +27,10 @@ shared mode, moving the folder retains settings but the model remains in the
 per-user cache. Existing v1.0.2 or other release folders are not scanned or
 migrated, so they remain independent rollback copies until you remove them
 manually.
+
+After closing every PrivateType version, shared model directories can be removed
+from `%LOCALAPPDATA%\PrivateType\models` to reclaim space. A cache-aware version
+downloads its pinned model again when needed.
 
 ## Privacy and supported targets
 

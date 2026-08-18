@@ -40,6 +40,28 @@ public sealed class ModelCacheTests : IDisposable
     }
 
     [Fact]
+    public async Task Preserves_a_verified_artifact_when_it_is_temporarily_unreadable()
+    {
+        var payload = "verified synthetic model"u8.ToArray();
+        var manifest = CreateManifest(payload);
+        var downloader = new CountingDownloader(payload);
+        var provisioner = new ModelProvisioner(directory, manifest, downloader);
+        Directory.CreateDirectory(directory);
+        File.WriteAllBytes(provisioner.ModelPath, payload);
+        await using var exclusiveReader = new FileStream(
+            provisioner.ModelPath,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.None);
+
+        await Assert.ThrowsAsync<IOException>(
+            () => provisioner.EnsureAvailableAsync(null, CancellationToken.None));
+
+        Assert.Equal(0, downloader.CallCount);
+        Assert.True(File.Exists(provisioner.ModelPath));
+    }
+
+    [Fact]
     public async Task Two_provisioners_download_and_promote_only_once()
     {
         var payload = "verified synthetic model"u8.ToArray();
@@ -106,6 +128,45 @@ public sealed class ModelCacheTests : IDisposable
     }
 
     [Fact]
+    public async Task Times_out_when_another_process_keeps_the_model_lease()
+    {
+        var payload = "verified synthetic model"u8.ToArray();
+        var manifest = CreateManifest(payload);
+        var owner = new ModelCacheCoordinator(directory, manifest, TimeSpan.FromSeconds(2));
+        var waiter = new ModelCacheCoordinator(directory, manifest, TimeSpan.FromMilliseconds(100));
+        await using var lease = await owner.AcquireAsync(CancellationToken.None);
+
+        var exception = await Assert.ThrowsAsync<TimeoutException>(async () =>
+        {
+            await using var unexpectedLease = await waiter.AcquireAsync(CancellationToken.None);
+        });
+
+        Assert.Contains(directory, exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Acquires_a_persistent_read_only_lock_sentinel()
+    {
+        var payload = "verified synthetic model"u8.ToArray();
+        var manifest = CreateManifest(payload);
+        var coordinator = new ModelCacheCoordinator(directory, manifest, TimeSpan.FromSeconds(2));
+        await using (var initialLease = await coordinator.AcquireAsync(CancellationToken.None))
+        {
+        }
+
+        var lockPath = Path.Combine(directory, $".model-{manifest.Sha256.ToLowerInvariant()}.lock");
+        File.SetAttributes(lockPath, FileAttributes.ReadOnly);
+        try
+        {
+            await using var readOnlyLease = await coordinator.AcquireAsync(CancellationToken.None);
+        }
+        finally
+        {
+            File.SetAttributes(lockPath, FileAttributes.Normal);
+        }
+    }
+
+    [Fact]
     public async Task Cleans_only_matching_stale_partial_state()
     {
         var payload = "verified synthetic model"u8.ToArray();
@@ -121,6 +182,38 @@ public sealed class ModelCacheTests : IDisposable
 
         Assert.False(File.Exists(matchingPartial));
         Assert.True(File.Exists(unrelatedPartial));
+    }
+
+    [Fact]
+    public async Task Ignores_a_matching_partial_that_is_temporarily_locked()
+    {
+        var payload = "verified synthetic model"u8.ToArray();
+        var manifest = CreateManifest(payload);
+        var provisioner = new ModelProvisioner(directory, manifest, new CountingDownloader(payload));
+        Directory.CreateDirectory(directory);
+        var lockedPartial = Path.Combine(directory, $"{manifest.FileName}.{manifest.Sha256.ToLowerInvariant()}.locked.partial");
+        await using var lockedStream = new FileStream(lockedPartial, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None);
+
+        await provisioner.EnsureAvailableAsync(null, CancellationToken.None);
+
+        Assert.True(File.Exists(lockedPartial));
+        Assert.True(provisioner.IsAvailable());
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("abc")]
+    [InlineData("zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz")]
+    public void Rejects_an_invalid_model_hash(string? sha256)
+    {
+        Assert.ThrowsAny<ArgumentException>(() => ModelArtifactVerifier.NormalizeSha256(sha256!));
+    }
+
+    [Fact]
+    public void Treats_an_empty_artifact_path_as_unavailable()
+    {
+        Assert.False(ModelArtifactVerifier.IsVerified(string.Empty, 1, new string('0', 64)));
     }
 
     [Fact]
@@ -151,11 +244,12 @@ public sealed class ModelCacheTests : IDisposable
 
     private sealed class CountingDownloader(byte[] payload) : IModelDownloadClient
     {
-        public int CallCount { get; private set; }
+        private int callCount;
+        public int CallCount => Volatile.Read(ref callCount);
 
         public Task DownloadAsync(Uri source, Stream destination, IProgress<long>? progress, CancellationToken cancellationToken)
         {
-            CallCount++;
+            Interlocked.Increment(ref callCount);
             destination.Write(payload);
             progress?.Report(payload.Length);
             return Task.CompletedTask;
@@ -166,12 +260,13 @@ public sealed class ModelCacheTests : IDisposable
     {
         private readonly TaskCompletionSource started = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private readonly TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private int callCount;
         public Task Started => started.Task;
-        public int CallCount { get; private set; }
+        public int CallCount => Volatile.Read(ref callCount);
 
         public async Task DownloadAsync(Uri source, Stream destination, IProgress<long>? progress, CancellationToken cancellationToken)
         {
-            CallCount++;
+            Interlocked.Increment(ref callCount);
             started.TrySetResult();
             await release.Task.WaitAsync(cancellationToken);
             await destination.WriteAsync(payload, cancellationToken);

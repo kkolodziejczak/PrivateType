@@ -41,7 +41,7 @@ public sealed class ModelProvisioner
             return ModelPath;
 
         CleanMatchingPartialFiles();
-        DeleteInvalidActiveArtifact();
+        DeleteInvalidActiveArtifactKnownToBeInvalid();
         var partialPath = $"{ModelPath}.{normalizedSha256}.{Guid.NewGuid():N}.partial";
         try
         {
@@ -57,8 +57,7 @@ public sealed class ModelProvisioner
         }
         finally
         {
-            if (File.Exists(partialPath))
-                File.Delete(partialPath);
+            TryDeletePartial(partialPath);
         }
     }
 
@@ -68,12 +67,34 @@ public sealed class ModelProvisioner
     {
         var pattern = $"{manifest.FileName}.{normalizedSha256}.*.partial";
         foreach (var partialPath in Directory.EnumerateFiles(ModelsDirectory, pattern, SearchOption.TopDirectoryOnly))
-            File.Delete(partialPath);
+        {
+            try
+            {
+                File.Delete(partialPath);
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            {
+                // A scanner may still hold an abandoned partial. New downloads use unique names.
+            }
+        }
     }
 
-    private void DeleteInvalidActiveArtifact()
+    private void DeleteInvalidActiveArtifactKnownToBeInvalid()
     {
-        if (File.Exists(ModelPath) && !IsAvailable())
+        if (File.Exists(ModelPath))
             File.Delete(ModelPath);
+    }
+
+    private static void TryDeletePartial(string partialPath)
+    {
+        try
+        {
+            if (File.Exists(partialPath))
+                File.Delete(partialPath);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            // Preserve the original cancellation/download/verification result.
+        }
     }
 }

@@ -51,6 +51,22 @@ public sealed class ModelStoragePolicyTests : IDisposable
         Assert.Contains("models", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public void Rejects_a_shared_model_cache_file_instead_of_deferring_the_failure_to_download()
+    {
+        var appBase = Path.Combine(root, "release", "app");
+        var localAppData = Path.Combine(root, "local-app-data");
+        var manifest = CreateManifest();
+        var modelsRoot = Path.Combine(localAppData, "PrivateType", "models");
+        Directory.CreateDirectory(Path.GetDirectoryName(modelsRoot)!);
+        File.WriteAllText(modelsRoot, "not a directory");
+
+        var exception = Assert.Throws<InvalidOperationException>(
+            () => ModelStoragePolicy.Resolve(manifest, appBase, localAppData));
+
+        Assert.Contains("not a directory", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
     [Theory]
     [InlineData(null)]
     [InlineData("")]
