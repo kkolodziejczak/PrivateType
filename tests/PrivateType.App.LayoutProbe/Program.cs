@@ -222,18 +222,41 @@ static void FlushRender(Window window)
 static void VerifyStartupVersionPromptChoice(bool useCurrent)
 {
     var prompt = new StartupVersionPromptWindow(new Version(2, 4, 0), new Version(1, 9, 3));
-    prompt.Loaded += (_, _) =>
+    Exception? loadedFailure = null;
+    var loadedTimer = new System.Windows.Threading.DispatcherTimer(
+        System.Windows.Threading.DispatcherPriority.ApplicationIdle,
+        prompt.Dispatcher)
     {
-        var keepButton = (System.Windows.Controls.Button)prompt.FindName("KeepButton");
-        if (!keepButton.IsKeyboardFocused)
-            throw new InvalidOperationException("The safe startup-version choice did not receive initial keyboard focus.");
+        Interval = TimeSpan.FromMilliseconds(50)
+    };
+    loadedTimer.Tick += (_, _) =>
+    {
+        if (!prompt.IsLoaded)
+            return;
 
-        var buttonName = useCurrent ? "UseButton" : "KeepButton";
-        var selectedButton = (System.Windows.Controls.Button)prompt.FindName(buttonName);
-        prompt.Dispatcher.BeginInvoke(() => selectedButton.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Button.ClickEvent)));
+        loadedTimer.Stop();
+        try
+        {
+            prompt.Activate();
+            var keepButton = (System.Windows.Controls.Button)prompt.FindName("KeepButton");
+            if (!keepButton.IsKeyboardFocused)
+                throw new InvalidOperationException("The safe startup-version choice did not receive initial keyboard focus.");
+
+            var buttonName = useCurrent ? "UseButton" : "KeepButton";
+            var selectedButton = (System.Windows.Controls.Button)prompt.FindName(buttonName);
+            selectedButton.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Button.ClickEvent));
+        }
+        catch (Exception exception)
+        {
+            loadedFailure = exception;
+            prompt.Close();
+        }
     };
 
+    loadedTimer.Start();
     var result = prompt.ShowDialog();
+    if (loadedFailure is not null)
+        throw new InvalidOperationException("Startup-version prompt verification failed after loading.", loadedFailure);
     if (result != useCurrent)
         throw new InvalidOperationException($"Startup-version prompt returned {result} for {useCurrent}.");
 
@@ -297,6 +320,9 @@ static void VerifyPointerMonitorPlacementThrough(
 
 static void Render(Window window, string outputPath, Action<Window>? verify = null)
 {
+    if (window is not DictationBubble)
+        VerifyWindowIcon(window);
+
     window.ShowInTaskbar = false;
     window.Show();
     window.UpdateLayout();
@@ -310,4 +336,10 @@ static void Render(Window window, string outputPath, Action<Window>? verify = nu
     using var output = File.Create(outputPath);
     encoder.Save(output);
     window.Close();
+}
+
+static void VerifyWindowIcon(Window window)
+{
+    if (window.Icon is null)
+        throw new InvalidOperationException($"{window.GetType().Name} did not resolve the PrivateType window icon.");
 }

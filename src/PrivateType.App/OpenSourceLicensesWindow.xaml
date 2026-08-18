@@ -1,7 +1,7 @@
 <Window x:Class="PrivateType.App.OpenSourceLicensesWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Width="620" Height="520" WindowStartupLocation="CenterOwner" WindowStyle="None"
+        Icon="/PrivateType;component/Assets/PrivateType.ready.ico" Width="620" Height="520" WindowStartupLocation="CenterOwner" WindowStyle="None"
         AllowsTransparency="True" Background="Transparent" Foreground="{DynamicResource ColorText}"
         FontFamily="{DynamicResource AppFont}">
   <Border Margin="8" Background="{DynamicResource ColorSurface}" BorderBrush="{DynamicResource ColorDivider}" BorderThickness="1" CornerRadius="16">

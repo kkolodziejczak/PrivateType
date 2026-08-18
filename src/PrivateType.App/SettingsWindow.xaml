@@ -1,7 +1,7 @@
 <Window x:Class="PrivateType.App.SettingsWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="PrivateType settings" Width="620" SizeToContent="Height"
+        Title="PrivateType settings" Icon="/PrivateType;component/Assets/PrivateType.ready.ico" Width="620" SizeToContent="Height"
         WindowStartupLocation="CenterScreen" ResizeMode="NoResize" WindowStyle="None" AllowsTransparency="True"
         Background="Transparent" Foreground="{DynamicResource ColorText}" FontFamily="{DynamicResource AppFont}">
   <Window.Resources>
