@@ -38,7 +38,8 @@ static void RenderWindows()
         new SettingsWindow(
             new PortableSettings("default", ShortcutBinding.Defaults),
             [new MicrophoneOption("default", "System default microphone")]),
-        Path.Combine(outputDirectory, "settings.png"));
+        Path.Combine(outputDirectory, "settings.png"),
+        VerifySettingsVersion);
     Render(new DiagnosticsWindow(new InMemoryDiagnostics()), Path.Combine(outputDirectory, "diagnostics-empty.png"));
     Render(new OpenSourceLicensesWindow(), Path.Combine(outputDirectory, "open-source-licenses.png"));
     var sharedModelSetup = new ModelSetupWindow();
@@ -156,6 +157,19 @@ static void RunCacheWorker(string cacheDirectory, string markerPath, bool offlin
         throw new InvalidOperationException($"Process worker did not produce a verified model: {modelPath}");
 
     Console.WriteLine($"PASS: synthetic {(offline ? "offline " : string.Empty)}cache worker reused/promoted {modelPath}");
+}
+
+static void VerifySettingsVersion(Window window)
+{
+    var expectedLabel = ApplicationVersion.Label(ApplicationVersion.Current);
+    var expectedHeader = SettingsWindow.HeaderText(ApplicationVersion.Current);
+    var header = (System.Windows.Controls.TextBlock)window.FindName("SettingsHeaderText");
+    if (!string.Equals(header.Text, expectedHeader, StringComparison.Ordinal))
+        throw new InvalidOperationException($"Settings header was '{header.Text}'; expected '{expectedHeader}'.");
+    if (!string.Equals(window.Title, $"{expectedLabel} settings", StringComparison.Ordinal))
+        throw new InvalidOperationException($"Settings window title was '{window.Title}'; expected '{expectedLabel} settings'.");
+
+    Console.WriteLine($"PASS: Settings visibly identifies {expectedLabel} and exposes the same accessible window title.");
 }
 
 static void VerifyModelTermsLinkAndSharedCopy(Window window)

@@ -21,6 +21,9 @@ public partial class SettingsWindow : Window
     public SettingsWindow(PortableSettings settings, IReadOnlyList<MicrophoneOption> microphones)
     {
         InitializeComponent();
+        var version = ApplicationVersion.Current;
+        Title = $"{ApplicationVersion.Label(version)} settings";
+        SettingsHeaderText.Text = HeaderText(version);
         originalSettings = settings;
         MicrophoneBox.ItemsSource = microphones;
         MicrophoneBox.SelectedValue = microphones.Any(microphone => microphone.Id == settings.MicrophoneId)
@@ -32,6 +35,8 @@ public partial class SettingsWindow : Window
         IdleTimeoutBox.ItemsSource = IdleTimeoutOption.Supported;
         IdleTimeoutBox.SelectedValue = settings.ModelIdleTimeoutMinutes;
     }
+
+    internal static string HeaderText(Version? version) => $"{ApplicationVersion.Label(version)} — settings";
 
     public PortableSettings? SavedSettings { get; private set; }
     public event Action? DiagnosticsRequested;

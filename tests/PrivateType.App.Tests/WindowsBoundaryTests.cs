@@ -165,6 +165,15 @@ public sealed class WindowsBoundaryTests
     }
 
     [Fact]
+    public void Shows_the_embedded_version_on_settings_and_the_tray_menu()
+    {
+        var version = new Version(1, 0, 4, 0);
+
+        Assert.Equal("PrivateType 1.0.4 — settings", SettingsWindow.HeaderText(version));
+        Assert.Equal("PrivateType 1.0.4", DictationApplication.TrayVersionText(version));
+    }
+
+    [Fact]
     public void Leaves_windows_startup_disabled_when_no_dictation_app_is_registered()
     {
         Assert.Equal(

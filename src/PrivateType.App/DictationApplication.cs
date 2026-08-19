@@ -44,6 +44,8 @@ internal sealed class DictationApplication : IDisposable
             Visible = true,
             ContextMenuStrip = new Forms.ContextMenuStrip()
         };
+        var versionItem = (Forms.ToolStripMenuItem)trayIcon.ContextMenuStrip.Items.Add(TrayVersionText(ApplicationVersion.Current));
+        versionItem.Enabled = false;
         statusItem = (Forms.ToolStripMenuItem)trayIcon.ContextMenuStrip.Items.Add("Starting…");
         statusItem.Enabled = false;
         settingsItem = (Forms.ToolStripMenuItem)trayIcon.ContextMenuStrip.Items.Add("Settings…", null, (_, _) => ShowSettings());
@@ -58,6 +60,8 @@ internal sealed class DictationApplication : IDisposable
         bubble.QuitRequested += () => Wpf.Application.Current.Shutdown();
         bubble.RecordingIndicatorChanged += visible => trayIcon.Icon = visible ? trayIcons.Listening : trayIcons.Ready;
     }
+
+    internal static string TrayVersionText(Version? version) => ApplicationVersion.Label(version);
 
     public void Start() => _ = InitializeAsync();
 

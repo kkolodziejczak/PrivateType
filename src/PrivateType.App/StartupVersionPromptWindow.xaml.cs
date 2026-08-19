@@ -11,14 +11,7 @@ public partial class StartupVersionPromptWindow : Window
         VersionSummary.Text = $"{VersionLabel(registeredVersion)} is currently registered. You opened {VersionLabel(currentVersion)}.";
     }
 
-    internal static string VersionLabel(Version? version)
-    {
-        if (version is null)
-            return "PrivateType (version unknown)";
-
-        var fieldCount = version.Revision > 0 ? 4 : version.Build > 0 ? 3 : 2;
-        return $"PrivateType {version.ToString(fieldCount)}";
-    }
+    internal static string VersionLabel(Version? version) => ApplicationVersion.Label(version);
 
     private void UseCurrentVersion(object sender, RoutedEventArgs e) => DialogResult = true;
 

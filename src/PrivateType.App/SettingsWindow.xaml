@@ -187,7 +187,7 @@
       </Grid.RowDefinitions>
       <Border Grid.Row="0" Background="{DynamicResource ColorNeutral900}" CornerRadius="15,15,0,0" MouseLeftButtonDown="DragWindow">
         <Grid Margin="16,0,8,0">
-          <TextBlock VerticalAlignment="Center" Foreground="{DynamicResource ColorText}" Opacity="0.8" FontSize="13" Text="PrivateType — settings" TextTrimming="CharacterEllipsis" />
+          <TextBlock x:Name="SettingsHeaderText" VerticalAlignment="Center" Foreground="{DynamicResource ColorText}" Opacity="0.8" FontSize="13" TextTrimming="CharacterEllipsis" />
           <Button Width="28" Height="28" Padding="0" HorizontalAlignment="Right" VerticalAlignment="Center" Content="×" FontSize="18"
                   Background="Transparent" BorderBrush="Transparent" Foreground="{DynamicResource ColorNeutral400}" Click="CloseWindow" />
         </Grid>
