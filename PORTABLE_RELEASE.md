@@ -49,18 +49,18 @@ downloads its pinned model again when needed.
 Build from a checkout containing the verified local engine runtime:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\Build-PortableRelease.ps1 -Version 1.0.4
+powershell -NoProfile -ExecutionPolicy Bypass -File .\Build-PortableRelease.ps1 -Version 1.0.5
 ```
 
 Verify a freshly created archive without overwriting an existing directory:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\Test-PortableRelease.ps1 -ExpectedVersion 1.0.4
+powershell -NoProfile -ExecutionPolicy Bypass -File .\Test-PortableRelease.ps1 -ExpectedVersion 1.0.5
 ```
 
 The smoke script validates the top-level launcher, embedded application version, clean unpack, required engine files, absence of a bundled model, and whole-folder relocation. It does not download the model or launch the tray application. Before a release handoff, manually complete first-run download, offline second launch, relocation launch, Notepad insertion, browser-textarea insertion, focus-change cancellation, and hotkey cleanup using a disposable writable folder.
 
-Pushing a version tag such as `v1.0.4` requires a matching `.github/release-notes/v1.0.4.md`, builds `PrivateType-1.0.4-win-x64.zip` and its checksum, and creates a GitHub draft release from those polished notes. Download and test those exact draft assets on a clean supported Windows installation before publishing the draft. Do not rebuild or replace an accepted ZIP between acceptance and publication.
+Pushing a version tag such as `v1.0.5` requires a matching `.github/release-notes/v1.0.5.md`, builds `PrivateType-1.0.5-win-x64.zip` and its checksum, and creates a GitHub draft release from those polished notes. Download and test those exact draft assets on a clean supported Windows installation before publishing the draft. Do not rebuild or replace an accepted ZIP between acceptance and publication.
 
 ## Recorded package evidence
 

@@ -46,7 +46,7 @@ Windows startup removes both current PrivateType and obsolete LiveDictation
 entries without touching other startup applications.
 
 ```powershell
-$version = '1.0.4'
+$version = '1.0.5'
 Get-FileHash ".\PrivateType-$version-win-x64.zip" -Algorithm SHA256
 ```
 
