@@ -77,9 +77,6 @@ public partial class DictationBubble : Window
     {
         var sourceScreen = CurrentScreen();
         var targetScreen = Forms.Screen.FromPoint(Forms.Cursor.Position);
-        if (string.Equals(sourceScreen.DeviceName, targetScreen.DeviceName, StringComparison.OrdinalIgnoreCase))
-            return;
-
         var sourceWorkArea = WorkAreaFor(sourceScreen);
         var targetWorkArea = WorkAreaFor(targetScreen);
         var bubbleWidth = ActualWidth > 0 ? ActualWidth : Width;

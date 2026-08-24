@@ -16,12 +16,26 @@ if (args.Length >= 3 && string.Equals(args[0], "--cache-worker", StringCompariso
     return;
 }
 
-var thread = new Thread(RenderWindows) { IsBackground = false };
+var pointerPlacementOnly = args.Length == 1 && string.Equals(args[0], "--pointer-placement-only", StringComparison.OrdinalIgnoreCase);
+Exception? probeFailure = null;
+var thread = new Thread(() =>
+{
+    try
+    {
+        RenderWindows(pointerPlacementOnly);
+    }
+    catch (Exception exception)
+    {
+        probeFailure = exception;
+    }
+}) { IsBackground = false };
 thread.SetApartmentState(ApartmentState.STA);
 thread.Start();
 thread.Join();
+if (probeFailure is not null)
+    throw probeFailure;
 
-static void RenderWindows()
+static void RenderWindows(bool pointerPlacementOnly)
 {
     WindowsTaskbarIdentity.Apply();
 
@@ -33,6 +47,13 @@ static void RenderWindows()
     Application.LoadComponent(application, new Uri("/PrivateType;component/App.xaml", UriKind.Relative));
     var outputDirectory = Path.Combine(Path.GetTempPath(), "live-dictation-layout-probe");
     Directory.CreateDirectory(outputDirectory);
+
+    VerifyPointerMonitorPlacementFromOffscreenCoordinates(outputDirectory);
+    if (pointerPlacementOnly)
+    {
+        VerifyPointerMonitorPlacement();
+        return;
+    }
 
     Render(
         new SettingsWindow(
@@ -367,16 +388,72 @@ static void VerifyPointerMonitorPlacementThrough(
     showState(panel);
     panel.UpdateLayout();
 
-    var center = new System.Drawing.Point(
-        (int)Math.Round(panel.Left + (panel.ActualWidth / 2)),
-        (int)Math.Round(panel.Top + (panel.ActualHeight / 2)));
-    var actualScreen = Forms.Screen.FromPoint(center);
+    var fullyInsideTarget =
+        panel.Left >= targetScreen.WorkingArea.Left &&
+        panel.Top >= targetScreen.WorkingArea.Top &&
+        panel.Left + panel.ActualWidth <= targetScreen.WorkingArea.Right &&
+        panel.Top + panel.ActualHeight <= targetScreen.WorkingArea.Bottom;
     panel.Close();
 
-    if (!string.Equals(actualScreen.DeviceName, targetScreen.DeviceName, StringComparison.OrdinalIgnoreCase))
-        throw new InvalidOperationException($"Bubble entered {state} on {actualScreen.DeviceName} instead of pointer monitor {targetScreen.DeviceName}.");
+    if (!fullyInsideTarget)
+        throw new InvalidOperationException($"Bubble entered {state} outside pointer monitor {targetScreen.DeviceName}.");
 
     Console.WriteLine($"PASS: Bubble entered {state} after moving from {sourceScreen.DeviceName} to pointer monitor {targetScreen.DeviceName}.");
+}
+
+static void VerifyPointerMonitorPlacementFromOffscreenCoordinates(string outputDirectory)
+{
+    var targetScreen = Forms.Screen.FromPoint(Forms.Cursor.Position);
+    VerifyPointerMonitorRecoveryThrough(
+        "unloaded ready",
+        "pointer-recovery-unloaded.png",
+        panel => { },
+        outputDirectory,
+        targetScreen);
+    VerifyPointerMonitorRecoveryThrough(
+        "model loading",
+        "pointer-recovery-model-loading.png",
+        panel => panel.ShowModelLoading(),
+        outputDirectory,
+        targetScreen);
+    VerifyPointerMonitorRecoveryThrough(
+        "recording",
+        "pointer-recovery-recording.png",
+        panel => panel.ShowRecording(RecognitionLanguage.English),
+        outputDirectory,
+        targetScreen);
+}
+
+static void VerifyPointerMonitorRecoveryThrough(
+    string state,
+    string imageFileName,
+    Action<DictationBubble> showState,
+    string outputDirectory,
+    Forms.Screen targetScreen)
+{
+    var panel = new DictationBubble();
+    panel.ShowReady(PortableSettings.Default, modelLoaded: false);
+    panel.Left = targetScreen.WorkingArea.Right + 1000;
+    panel.Top = targetScreen.WorkingArea.Bottom + 1000;
+    panel.UpdateLayout();
+
+    panel.MoveToPointerScreen();
+    panel.UpdateLayout();
+    var fullyInsideTarget =
+        panel.Left >= targetScreen.WorkingArea.Left &&
+        panel.Top >= targetScreen.WorkingArea.Top &&
+        panel.Left + panel.ActualWidth <= targetScreen.WorkingArea.Right &&
+        panel.Top + panel.ActualHeight <= targetScreen.WorkingArea.Bottom;
+    if (!fullyInsideTarget)
+    {
+        panel.Close();
+        throw new InvalidOperationException($"Bubble remained outside the pointer monitor before entering {state} after its previous monitor disappeared.");
+    }
+
+    showState(panel);
+    Render(panel, Path.Combine(outputDirectory, imageFileName));
+
+    Console.WriteLine($"PASS: Bubble recovered in {state} onto pointer monitor {targetScreen.DeviceName} from stale off-screen coordinates.");
 }
 
 static void Render(Window window, string outputPath, Action<Window>? verify = null)
