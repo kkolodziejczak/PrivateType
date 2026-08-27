@@ -7,3 +7,6 @@
 - Investigate platform-native macOS and explicitly named Linux hosts after Windows v1.0.0; .NET MAUI does not provide Linux desktop parity for this app.
 - Explore a one-file extractor after v1.0.0. The current transparent folder ZIP remains the release format because the engine needs real files and the model remains a separate download.
 - Design a manual update window and workflow; automatic updates are out of scope for v1.0.0.
+- Add a private note-taker mode: when dictation starts without an eligible target window, let the user explicitly save the transcript as a local note instead of inserting it into another app. Define how notes are opened, organized, and deleted without weakening PrivateType's privacy guarantees.
+- Make the bubble click-through.
+- Make the bubble transparent by default, and even more transparent when the module is unloaded.
