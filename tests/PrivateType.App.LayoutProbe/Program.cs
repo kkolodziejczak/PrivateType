@@ -1,7 +1,6 @@
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
-using System.Reflection;
 using System.Threading;
 using System.Windows;
 using System.Windows.Media;
@@ -95,11 +94,6 @@ static void RenderWindows(bool pointerPlacementOnly)
     unloadedPanel.ShowReady(PortableSettings.Default, modelLoaded: false);
     Render(unloadedPanel, Path.Combine(outputDirectory, "status-panel-model-unloaded.png"));
 
-    var hintPanel = new DictationBubble();
-    hintPanel.ShowReady(PortableSettings.Default, modelLoaded: true);
-    typeof(DictationBubble).GetMethod("ExpandHints", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(hintPanel, [null, null]);
-    Render(hintPanel, Path.Combine(outputDirectory, "status-panel-hint.png"));
-
     var recordingPanel = new DictationBubble();
     recordingPanel.ShowReady(PortableSettings.Default, modelLoaded: true);
     recordingPanel.ShowRecording(RecognitionLanguage.English);
@@ -151,7 +145,6 @@ static void RenderWindows(bool pointerPlacementOnly)
     Console.WriteLine($"Rendered unknown startup version prompt: {Path.Combine(outputDirectory, "startup-version-prompt-unknown.png")}");
     Console.WriteLine($"Rendered status panel: {Path.Combine(outputDirectory, "status-panel.png")}");
     Console.WriteLine($"Rendered unloaded-model status panel: {Path.Combine(outputDirectory, "status-panel-model-unloaded.png")}");
-    Console.WriteLine($"Rendered hint panel: {Path.Combine(outputDirectory, "status-panel-hint.png")}");
     Console.WriteLine($"Rendered recording panel: {Path.Combine(outputDirectory, "status-panel-recording.png")}");
     Console.WriteLine($"Rendered quiet recording panel: {Path.Combine(outputDirectory, "status-panel-recording-quiet.png")}");
     Console.WriteLine($"Rendered model-loading panel: {Path.Combine(outputDirectory, "status-panel-model-loading.png")}");

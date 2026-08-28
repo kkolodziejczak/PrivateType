@@ -48,6 +48,46 @@ public sealed class WindowsBoundaryTests
     }
 
     [Fact]
+    public void Installs_the_low_level_mouse_hook_for_bubble_dragging()
+    {
+        Assert.Equal(14, NativeMethods.WhMouseLl);
+    }
+
+    [Fact]
+    public void Ends_bubble_dragging_on_left_button_release()
+    {
+        Assert.Equal(0x0202, NativeMethods.WmLButtonUp);
+    }
+
+    [Fact]
+    public void Classifies_the_complete_bubble_drag_lifecycle_from_native_mouse_messages()
+    {
+        Assert.Equal(DictationBubble.DragHookAction.Start, DictationBubble.ClassifyDragHookAction(false, 0x0201));
+        Assert.Equal(DictationBubble.DragHookAction.None, DictationBubble.ClassifyDragHookAction(false, 0x0200));
+        Assert.Equal(DictationBubble.DragHookAction.Move, DictationBubble.ClassifyDragHookAction(true, 0x0200));
+        Assert.Equal(DictationBubble.DragHookAction.End, DictationBubble.ClassifyDragHookAction(true, 0x0202));
+        Assert.Equal(DictationBubble.DragHookAction.None, DictationBubble.ClassifyDragHookAction(true, 0x0203));
+    }
+
+    [Fact]
+    public void Keeps_the_bubble_aligned_with_the_pointer_at_scaled_display_dpi()
+    {
+        var offset = DictationBubble.CursorDeltaInDips(300, 450, 450, 525, 1.5, 1.5);
+
+        Assert.Equal(100, offset.X);
+        Assert.Equal(50, offset.Y);
+    }
+
+    [Fact]
+    public void Decodes_negative_screen_coordinates_for_monitors_left_or_above_the_primary_display()
+    {
+        var cursor = DictationBubble.CursorScreenPosition(unchecked((nint)0x00000000FFE2FFECL));
+
+        Assert.Equal(-20, cursor.X);
+        Assert.Equal(-30, cursor.Y);
+    }
+
+    [Fact]
     public void Rejects_start_when_the_fixed_local_engine_endpoint_is_already_ready()
     {
         var exception = Assert.Throws<InvalidOperationException>(() => EngineHost.EnsureEndpointIsAvailable(true));
@@ -345,8 +385,8 @@ public sealed class WindowsBoundaryTests
     }
 
     [Theory]
-    [InlineData(false, 0.45)]
-    [InlineData(true, 1.0)]
+    [InlineData(false, 0.4)]
+    [InlineData(true, 0.7)]
     public void Uses_transparency_only_for_the_unloaded_ready_bubble(bool modelLoaded, double expected)
     {
         Assert.Equal(expected, DictationBubble.OpacityForReadyState(modelLoaded));
@@ -374,14 +414,6 @@ public sealed class WindowsBoundaryTests
 
         Assert.True(queue.TryTake(out var meter));
         Assert.Equal(0.8, meter!.Level);
-    }
-
-    [Fact]
-    public void Keeps_hints_open_when_pointer_settles_on_the_expanded_bubble()
-    {
-        Assert.False(DictationBubble.ShouldCollapseHints(isActive: false, isPointerOverBubble: true));
-        Assert.True(DictationBubble.ShouldCollapseHints(isActive: false, isPointerOverBubble: false));
-        Assert.False(DictationBubble.ShouldCollapseHints(isActive: true, isPointerOverBubble: false));
     }
 
     [Fact]

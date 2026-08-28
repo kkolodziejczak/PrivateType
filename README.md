@@ -70,8 +70,9 @@ shown; it will move to **Listening** when ready.
 
 - When dictation starts, the bubble moves to the monitor under the mouse while
   keeping the same relative screen position.
-- The ready bubble is faded while the model is unloaded and fully opaque once
-  the model is loaded.
+- The ready bubble is semi-transparent (more faded while the model is unloaded)
+  and click-through, so you can see what is behind it. Only the icon is
+  draggable; the bubble expands when the model is loading or you are speaking.
 - A 44-band voice spectrum and icon react to microphone input; visual gain
   adapts to quieter speech without changing the audio passed to recognition.
 - The live transcript keeps three visible lines and follows the newest text.

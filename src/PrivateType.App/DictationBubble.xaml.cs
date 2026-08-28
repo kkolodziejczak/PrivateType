@@ -1,3 +1,5 @@
+using System.ComponentModel;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -6,7 +8,6 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using PrivateType.Core;
 using Forms = System.Windows.Forms;
-using Input = System.Windows.Input;
 
 namespace PrivateType.App;
 
@@ -16,35 +17,37 @@ public partial class DictationBubble : Window
     internal const int SpectrumBarCount = 44;
     internal const string ModelLoadingTitle = "Loading local model…";
     internal const string ModelLoadingHint = "This may take a few seconds. Keep holding to dictate.";
-    internal static readonly TimeSpan HintCollapseDelay = TimeSpan.FromMilliseconds(180);
 
     private const int GwlExStyle = -20;
     private const int WsExNoActivate = 0x08000000;
     private const int WmNchitTest = 0x0084;
     private const int WmExitSizeMove = 0x0232;
-    private const int VkLeftButton = 0x01;
     private const double ReadyWidth = 64;
-    private const double HintWidth = 330;
     private const double ActiveWidth = 330;
     private const double WorkAreaBottomClearance = 8;
-    private const nint HtCaption = 2;
-    private readonly DispatcherTimer hintCollapseTimer;
+    private const nint HtClient = 1;
+    private const nint HtTransparent = 0x20;
     private readonly AdaptiveAudioMeter adaptiveAudioMeter = new();
     private readonly List<ScaleTransform> waveformScales = [];
     private readonly double[] smoothedSpectrum = new double[SpectrumBarCount];
     private bool active;
     private bool recordingIndicatorVisible;
     private bool recordingVisualsActive;
+    private bool dragActive;
+    private int dragStartCursorX, dragStartCursorY;
+    private double dragStartLeft, dragStartTop;
+    private double dragDpiScaleX = 1, dragDpiScaleY = 1;
+    private readonly NativeMethods.MouseHookProc mouseHookProc;
+    private nint mouseHook;
 
     public DictationBubble()
     {
         InitializeComponent();
+        mouseHookProc = OnMouseHook;
         BubbleShell.ContextMenu.PlacementTarget = BubbleShell;
         BubbleShell.ContextMenu.Placement = PlacementMode.Right;
         BubbleShell.ContextMenu.HorizontalOffset = 8;
         CreateWaveformBars();
-        hintCollapseTimer = new DispatcherTimer { Interval = HintCollapseDelay };
-        hintCollapseTimer.Tick += CollapseHintsAfterPointerSettles;
     }
 
     public event Action<string, double, double>? PositionChanged;
@@ -62,7 +65,6 @@ public partial class DictationBubble : Window
 
         active = false;
         recordingVisualsActive = false;
-        hintCollapseTimer.Stop();
         StopRecordingIndicator();
         BubbleShell.Opacity = OpacityForReadyState(modelLoaded);
         ApplyReadyVisuals();
@@ -93,7 +95,6 @@ public partial class DictationBubble : Window
         var selectedWorkArea = CurrentWorkArea();
         active = true;
         recordingVisualsActive = true;
-        hintCollapseTimer.Stop();
         BubbleShell.Opacity = 1;
         ApplyRecordingVisuals();
         ResetAudioVisuals();
@@ -112,7 +113,6 @@ public partial class DictationBubble : Window
     {
         active = true;
         recordingVisualsActive = false;
-        hintCollapseTimer.Stop();
         StopRecordingIndicator();
         BubbleShell.Opacity = 1;
         ApplyExpandedVisuals(ModelLoadingTitle, "ColorAccent900", "ColorAccent300", "ColorAccent300");
@@ -162,7 +162,6 @@ public partial class DictationBubble : Window
     {
         active = false;
         recordingVisualsActive = false;
-        hintCollapseTimer.Stop();
         StopRecordingIndicator();
         BubbleShell.Opacity = 1;
         ApplyCancelledVisuals();
@@ -180,7 +179,6 @@ public partial class DictationBubble : Window
     {
         active = true;
         recordingVisualsActive = false;
-        hintCollapseTimer.Stop();
         StopRecordingIndicator();
         BubbleShell.Opacity = 1;
         ApplyErrorVisuals();
@@ -202,20 +200,71 @@ public partial class DictationBubble : Window
         var handle = new WindowInteropHelper(this).Handle;
         var extendedStyle = NativeMethods.GetWindowLongPtr(handle, GwlExStyle).ToInt64();
         NativeMethods.SetWindowLongPtr(handle, GwlExStyle, (nint)(extendedStyle | WsExNoActivate));
+
+        // The click-through + non-activatable + transparent window does not reliably
+        // route drag mouse events, so track the drag from a global low-level mouse hook
+        // instead. This callback runs on this (UI) thread.
+        mouseHook = NativeMethods.SetWindowsHookExW(
+            NativeMethods.WhMouseLl,
+            mouseHookProc,
+            NativeMethods.GetModuleHandleW(null),
+            0);
+        if (mouseHook == nint.Zero)
+            throw new Win32Exception(Marshal.GetLastWin32Error(), "Could not install the bubble drag hook.");
     }
 
     private nint WindowMessageHook(nint handle, int message, nint wParam, nint lParam, ref bool handled)
     {
-        if (message == WmNchitTest && !active && (NativeMethods.GetKeyState(VkLeftButton) & 0x8000) != 0)
+        if (message == WmNchitTest)
         {
+            // While dragging, report the whole window as a client-area hit so it
+            // does not become click-through after the pointer leaves the icon.
+            // We move the window in OnMouseHook, so we must
+            // NOT return a caption hit (that would let Windows drag the window
+            // natively and fight our manual move).
+            if (dragActive)
+            {
+                handled = true;
+                return HtClient;
+            }
+
+            if (IsPointerOverIcon(lParam))
+            {
+                // The icon stays interactive and draggable.
+                handled = true;
+                return HtClient;
+            }
+
+            // The rest of the bubble is click-through so you can see what is
+            // behind it while the module is loading or speaking.
             handled = true;
-            return HtCaption;
+            return HtTransparent;
         }
 
         if (message == WmExitSizeMove)
             ReportPosition();
 
         return nint.Zero;
+    }
+
+    internal static PointInt CursorScreenPosition(nint lParam)
+    {
+        var packed = lParam.ToInt64();
+        return new PointInt(
+            unchecked((short)(packed & 0xFFFF)),
+            unchecked((short)((packed >> 16) & 0xFFFF)));
+    }
+
+    private bool IsPointerOverIcon(nint lParam) => IsScreenPointOverIcon(CursorScreenPosition(lParam));
+
+    private bool IsScreenPointOverIcon(PointInt cursor)
+    {
+        if (IconTile.ActualWidth <= 0 || IconTile.ActualHeight <= 0)
+            return false;
+
+        var local = IconTile.PointFromScreen(new System.Windows.Point(cursor.X, cursor.Y));
+        return local.X >= 0 && local.X < IconTile.ActualWidth
+            && local.Y >= 0 && local.Y < IconTile.ActualHeight;
     }
 
     private void CreateWaveformBars()
@@ -337,46 +386,88 @@ public partial class DictationBubble : Window
             workArea.Height == Height ? 0 : Math.Clamp((Top - workArea.Top) / (workArea.Height - Height), 0, 1));
     }
 
-    private void ExpandHints(object sender, Input.MouseEventArgs e)
-    {
-        if (!active)
-        {
-            hintCollapseTimer.Stop();
-            ApplyExpandedVisuals("PrivateType", "ColorAccent800", "ColorDivider", "ColorAccent300");
-            SetWidthAroundCenter(HintWidth);
-            Hint.Visibility = Visibility.Visible;
-        }
-    }
-
-    private void CollapseHints(object sender, Input.MouseEventArgs e)
-    {
-        if (!active)
-            hintCollapseTimer.Start();
-    }
-
-    private void CollapseHintsAfterPointerSettles(object? sender, EventArgs e)
-    {
-        hintCollapseTimer.Stop();
-        if (!ShouldCollapseHints(active, BubbleShell.IsMouseOver))
-            return;
-
-        ApplyReadyVisuals();
-        SetWidthAroundCenter(ReadyWidth);
-        Hint.Visibility = Visibility.Collapsed;
-    }
-
-    private void StartDrag(object sender, Input.MouseButtonEventArgs e)
-    {
-        if (active || e.LeftButton != Input.MouseButtonState.Pressed)
-            return;
-
-        DragMove();
-    }
-
     protected override void OnClosed(EventArgs e)
     {
-        hintCollapseTimer.Stop();
+        if (mouseHook != nint.Zero)
+        {
+            NativeMethods.UnhookWindowsHookEx(mouseHook);
+            mouseHook = nint.Zero;
+        }
+
         base.OnClosed(e);
+    }
+
+    private nint OnMouseHook(int code, nint wParam, nint lParam)
+    {
+        if (code < 0)
+            return NativeMethods.CallNextHookEx(mouseHook, code, wParam, lParam);
+
+        switch (ClassifyDragHookAction(dragActive, wParam))
+        {
+            case DragHookAction.Start when active || !IsCursorOverIcon(lParam):
+                return NativeMethods.CallNextHookEx(mouseHook, code, wParam, lParam);
+            case DragHookAction.Start:
+            {
+                var p = CursorFromHook(lParam);
+                dragStartCursorX = p.X;
+                dragStartCursorY = p.Y;
+                dragStartLeft = Left;
+                dragStartTop = Top;
+                var dpi = VisualTreeHelper.GetDpi(this);
+                dragDpiScaleX = dpi.DpiScaleX;
+                dragDpiScaleY = dpi.DpiScaleY;
+                dragActive = true;
+                return 1;
+            }
+            case DragHookAction.Move:
+            {
+                var p = CursorFromHook(lParam);
+                var offset = CursorDeltaInDips(
+                    dragStartCursorX,
+                    dragStartCursorY,
+                    p.X,
+                    p.Y,
+                    dragDpiScaleX,
+                    dragDpiScaleY);
+                Left = dragStartLeft + offset.X;
+                Top = dragStartTop + offset.Y;
+                break;
+            }
+            case DragHookAction.End:
+                dragActive = false;
+                ReportPosition();
+                // We suppressed the matching button-down, so suppress the up too.
+                return 1;
+        }
+
+        return NativeMethods.CallNextHookEx(mouseHook, code, wParam, lParam);
+    }
+
+    internal static DragHookAction ClassifyDragHookAction(bool dragActive, nint message) =>
+        (dragActive, message) switch
+        {
+            (false, NativeMethods.WmLButtonDown) => DragHookAction.Start,
+            (true, NativeMethods.WmMouseMove) => DragHookAction.Move,
+            (true, NativeMethods.WmLButtonUp) => DragHookAction.End,
+            _ => DragHookAction.None
+        };
+
+    internal static Vector CursorDeltaInDips(
+        int startX,
+        int startY,
+        int currentX,
+        int currentY,
+        double dpiScaleX,
+        double dpiScaleY) =>
+        new((currentX - startX) / dpiScaleX, (currentY - startY) / dpiScaleY);
+
+    private static NativeMethods.NativePoint CursorFromHook(nint lParam) =>
+        Marshal.PtrToStructure<NativeMethods.NativePoint>(lParam);
+
+    private bool IsCursorOverIcon(nint lParam)
+    {
+        var cursor = CursorFromHook(lParam);
+        return IsScreenPointOverIcon(new PointInt(cursor.X, cursor.Y));
     }
 
     private void OpenSettings(object sender, RoutedEventArgs e) => SettingsRequested?.Invoke();
@@ -435,7 +526,11 @@ public partial class DictationBubble : Window
         return targetStart + (targetTravel * relativePosition);
     }
 
-    internal static double OpacityForReadyState(bool modelLoaded) => modelLoaded ? 1 : 0.45;
+    internal const double ReadyOpacityWithModel = 0.7;
+    internal const double ReadyOpacityWithoutModel = 0.4;
+
+    internal static double OpacityForReadyState(bool modelLoaded) =>
+        modelLoaded ? ReadyOpacityWithModel : ReadyOpacityWithoutModel;
 
     private void ClampHorizontallyToWorkArea(DisplayWorkArea workArea)
     {
@@ -477,13 +572,21 @@ public partial class DictationBubble : Window
         return new DisplayWorkArea(workArea.Left, workArea.Top, workArea.Width, workArea.Height);
     }
 
+    internal readonly record struct PointInt(int X, int Y);
+
+    internal enum DragHookAction
+    {
+        None,
+        Start,
+        Move,
+        End
+    }
+
     private readonly record struct DisplayWorkArea(double Left, double Top, double Width, double Height)
     {
         public double Right => Left + Width;
         public double Bottom => Top + Height;
     }
-
-    internal static bool ShouldCollapseHints(bool isActive, bool isPointerOverBubble) => !isActive && !isPointerOverBubble;
 
     private static string DescribeBindings(IReadOnlyList<ShortcutBinding> bindings) =>
         string.Join("\n", HotkeyCatalog.FromBindings(bindings).Select(binding => $"{LanguageLabel(binding.Language)} — {binding.Label}"));

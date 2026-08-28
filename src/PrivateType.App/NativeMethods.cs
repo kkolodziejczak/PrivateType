@@ -4,11 +4,27 @@ namespace PrivateType.App;
 
 internal static class NativeMethods
 {
+    internal const int WhMouseLl = 14;
+    internal const int WmLButtonDown = 0x0201;
+    internal const int WmMouseMove = 0x0200;
+    internal const int WmLButtonUp = 0x0202;
+
+    internal delegate nint MouseHookProc(int nCode, nint wParam, nint lParam);
+
     [DllImport("user32.dll")]
     internal static extern bool GetCursorPos(out NativePoint point);
 
+    [DllImport("user32.dll", SetLastError = true)]
+    internal static extern nint SetWindowsHookExW(int idHook, MouseHookProc lpfn, nint hMod, uint dwThreadId);
+
     [DllImport("user32.dll")]
-    internal static extern short GetKeyState(int virtualKey);
+    internal static extern bool UnhookWindowsHookEx(nint hHook);
+
+    [DllImport("user32.dll")]
+    internal static extern nint CallNextHookEx(nint hHook, int nCode, nint wParam, nint lParam);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    internal static extern nint GetModuleHandleW(string? lpModuleName);
 
     [DllImport("user32.dll")]
     internal static extern nint GetForegroundWindow();
