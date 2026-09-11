@@ -16,5 +16,6 @@
   <ItemGroup>
     <Resource Include="Assets\PrivateType.ready.ico" />
     <Resource Include="Assets\PrivateType.listening.ico" />
+    <EmbeddedResource Include="Assets\ModelReady.wav" LogicalName="PrivateType.ModelReady.wav" />
   </ItemGroup>
 </Project>

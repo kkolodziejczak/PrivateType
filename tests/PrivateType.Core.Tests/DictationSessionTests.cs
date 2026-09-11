@@ -253,6 +253,80 @@ public sealed class DictationSessionTests
         await coordinator.DisposeAsync();
     }
 
+    [Fact]
+    public async Task Reports_recording_only_after_microphone_start_completes()
+    {
+        var capture = new FakeCapture
+        {
+            StartGate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously)
+        };
+        await using var coordinator = new DictationSessionCoordinator(_ =>
+            CreateSession(capture, new FakeRecognizer(), new FakeForegroundTarget(), new FakeInjector()));
+
+        Assert.False(coordinator.IsRecording);
+        var hold = coordinator.HoldAsync(RecognitionLanguage.Polish);
+        await capture.StartEntered.Task.WaitAsync(TimeSpan.FromSeconds(1));
+        var recordingBeforeMicrophoneReady = coordinator.IsRecording;
+        capture.StartGate.SetResult();
+        await hold;
+
+        Assert.False(recordingBeforeMicrophoneReady);
+        Assert.True(coordinator.IsRecording);
+        await coordinator.ReleaseAsync();
+        Assert.False(coordinator.IsRecording);
+    }
+
+    [Fact]
+    public async Task Does_not_report_recording_when_released_during_microphone_start()
+    {
+        var capture = new FakeCapture
+        {
+            StartGate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously)
+        };
+        await using var coordinator = new DictationSessionCoordinator(_ =>
+            CreateSession(capture, new FakeRecognizer(), new FakeForegroundTarget(), new FakeInjector()));
+
+        var hold = coordinator.HoldAsync(RecognitionLanguage.Polish);
+        await capture.StartEntered.Task.WaitAsync(TimeSpan.FromSeconds(1));
+        var release = coordinator.ReleaseAsync();
+        capture.StartGate.SetResult();
+        await hold;
+
+        Assert.False(coordinator.IsRecording);
+        await release;
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Does_not_report_recording_after_a_startup_failure(bool microphoneFailure)
+    {
+        var failure = new InvalidOperationException("startup failed");
+        var capture = new FakeCapture { StartFailure = microphoneFailure ? failure : null };
+        var recognizer = new FakeRecognizer { StartFailure = microphoneFailure ? null : failure };
+        await using var coordinator = new DictationSessionCoordinator(_ =>
+            CreateSession(capture, recognizer, new FakeForegroundTarget(), new FakeInjector()));
+
+        await coordinator.HoldAsync(RecognitionLanguage.Polish);
+
+        Assert.False(coordinator.IsRecording);
+        Assert.True(capture.Disposed);
+        Assert.True(recognizer.Disposed);
+    }
+
+    [Fact]
+    public async Task Does_not_report_recording_after_a_capture_fault()
+    {
+        var capture = new FakeCapture();
+        await using var coordinator = new DictationSessionCoordinator(_ =>
+            CreateSession(capture, new FakeRecognizer(), new FakeForegroundTarget(), new FakeInjector()));
+        await coordinator.HoldAsync(RecognitionLanguage.Polish);
+
+        capture.Fail(new InvalidOperationException("capture failed"));
+
+        Assert.False(coordinator.IsRecording);
+    }
+
     private static DictationSession CreateSession(
         FakeCapture capture,
         FakeRecognizer recognizer,

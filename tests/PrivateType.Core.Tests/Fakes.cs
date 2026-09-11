@@ -12,11 +12,18 @@ internal sealed class FakeCapture : IAudioCapture
     public bool Stopped { get; private set; }
     public bool Disposed { get; private set; }
     public TaskCompletionSource DisposedSignal { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    public TaskCompletionSource StartEntered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    public TaskCompletionSource? StartGate { get; set; }
+    public Exception? StartFailure { get; set; }
 
-    public Task StartAsync(CancellationToken cancellationToken)
+    public async Task StartAsync(CancellationToken cancellationToken)
     {
+        StartEntered.TrySetResult();
+        if (StartGate is not null)
+            await StartGate.Task.WaitAsync(cancellationToken);
+        if (StartFailure is not null)
+            throw StartFailure;
         Started = true;
-        return Task.CompletedTask;
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
@@ -57,10 +64,13 @@ internal sealed class FakeRecognizer : IStreamingRecognizer
     public TaskCompletionSource PushStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
     public TaskCompletionSource CompleteStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
     public TaskCompletionSource? CompleteGate { get; set; }
+    public Exception? StartFailure { get; set; }
     private int activePushes;
 
     public Task StartAsync(RecognitionLanguage language, CancellationToken cancellationToken)
     {
+        if (StartFailure is not null)
+            throw StartFailure;
         return Task.CompletedTask;
     }
 

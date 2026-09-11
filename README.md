@@ -60,9 +60,10 @@ The reported hash must exactly match the accompanying `.zip.sha256` file.
 | English | `Ctrl+Shift+E` |
 
 Hold a shortcut while speaking, then release it to insert the final text. The
-model loads when PrivateType starts. If it has been unloaded after the selected
-idle timeout, keep holding the shortcut while **Loading local model…** is
-shown; it will move to **Listening** when ready.
+model loads on first use and again after the selected idle timeout. Keep
+holding the shortcut while **Loading local model…** is shown. A short ping
+signals that loading has finished and the microphone is ready: you can speak.
+The ping plays only when that hold waited for the model to load.
 
 ![Settings](docs/images/settings.png)
 

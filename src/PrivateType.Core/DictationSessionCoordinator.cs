@@ -17,6 +17,16 @@ public sealed class DictationSessionCoordinator : IAsyncDisposable
         this.createSession = createSession;
     }
 
+    public bool IsRecording
+    {
+        get
+        {
+            lock (commandLock)
+                return !disposed && hotkeyHeld && activeHoldGeneration == holdGeneration &&
+                    activeSession?.State == DictationState.Recording;
+        }
+    }
+
     public Task HoldAsync(RecognitionLanguage language)
     {
         lock (commandLock)
@@ -62,7 +72,8 @@ public sealed class DictationSessionCoordinator : IAsyncDisposable
         commands = commands.ContinueWith(
             _ => command(),
             CancellationToken.None,
-            TaskContinuationOptions.ExecuteSynchronously,
+            // Publish the queued task before a command can enqueue fault cleanup.
+            TaskContinuationOptions.None,
             TaskScheduler.Default).Unwrap();
         return commands;
     }

@@ -9,6 +9,7 @@ namespace PrivateType.App;
 internal sealed class DictationApplication : IDisposable
 {
     private readonly EngineHost engine = new();
+    private readonly ModelReadySound modelReadySound = new();
     private readonly EngineLoadCoordinator engineLoads;
     private readonly HoldHotkeyHook hotkey = new();
     private readonly DictationBubble bubble = new();
@@ -78,6 +79,7 @@ internal sealed class DictationApplication : IDisposable
         sessions.DisposeAsync().AsTask().GetAwaiter().GetResult();
         bubble.Close();
         engine.Dispose();
+        modelReadySound.Dispose();
         downloader.Dispose();
         provisioningCancellation?.Dispose();
     }
@@ -401,7 +403,8 @@ internal sealed class DictationApplication : IDisposable
         var generation = ++heldGeneration;
         modelIdleTimer.Stop();
         bubble.MoveToPointerScreen();
-        if (!engineLoads.IsLoaded)
+        var waitedForModel = !engineLoads.IsLoaded;
+        if (waitedForModel)
             bubble.ShowModelLoading();
         try
         {
@@ -415,6 +418,8 @@ internal sealed class DictationApplication : IDisposable
             }
 
             await sessions.HoldAsync(language);
+            if (waitedForModel && shortcutHeld && generation == heldGeneration && sessions.IsRecording)
+                PlayModelReadySound();
         }
         catch (Exception exception)
         {
@@ -422,6 +427,18 @@ internal sealed class DictationApplication : IDisposable
             statusItem.Text = "Model could not load";
             trayIcon.ShowBalloonTip(5000, "PrivateType", $"The local model could not load: {exception.Message}", Forms.ToolTipIcon.Error);
             bubble.ShowError("The local model could not load.");
+        }
+    }
+
+    private void PlayModelReadySound()
+    {
+        try
+        {
+            modelReadySound.Play();
+        }
+        catch (Exception exception)
+        {
+            RecordDiagnostic("model.ready.sound.failed", exception);
         }
     }
 
