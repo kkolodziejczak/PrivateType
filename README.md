@@ -65,6 +65,14 @@ holding the shortcut while **Loading local model…** is shown. A short ping
 signals that loading has finished and the microphone is ready: you can speak.
 The ping plays only when that hold waited for the model to load.
 
+In **Settings → Ready sound**, choose Ping, Chime, Bell, or your own WAV/MP3,
+and adjust the volume from 0% (muted) to 100%. **Preview** plays your pending
+choice immediately, without loading the model. **Save changes** keeps your
+preferences; **Cancel** discards them. Custom files are copied into app storage
+when saved, and playback uses at most the first three seconds. If a saved custom
+file becomes unreadable, PrivateType uses Ping instead. Settings scrolls when
+needed, with Save and Cancel always accessible.
+
 ![Settings](docs/images/settings.png)
 
 ### What the app does

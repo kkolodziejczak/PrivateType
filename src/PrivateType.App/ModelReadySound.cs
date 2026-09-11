@@ -1,29 +1,61 @@
-using System.IO;
-using System.Media;
+using NAudio.Wave;
+using PrivateType.Core;
 
 namespace PrivateType.App;
 
 internal sealed class ModelReadySound : IDisposable
 {
-    private SoundPlayer? player;
-    private Stream? stream;
+    private readonly object playbackLock = new();
+    private WaveOutEvent? player;
+    private bool disposed;
 
-    public void Play()
+    public void Play(PortableSettings settings) => Start(settings, fallbackToPing: true);
+
+    public void Preview(PortableSettings settings) => Start(settings, fallbackToPing: false);
+
+    private void Start(PortableSettings settings, bool fallbackToPing)
     {
-        if (player is null)
+        lock (playbackLock)
         {
-            stream = typeof(ModelReadySound).Assembly.GetManifestResourceStream("PrivateType.ModelReady.wav")
-                ?? throw new InvalidOperationException("The model-ready sound is missing.");
-            player = new SoundPlayer(stream);
-            player.Load();
+            ObjectDisposedException.ThrowIf(disposed, this);
+            StopPlayback();
+            var clip = ReadySoundAudio.Load(settings, fallbackToPing);
+            if (settings.ReadySoundVolume == 0)
+                return;
+            var output = new WaveOutEvent();
+            try
+            {
+                output.Init(clip);
+                output.Play();
+                player = output;
+            }
+            catch
+            {
+                output.Dispose();
+                throw;
+            }
         }
+    }
 
-        player.Play();
+    public void Stop()
+    {
+        lock (playbackLock)
+            StopPlayback();
+    }
+
+    private void StopPlayback()
+    {
+        player?.Stop();
+        player?.Dispose();
+        player = null;
     }
 
     public void Dispose()
     {
-        player?.Dispose();
-        stream?.Dispose();
+        lock (playbackLock)
+        {
+            StopPlayback();
+            disposed = true;
+        }
     }
 }

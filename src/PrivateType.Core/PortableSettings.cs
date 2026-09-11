@@ -20,6 +20,10 @@ public sealed record PortableSettings(
     bool StartWithWindows = false,
     int ModelIdleTimeoutMinutes = 10)
 {
+    public string ReadySound { get; init; } = "ping";
+    public int ReadySoundVolume { get; init; } = 80;
+    public string? CustomReadySoundPath { get; init; }
+
     public static PortableSettings Default { get; } = new("default", ShortcutBinding.Defaults);
 }
 
@@ -49,6 +53,15 @@ public static class PortableSettingsValidator
 
         if (settings.ModelIdleTimeoutMinutes is not (5 or 10 or 15 or 30))
             return "Choose a supported model idle timeout.";
+
+        if (settings.ReadySound is not ("ping" or "chime" or "bell" or "custom"))
+            return "Choose a supported ready sound.";
+
+        if (settings.ReadySoundVolume is < 0 or > 100)
+            return "Choose a ready sound volume between 0 and 100%.";
+
+        if (settings.ReadySound == "custom" && string.IsNullOrWhiteSpace(settings.CustomReadySoundPath))
+            return "Choose a custom ready sound file.";
 
         return null;
     }

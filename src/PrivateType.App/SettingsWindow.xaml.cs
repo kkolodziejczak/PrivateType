@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.IO;
 using System.Runtime.CompilerServices;
 using System.Windows;
 using PrivateType.Core;
@@ -17,10 +18,14 @@ public partial class SettingsWindow : Window
     ];
     private readonly ObservableCollection<ShortcutBindingEditor> bindings;
     private readonly PortableSettings originalSettings;
+    private readonly ModelReadySound soundPreview = new();
+    private string? customSoundPath;
 
     public SettingsWindow(PortableSettings settings, IReadOnlyList<MicrophoneOption> microphones)
     {
         InitializeComponent();
+        MaxHeight = Math.Max(320, SystemParameters.WorkArea.Height - 24);
+        Height = Math.Min(800, MaxHeight);
         var version = ApplicationVersion.Current;
         Title = $"{ApplicationVersion.Label(version)} settings";
         SettingsHeaderText.Text = HeaderText(version);
@@ -34,6 +39,12 @@ public partial class SettingsWindow : Window
         StartWithWindowsCheckBox.IsChecked = settings.StartWithWindows;
         IdleTimeoutBox.ItemsSource = IdleTimeoutOption.Supported;
         IdleTimeoutBox.SelectedValue = settings.ModelIdleTimeoutMinutes;
+        customSoundPath = settings.CustomReadySoundPath;
+        ReadySoundBox.ItemsSource = ReadySoundOption.Supported;
+        ReadySoundBox.SelectedValue = settings.ReadySound;
+        ReadyVolumeSlider.Value = settings.ReadySoundVolume;
+        UpdateSoundControls();
+        Closed += (_, _) => soundPreview.Dispose();
     }
 
     internal static string HeaderText(Version? version) => $"{ApplicationVersion.Label(version)} — settings";
@@ -41,6 +52,96 @@ public partial class SettingsWindow : Window
     public PortableSettings? SavedSettings { get; private set; }
     public event Action? DiagnosticsRequested;
     public event Action? LicensesRequested;
+
+    private void ReadySoundChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    {
+        if (CustomSoundPathText is null)
+            return;
+
+        soundPreview.Stop();
+        UpdateSoundControls();
+    }
+
+    private void UpdateSoundControls()
+    {
+        var custom = ReadySoundBox.SelectedValue as string == "custom";
+        BrowseSoundButton.IsEnabled = custom;
+        CustomSoundPathText.IsEnabled = custom;
+        CustomSoundPathText.Text = string.IsNullOrWhiteSpace(customSoundPath)
+            ? "Choose a WAV or MP3 file"
+            : Path.GetFileName(customSoundPath);
+        CustomSoundPathText.ToolTip = customSoundPath;
+        SoundStatusText.Text = custom && string.IsNullOrWhiteSpace(customSoundPath)
+            ? "Choose a file with Browse before previewing or saving."
+            : string.Empty;
+        ReadyVolumeText.Text = $"{ReadyVolumeSlider.Value:0}%";
+    }
+
+    private void ReadyVolumeChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (ReadyVolumeText is null)
+            return;
+
+        soundPreview.Stop();
+        ReadyVolumeText.Text = $"{e.NewValue:0}%";
+        SoundStatusText.Text = string.Empty;
+    }
+
+    private void BrowseSound(object sender, RoutedEventArgs e)
+    {
+        var picker = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = "Choose a ready sound",
+            Filter = "Audio files (*.wav;*.mp3)|*.wav;*.mp3",
+            CheckFileExists = true,
+            Multiselect = false
+        };
+        if (picker.ShowDialog(this) != true)
+            return;
+
+        SelectCustomSound(picker.FileName);
+    }
+
+    internal bool SelectCustomSound(string path)
+    {
+        try
+        {
+            ReadySoundStorage.Validate(path);
+            soundPreview.Stop();
+            customSoundPath = path;
+            UpdateSoundControls();
+            return true;
+        }
+        catch (Exception)
+        {
+            SoundStatusText.Text = "Couldn't read that sound. Choose a valid WAV or MP3 file.";
+            SoundStatusText.BringIntoView();
+            return false;
+        }
+    }
+
+    private void PreviewSound(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            soundPreview.Preview(PendingSoundSettings());
+            SoundStatusText.Text = ReadyVolumeSlider.Value == 0
+                ? "Sound is muted. Increase the volume to hear a preview."
+                : "Preview started. Playback lasts up to 3 seconds.";
+        }
+        catch (Exception)
+        {
+            SoundStatusText.Text = "Couldn't play the sound. Check your audio output or choose a valid WAV or MP3 file.";
+        }
+        SoundStatusText.BringIntoView();
+    }
+
+    private PortableSettings PendingSoundSettings() => originalSettings with
+    {
+        ReadySound = ReadySoundBox.SelectedValue as string ?? "ping",
+        ReadySoundVolume = (int)Math.Round(ReadyVolumeSlider.Value),
+        CustomReadySoundPath = customSoundPath
+    };
 
     private void AddBinding(object sender, RoutedEventArgs e)
     {
@@ -94,7 +195,7 @@ public partial class SettingsWindow : Window
 
     private void Save(object sender, RoutedEventArgs e)
     {
-        var settings = originalSettings with
+        var settings = PendingSoundSettings() with
         {
             MicrophoneId = MicrophoneBox.SelectedValue as string ?? "default",
             Shortcuts = bindings.Select(binding => new ShortcutBinding(binding.Language, binding.VirtualKey)).ToArray(),
@@ -106,6 +207,20 @@ public partial class SettingsWindow : Window
         {
             ValidationText.Text = validationError;
             return;
+        }
+
+        if (settings.ReadySound == "custom" &&
+            (settings.CustomReadySoundPath != originalSettings.CustomReadySoundPath || originalSettings.ReadySound != "custom"))
+        {
+            try
+            {
+                ReadySoundStorage.Validate(settings.CustomReadySoundPath!);
+            }
+            catch (Exception)
+            {
+                ValidationText.Text = "Choose a readable WAV or MP3 file for the custom ready sound.";
+                return;
+            }
         }
 
         SavedSettings = settings;
@@ -125,6 +240,17 @@ public partial class SettingsWindow : Window
 }
 
 public sealed record LanguageOption(RecognitionLanguage Language, string Label);
+
+public sealed record ReadySoundOption(string Id, string Label)
+{
+    public static IReadOnlyList<ReadySoundOption> Supported { get; } =
+    [
+        new("ping", "Ping"),
+        new("chime", "Chime"),
+        new("bell", "Bell"),
+        new("custom", "Custom file")
+    ];
+}
 
 public sealed record IdleTimeoutOption(int Minutes, string Label)
 {

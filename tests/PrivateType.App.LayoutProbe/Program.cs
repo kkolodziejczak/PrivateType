@@ -60,6 +60,7 @@ static void RenderWindows(bool pointerPlacementOnly)
             [new MicrophoneOption("default", "System default microphone")]),
         Path.Combine(outputDirectory, "settings.png"),
         VerifySettingsVersion);
+    SettingsSoundProbe.Run(outputDirectory);
     Render(new DiagnosticsWindow(new InMemoryDiagnostics()), Path.Combine(outputDirectory, "diagnostics-empty.png"));
     Render(new OpenSourceLicensesWindow(), Path.Combine(outputDirectory, "open-source-licenses.png"));
     var sharedModelSetup = new ModelSetupWindow();

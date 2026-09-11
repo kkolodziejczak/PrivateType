@@ -307,7 +307,18 @@ internal sealed class DictationApplication : IDisposable
                 startupUpdate,
                 windowsStartup,
                 ExecutablePath(),
-                () => settingsStore.Save(newSettings));
+                () =>
+                {
+                    if (newSettings.ReadySound == "custom" &&
+                        (newSettings.CustomReadySoundPath != settings.CustomReadySoundPath || settings.ReadySound != "custom"))
+                    {
+                        newSettings = newSettings with
+                        {
+                            CustomReadySoundPath = ReadySoundStorage.Import(newSettings.CustomReadySoundPath!, PortablePaths.DataDirectory)
+                        };
+                    }
+                    settingsStore.Save(newSettings);
+                });
             settings = newSettings;
             statusItem.Text = DescribeReady(availability);
             trayIcon.Text = $"PrivateType — {statusItem.Text}";
@@ -434,7 +445,7 @@ internal sealed class DictationApplication : IDisposable
     {
         try
         {
-            modelReadySound.Play();
+            modelReadySound.Play(settings);
         }
         catch (Exception exception)
         {
