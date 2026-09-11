@@ -8,6 +8,22 @@ namespace PrivateType.App.Tests;
 
 public sealed class ReadySoundAudioTests
 {
+    [Fact]
+    public void Playback_adapter_reads_samples_into_its_byte_backed_buffer()
+    {
+        var clip = new ReadySoundClip(WaveFormat.CreateIeeeFloatWaveFormat(44100, 1), [0.25f, -0.5f, 1f]);
+        var playback = clip.ToWaveProvider();
+        var buffer = Enumerable.Repeat((byte)0x7F, 16).ToArray();
+
+        Assert.Equal(8, playback.Read(buffer, 4, 8));
+        Assert.Equal(0.25f, BitConverter.ToSingle(buffer, 4));
+        Assert.Equal(-0.5f, BitConverter.ToSingle(buffer, 8));
+        Assert.All(buffer.Take(4).Concat(buffer.Skip(12)), value => Assert.Equal((byte)0x7F, value));
+        Assert.Equal(4, playback.Read(buffer, 0, 8));
+        Assert.Equal(1f, BitConverter.ToSingle(buffer, 0));
+        Assert.Equal(0, playback.Read(buffer, 0, 8));
+    }
+
     [Theory]
     [InlineData("ping")]
     [InlineData("chime")]

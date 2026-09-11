@@ -105,7 +105,9 @@ internal sealed class ReadySoundClip(WaveFormat waveFormat, float[] samples) : I
     public int Read(float[] buffer, int offset, int count)
     {
         var available = Math.Min(count, Samples.Length - position);
-        Array.Copy(Samples, position, buffer, offset, available);
+        // NAudio may expose a byte-backed WaveBuffer as float[]. Copy primitive
+        // bytes rather than requiring both arrays to have the same runtime type.
+        Buffer.BlockCopy(Samples, position * sizeof(float), buffer, offset * sizeof(float), available * sizeof(float));
         position += available;
         return available;
     }
