@@ -1,17 +1,19 @@
 using System.Diagnostics;
 using System.IO;
+using System.Net;
 using System.Net.Http;
+using System.Net.Sockets;
 
 namespace PrivateType.App;
 
 internal sealed class EngineHost : IDisposable
 {
-    private const int Port = 8098;
     private readonly EngineProcessJob engineJob = new();
     private Process? process;
+    private int port;
     private bool ready;
 
-    public Uri RealtimeEndpoint => new($"ws://127.0.0.1:{Port}/v1/realtime");
+    public Uri RealtimeEndpoint => new($"ws://127.0.0.1:{port}/v1/realtime");
 
     public bool IsRunning => process is { HasExited: false };
 
@@ -53,14 +55,13 @@ internal sealed class EngineHost : IDisposable
         if (IsReady)
             return;
 
-        if (IsRunning && await IsEndpointReadyAsync(cancellationToken))
+        if (IsRunning && await IsEndpointReadyAsync(port, cancellationToken))
         {
             ready = true;
             return;
         }
 
         Stop();
-        EnsureEndpointIsAvailable(await IsEndpointReadyAsync(cancellationToken));
 
         var runtime = FindRuntime();
         var executable = runtime.ExecutablePath;
@@ -69,8 +70,8 @@ internal sealed class EngineHost : IDisposable
 
         try
         {
-            process = Process.Start(new ProcessStartInfo(executable,
-                $"serve --host 127.0.0.1 --port {Port} --threads 1 --asr-model \"{modelPath}\" --device cpu")
+            port = ReserveLoopbackPort();
+            process = Process.Start(new ProcessStartInfo(executable, ServeArguments(port, modelPath))
             {
                 UseShellExecute = false,
                 CreateNoWindow = true,
@@ -83,7 +84,7 @@ internal sealed class EngineHost : IDisposable
             {
                 if (process.HasExited)
                     throw new InvalidOperationException("The local speech runtime stopped before it became ready.");
-                if (await IsEndpointReadyAsync(cancellationToken))
+                if (await IsEndpointReadyAsync(port, cancellationToken))
                 {
                     ready = true;
                     return;
@@ -120,21 +121,33 @@ internal sealed class EngineHost : IDisposable
         engineJob.Dispose();
     }
 
-    internal static void EnsureEndpointIsAvailable(bool endpointIsReady)
+    // One realtime connection at a time, so a single HTTP worker is enough.
+    // ASR compute threading is fixed inside the engine.
+    internal static string ServeArguments(int port, string modelPath) =>
+        $"serve --host 127.0.0.1 --port {port} --threads 1 --no-ui --asr-model \"{modelPath}\" --device cpu";
+
+    // Each engine gets a free loopback port, so concurrent PrivateType versions
+    // and unrelated local services cannot collide on a fixed port.
+    internal static int ReserveLoopbackPort()
     {
-        if (endpointIsReady)
+        var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        try
         {
-            throw new InvalidOperationException(
-                $"Silnik lokalnego dyktowania działa już na porcie {Port}. Zamknij istniejącą instancję przed uruchomieniem PrivateType.");
+            return ((IPEndPoint)listener.LocalEndpoint).Port;
+        }
+        finally
+        {
+            listener.Stop();
         }
     }
 
-    private static async Task<bool> IsEndpointReadyAsync(CancellationToken cancellationToken)
+    private static async Task<bool> IsEndpointReadyAsync(int port, CancellationToken cancellationToken)
     {
         try
         {
             using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(1) };
-            var response = await client.GetAsync($"http://127.0.0.1:{Port}/ready", cancellationToken);
+            var response = await client.GetAsync($"http://127.0.0.1:{port}/ready", cancellationToken);
             return response.IsSuccessStatusCode;
         }
         catch (HttpRequestException)
@@ -153,7 +166,8 @@ internal sealed class EngineHost : IDisposable
         if (File.Exists(portableRuntime))
             return new EngineRuntime(portableRuntime, Path.GetDirectoryName(portableRuntime)!);
 
-        var configured = Environment.GetEnvironmentVariable("LIVE_DICTATION_ENGINE_ROOT");
+        var configured = Environment.GetEnvironmentVariable("PRIVATETYPE_ENGINE_ROOT")
+            ?? Environment.GetEnvironmentVariable("LIVE_DICTATION_ENGINE_ROOT");
         if (!string.IsNullOrWhiteSpace(configured))
         {
             var root = Path.GetFullPath(configured);

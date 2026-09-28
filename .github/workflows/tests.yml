@@ -1,0 +1,28 @@
+name: Tests
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: windows-2022
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Test .NET projects and rendered layouts
+        shell: pwsh
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          dotnet test ./tests/PrivateType.Core.Tests/PrivateType.Core.Tests.csproj --configuration Release
+          dotnet test ./tests/PrivateType.App.Tests/PrivateType.App.Tests.csproj --configuration Release
+          dotnet run --project ./tests/PrivateType.App.LayoutProbe/PrivateType.App.LayoutProbe.csproj --configuration Release

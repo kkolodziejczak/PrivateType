@@ -31,12 +31,66 @@ public sealed record SettingsLoadResult(PortableSettings Settings, string? Warni
 
 public static class PortableSettingsValidator
 {
+    // Each check owns one group of fields, so an invalid group can be reset on load
+    // without discarding the user's other settings.
+    private sealed record Check(string Name, Func<PortableSettings, string?> Validate, Func<PortableSettings, PortableSettings> Reset);
+
+    private static readonly Check[] Checks =
+    [
+        new("microphone",
+            settings => string.IsNullOrWhiteSpace(settings.MicrophoneId) ? "Choose a microphone before saving settings." : null,
+            settings => settings with { MicrophoneId = PortableSettings.Default.MicrophoneId }),
+        new("shortcuts",
+            ValidateShortcuts,
+            settings => settings with { Shortcuts = ShortcutBinding.Defaults }),
+        new("bubble position",
+            settings => settings.PanelLeftFraction is < 0 or > 1 || settings.PanelTopFraction is < 0 or > 1
+                ? "The saved panel position is outside the screen."
+                : null,
+            settings => settings with { PanelLeftFraction = null, PanelTopFraction = null, PanelDisplayDeviceName = null }),
+        new("model idle timeout",
+            settings => settings.ModelIdleTimeoutMinutes is not (5 or 10 or 15 or 30) ? "Choose a supported model idle timeout." : null,
+            settings => settings with { ModelIdleTimeoutMinutes = PortableSettings.Default.ModelIdleTimeoutMinutes }),
+        new("ready sound",
+            ValidateReadySound,
+            settings => settings with { ReadySound = PortableSettings.Default.ReadySound, CustomReadySoundPath = null }),
+        new("ready sound volume",
+            settings => settings.ReadySoundVolume is < 0 or > 100 ? "Choose a ready sound volume between 0 and 100%." : null,
+            settings => settings with { ReadySoundVolume = PortableSettings.Default.ReadySoundVolume })
+    ];
+
     public static string? Validate(PortableSettings settings)
     {
-        if (string.IsNullOrWhiteSpace(settings.MicrophoneId))
-            return "Choose a microphone before saving settings.";
+        foreach (var check in Checks)
+        {
+            if (check.Validate(settings) is { } error)
+                return error;
+        }
 
-        if (settings.Shortcuts.Count == 0)
+        return null;
+    }
+
+    public static (PortableSettings Settings, IReadOnlyList<string> ResetNames) Repair(PortableSettings settings)
+    {
+        var resetNames = new List<string>();
+        foreach (var check in Checks)
+        {
+            if (check.Validate(settings) is null)
+                continue;
+
+            settings = check.Reset(settings);
+            resetNames.Add(check.Name);
+        }
+
+        return (settings, resetNames);
+    }
+
+    private static string? ValidateShortcuts(PortableSettings settings)
+    {
+        if (settings.Shortcuts is null || settings.Shortcuts.Count == 0)
+            return "Add at least one shortcut.";
+
+        if (settings.Shortcuts.Any(binding => binding is null))
             return "Add at least one shortcut.";
 
         if (settings.Shortcuts.Any(binding => binding.Language is not RecognitionLanguage.Polish and not RecognitionLanguage.English and not RecognitionLanguage.Auto))
@@ -48,17 +102,13 @@ public static class PortableSettingsValidator
         if (settings.Shortcuts.Select(binding => binding.VirtualKey).Distinct().Count() != settings.Shortcuts.Count)
             return "Each shortcut must use a different key.";
 
-        if (settings.PanelLeftFraction is < 0 or > 1 || settings.PanelTopFraction is < 0 or > 1)
-            return "The saved panel position is outside the screen.";
+        return null;
+    }
 
-        if (settings.ModelIdleTimeoutMinutes is not (5 or 10 or 15 or 30))
-            return "Choose a supported model idle timeout.";
-
+    private static string? ValidateReadySound(PortableSettings settings)
+    {
         if (settings.ReadySound is not ("ping" or "chime" or "bell" or "custom"))
             return "Choose a supported ready sound.";
-
-        if (settings.ReadySoundVolume is < 0 or > 100)
-            return "Choose a ready sound volume between 0 and 100%.";
 
         if (settings.ReadySound == "custom" && string.IsNullOrWhiteSpace(settings.CustomReadySoundPath))
             return "Choose a custom ready sound file.";
@@ -82,10 +132,13 @@ public sealed class PortableSettingsStore(string dataDirectory)
                 return new SettingsLoadResult(PortableSettings.Default);
 
             var settings = JsonSerializer.Deserialize<PortableSettings>(File.ReadAllText(SettingsPath), JsonOptions);
-            var validationError = settings is null ? "Settings file is empty." : PortableSettingsValidator.Validate(settings);
-            return validationError is null
-                ? new SettingsLoadResult(settings!)
-                : new SettingsLoadResult(PortableSettings.Default, $"Saved settings were ignored: {validationError}");
+            if (settings is null)
+                return new SettingsLoadResult(PortableSettings.Default, "Saved settings were ignored: Settings file is empty.");
+
+            var (repaired, resetNames) = PortableSettingsValidator.Repair(settings);
+            return resetNames.Count == 0
+                ? new SettingsLoadResult(settings)
+                : new SettingsLoadResult(repaired, $"Some saved settings were invalid and have been reset: {string.Join(", ", resetNames)}.");
         }
         catch (JsonException)
         {

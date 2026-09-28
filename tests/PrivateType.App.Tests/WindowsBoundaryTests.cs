@@ -88,11 +88,23 @@ public sealed class WindowsBoundaryTests
     }
 
     [Fact]
-    public void Rejects_start_when_the_fixed_local_engine_endpoint_is_already_ready()
+    public void Reserves_a_free_loopback_port_for_each_engine_start()
     {
-        var exception = Assert.Throws<InvalidOperationException>(() => EngineHost.EnsureEndpointIsAvailable(true));
+        var port = EngineHost.ReserveLoopbackPort();
 
-        Assert.Contains("8098", exception.Message);
+        Assert.InRange(port, 1024, 65535);
+        using var listener = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, port);
+        listener.Start();
+    }
+
+    [Fact]
+    public void Serves_the_engine_on_the_reserved_loopback_port_without_the_browser_playground()
+    {
+        var arguments = EngineHost.ServeArguments(51234, @"C:\models\model.gguf");
+
+        Assert.Contains("--host 127.0.0.1 --port 51234", arguments);
+        Assert.Contains("--no-ui", arguments);
+        Assert.Contains(@"--asr-model ""C:\models\model.gguf""", arguments);
     }
 
     [Fact]
@@ -426,12 +438,12 @@ public sealed class WindowsBoundaryTests
     [Fact]
     public void Maps_target_cancellation_to_a_visible_bubble_notice()
     {
-        var presentation = new DictationPresentation(DictationState.Finalizing, string.Empty, "Nie wstawiono tekstu", 0.25);
+        var presentation = new DictationPresentation(DictationState.Finalizing, string.Empty, "Text not inserted", 0.25);
 
         var bubble = BubblePresentationMapper.Map(presentation);
 
         Assert.Equal(BubblePresentationKind.Cancellation, bubble.Kind);
-        Assert.Equal("Nie wstawiono tekstu", bubble.Text);
+        Assert.Equal("Text not inserted", bubble.Text);
     }
 
     [Fact]

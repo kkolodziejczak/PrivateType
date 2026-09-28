@@ -1,6 +1,8 @@
 using System.Net.Http;
 using System.IO;
 using PrivateType.Core;
+using System.Runtime.InteropServices;
+using NAudio.CoreAudioApi;
 using NAudio.Wave;
 
 namespace PrivateType.App;
@@ -9,25 +11,76 @@ public sealed record MicrophoneOption(string Id, string DisplayName);
 
 internal static class MicrophoneCatalog
 {
+    internal const string DefaultId = "default";
+    private const string EndpointPrefix = "wasapi:";
+    private const string LegacyWaveInPrefix = "wavein:";
+
     internal static IReadOnlyList<MicrophoneOption> Enumerate()
     {
-        var microphones = new List<MicrophoneOption> { new("default", "System default") };
-        for (var index = 0; index < WaveIn.DeviceCount; index++)
-            microphones.Add(new($"wavein:{index}", WaveIn.GetCapabilities(index).ProductName));
+        var microphones = new List<MicrophoneOption> { new(DefaultId, "System default") };
+        using var enumerator = new MMDeviceEnumerator();
+        foreach (var device in enumerator.EnumerateAudioEndPoints(DataFlow.Capture, DeviceState.Active))
+        {
+            using (device)
+                microphones.Add(new(EndpointPrefix + device.ID, device.FriendlyName));
+        }
         return microphones;
     }
 
-    internal static int ToDeviceNumber(string microphoneId)
+    // Opens the saved endpoint, or the current Windows default when it is unavailable.
+    internal static MMDevice Open(string microphoneId)
     {
-        if (string.Equals(microphoneId, "default", StringComparison.OrdinalIgnoreCase))
-            return -1;
+        using var enumerator = new MMDeviceEnumerator();
+        if (microphoneId.StartsWith(EndpointPrefix, StringComparison.Ordinal))
+        {
+            try
+            {
+                var device = enumerator.GetDevice(microphoneId[EndpointPrefix.Length..]);
+                if (device.State == DeviceState.Active)
+                    return device;
+                device.Dispose();
+            }
+            catch (COMException)
+            {
+            }
+        }
 
-        return microphoneId.StartsWith("wavein:", StringComparison.OrdinalIgnoreCase)
-            && int.TryParse(microphoneId["wavein:".Length..], out var deviceNumber)
-            && deviceNumber >= 0
-            && deviceNumber < WaveIn.DeviceCount
-                ? deviceNumber
-                : -1;
+        try
+        {
+            return enumerator.GetDefaultAudioEndpoint(DataFlow.Capture, Role.Console);
+        }
+        catch (COMException exception)
+        {
+            throw new InvalidOperationException("No microphone is available. Connect or enable a recording device.", exception);
+        }
+    }
+
+    // Settings from v1.0.7 and earlier store an MME position ("wavein:N"), which shifts
+    // whenever devices are added or removed. Map it to a stable endpoint once, by name.
+    internal static string MigrateLegacyId(string microphoneId, IReadOnlyList<MicrophoneOption> microphones)
+    {
+        if (!microphoneId.StartsWith(LegacyWaveInPrefix, StringComparison.OrdinalIgnoreCase)
+            || !int.TryParse(microphoneId[LegacyWaveInPrefix.Length..], out var deviceNumber)
+            || deviceNumber < 0
+            || deviceNumber >= WaveIn.DeviceCount)
+        {
+            return microphoneId;
+        }
+
+        return MatchLegacyProductName(WaveIn.GetCapabilities(deviceNumber).ProductName, microphones) ?? microphoneId;
+    }
+
+    // MME truncates product names to 31 characters, so match by prefix and accept only one candidate.
+    internal static string? MatchLegacyProductName(string productName, IReadOnlyList<MicrophoneOption> microphones)
+    {
+        if (string.IsNullOrWhiteSpace(productName))
+            return null;
+
+        var matches = microphones
+            .Where(microphone => microphone.Id.StartsWith(EndpointPrefix, StringComparison.Ordinal)
+                && microphone.DisplayName.StartsWith(productName, StringComparison.Ordinal))
+            .ToList();
+        return matches.Count == 1 ? matches[0].Id : null;
     }
 }
 

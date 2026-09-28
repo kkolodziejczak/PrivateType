@@ -8,5 +8,9 @@
 - Explore a one-file extractor after v1.0.0. The current transparent folder ZIP remains the release format because the engine needs real files and the model remains a separate download.
 - Design a manual update window and workflow; automatic updates are out of scope for v1.0.0.
 - Add a private note-taker mode: when dictation starts without an eligible target window, let the user explicitly save the transcript as a local note instead of inserting it into another app. Define how notes are opened, organized, and deleted without weakening PrivateType's privacy guarantees.
-- Make the bubble click-through.
-- Make the bubble transparent by default, and even more transparent when the module is unloaded.
+- Implement the vocabulary and language plan in [VOCABULARY_AND_LANGUAGE_IMPLEMENTATION_PLAN.md](VOCABULARY_AND_LANGUAGE_IMPLEMENTATION_PLAN.md), starting with the Stage 1 boosting calibration.
+- Offer an opt-in clipboard-paste insertion mode for long text and apps that reject synthetic typing; restore the previous clipboard contents afterwards.
+- Offer a toggle mode (tap to start, tap to stop) alongside hold-to-dictate.
+- Allow modifiers other than Ctrl+Shift for dictation shortcuts.
+- ASR compute threads are fixed at 4 inside the pinned engine; making them configurable requires an engine patch and a latency benchmark.
+- Sign release executables so Windows SmartScreen does not warn on first launch.

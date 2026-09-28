@@ -146,7 +146,7 @@ public sealed class DictationSession : IAsyncDisposable
         if (eligibility != TargetEligibility.Eligible)
         {
             Diagnose("injection.skipped", ("reason", "target-ineligible"), ("targetEligibility", eligibility), ("characters", text.Length));
-            Publish(DictationState.Finalizing, message: $"Nie wstawiono tekstu: cel dyktowania jest {eligibility}.");
+            Publish(DictationState.Finalizing, message: TargetCancellationMessage(eligibility));
             return;
         }
 
@@ -154,6 +154,13 @@ public sealed class DictationSession : IAsyncDisposable
         injector.Inject(text);
         Diagnose("injection.completed", ("characters", text.Length));
     }
+
+    internal static string TargetCancellationMessage(TargetEligibility eligibility) => eligibility switch
+    {
+        TargetEligibility.Changed => "Text not inserted: the active window changed.",
+        TargetEligibility.Ineligible => "Text not inserted: the window does not accept input from PrivateType.",
+        _ => "Text not inserted: the original window is no longer available."
+    };
 
     public async ValueTask DisposeAsync()
     {

@@ -60,7 +60,8 @@ The reported hash must exactly match the accompanying `.zip.sha256` file.
 | English | `Ctrl+Shift+E` |
 
 Hold a shortcut while speaking, then release it to insert the final text. The
-model loads on first use and again after the selected idle timeout. Keep
+model loads when PrivateType starts; after the selected idle timeout unloads
+it, the next held shortcut loads it again. Keep
 holding the shortcut while **Loading local model…** is shown. A short ping
 signals that loading has finished and the microphone is ready: you can speak.
 The ping plays only when that hold waited for the model to load.
@@ -104,7 +105,7 @@ PrivateType is a CPU-only `win-x64` app.
 | Microphone | Any Windows recording device | Headset or close microphone in a quiet room |
 
 The pinned Nemotron Q8_0 model is about 707 MiB. The self-contained app/runtime
-folder is about 190 MB before the model download. The current native runtime
+folder is about 200 MB before the model download. The current native runtime
 requires the [Microsoft Visual C++ x64 Redistributable](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist)
 if it is not already installed.
 

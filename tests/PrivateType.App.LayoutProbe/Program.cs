@@ -42,8 +42,9 @@ static void RenderWindows(bool pointerPlacementOnly)
     if (inputSize != 40)
         throw new InvalidOperationException($"Win32 x64 INPUT must be 40 bytes; actual size was {inputSize}.");
 
-    var application = new PrivateType.App.App { ShutdownMode = ShutdownMode.OnExplicitShutdown };
-    Application.LoadComponent(application, new Uri("/PrivateType;component/App.xaml", UriKind.Relative));
+    // Load only the theme: instantiating App would start a real PrivateType (hotkeys, tray, model load).
+    var application = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
+    application.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("/PrivateType;component/Theme.xaml", UriKind.Relative) });
     var outputDirectory = Path.Combine(Path.GetTempPath(), "live-dictation-layout-probe");
     Directory.CreateDirectory(outputDirectory);
 
@@ -122,7 +123,7 @@ static void RenderWindows(bool pointerPlacementOnly)
 
     var cancelledPanel = new DictationBubble();
     cancelledPanel.ShowReady(PortableSettings.Default, modelLoaded: true);
-    cancelledPanel.ShowCancellation("Target window changed — dictation was cancelled.");
+    cancelledPanel.ShowCancellation("Text not inserted: the window does not accept input from PrivateType.");
     Render(cancelledPanel, Path.Combine(outputDirectory, "status-panel-cancelled.png"));
 
     var errorPanel = new DictationBubble();

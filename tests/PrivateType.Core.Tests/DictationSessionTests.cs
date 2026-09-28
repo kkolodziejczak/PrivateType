@@ -54,7 +54,7 @@ public sealed class DictationSessionTests
         await session.StartAsync();
         await session.StopAsync();
 
-        Assert.Contains(presentations, presentation => presentation.Message?.Contains("Changed", StringComparison.Ordinal) == true);
+        Assert.Contains(presentations, presentation => presentation.Message == "Text not inserted: the active window changed.");
     }
 
     [Fact]

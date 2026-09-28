@@ -14,7 +14,7 @@ public partial class DiagnosticsWindow : Window
     private void CopyReport(object sender, RoutedEventArgs e) => System.Windows.Clipboard.SetText(Report());
     private void SaveReport(object sender, RoutedEventArgs e)
     {
-        var dialog = new Microsoft.Win32.SaveFileDialog { FileName = $"live-dictation-diagnostics-{DateTime.Now:yyyyMMdd-HHmmss}.json", Filter = "JSON report|*.json" };
+        var dialog = new Microsoft.Win32.SaveFileDialog { FileName = $"privatetype-diagnostics-{DateTime.Now:yyyyMMdd-HHmmss}.json", Filter = "JSON report|*.json" };
         if (dialog.ShowDialog(this) == true) File.WriteAllText(dialog.FileName, Report());
     }
     private void ClearReport(object sender, RoutedEventArgs e) { diagnostics.Clear(); Refresh(); }

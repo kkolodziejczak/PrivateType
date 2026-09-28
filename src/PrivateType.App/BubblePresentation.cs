@@ -86,7 +86,7 @@ internal static class BubblePresentationMapper
             DictationState.Recording => new(BubblePresentationKind.Recording, presentation.ProvisionalText, presentation.AudioLevel),
             DictationState.Finalizing when presentation.Message is not null => new(BubblePresentationKind.Cancellation, presentation.Message, presentation.AudioLevel),
             DictationState.Finalizing => new(BubblePresentationKind.Finalizing, string.Empty, presentation.AudioLevel),
-            DictationState.Error => new(BubblePresentationKind.Error, presentation.Message ?? "Dyktowanie zostało przerwane.", presentation.AudioLevel),
+            DictationState.Error => new(BubblePresentationKind.Error, presentation.Message ?? "Dictation was interrupted.", presentation.AudioLevel),
             _ => new(BubblePresentationKind.Hide, string.Empty, presentation.AudioLevel)
         };
     }

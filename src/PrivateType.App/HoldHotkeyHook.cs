@@ -14,8 +14,8 @@ internal sealed class HoldHotkeyHook : IDisposable
     private const int VkShift = 0x10;
     private readonly HookProcedure callback;
     private nint hook;
+    private readonly HeldShortcutTracker held = new();
     private HotkeyReservation? reservation;
-    private HotkeyDefinition? heldHotkey;
     private IReadOnlyList<HotkeyDefinition> configuredHotkeys = [];
 
     public HoldHotkeyHook() => callback = HookCallback;
@@ -49,7 +49,16 @@ internal sealed class HoldHotkeyHook : IDisposable
     {
         reservation?.Dispose();
         reservation = null;
-        heldHotkey = null;
+        held.Clear();
+    }
+
+    public bool ReleaseIfKeyIsUp()
+    {
+        if (!held.ReleaseIfPhysicallyUp(IsPressed))
+            return false;
+
+        Released?.Invoke();
+        return true;
     }
 
     public HotkeyAvailability? Resume(IReadOnlyList<HotkeyDefinition> hotkeys)
@@ -77,7 +86,7 @@ internal sealed class HoldHotkeyHook : IDisposable
         reservation?.Dispose();
         reservation = null;
         configuredHotkeys = [];
-        heldHotkey = null;
+        held.Clear();
     }
 
     private nint HookCallback(int code, nint wParam, nint lParam)
@@ -87,17 +96,22 @@ internal sealed class HoldHotkeyHook : IDisposable
         var key = Marshal.ReadInt32(lParam);
         var hotkey = reservation?.Availability.EnabledHotkeys.SingleOrDefault(candidate => candidate.VirtualKey == key);
 
-        if (HotkeyMessage.IsKeyDown(wParam) && heldHotkey is null && hotkey is not null && IsPressed(VkControl) && IsPressed(VkShift))
+        if (HotkeyMessage.IsKeyDown(wParam) && held.Held is null && hotkey is not null && IsPressed(VkControl) && IsPressed(VkShift))
         {
-            heldHotkey = hotkey;
+            held.TryPress(hotkey);
             Held?.Invoke(hotkey.Language);
             return 1;
         }
-        if (HotkeyMessage.IsKeyUp(wParam) && heldHotkey?.VirtualKey == key)
+        if (HotkeyMessage.IsKeyUp(wParam))
         {
-            heldHotkey = null;
-            Released?.Invoke();
-            return 1;
+            switch (held.KeyUp(key))
+            {
+                case HeldKeyUpResult.Released:
+                    Released?.Invoke();
+                    return 1;
+                case HeldKeyUpResult.Swallowed:
+                    return 1;
+            }
         }
         return CallNextHookEx(hook, code, wParam, lParam);
     }

@@ -56,7 +56,7 @@ Nemotron; accuracy and macOS native packaging must be proved before adoption.
 ## Current application boundary
 
 The current UI project is explicitly Windows-only: it targets
-`net8.0-windows`, enables WPF and Windows Forms, and references NAudio in
+`net10.0-windows`, enables WPF and Windows Forms, and references NAudio in
 [`PrivateType.App.csproj`](../src/PrivateType.App/PrivateType.App.csproj).
 The following behavior is coupled to Windows APIs:
 
@@ -73,7 +73,7 @@ The following behavior is coupled to Windows APIs:
 | ASR process | A Windows `nemo-speech.exe` child process hosts a loopback WebSocket service; model download is size/hash verified by [`EngineHost.cs`](../src/PrivateType.App/EngineHost.cs) and [`ModelProvisioner.cs`](../src/PrivateType.Core/ModelProvisioner.cs). |
 
 The reusable boundary is already meaningful. `PrivateType.Core` targets plain
-`net8.0`, and its contracts isolate `IAudioCapture`, `IStreamingRecognizer`,
+`net10.0`, and its contracts isolate `IAudioCapture`, `IStreamingRecognizer`,
 `IForegroundTarget`, and `ITextInjector` in
 [`DictationContracts.cs`](../src/PrivateType.Core/DictationContracts.cs).
 Session coordination, commit de-duplication, transcript presentation, safe

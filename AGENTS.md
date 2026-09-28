@@ -9,7 +9,7 @@ Use this sequence after the relevant build and tests pass:
 1. Resolve the exact `PrivateType` process with `Get-Process`; do not use a broad process name, wildcard, or `taskkill`.
 2. Stop only that resolved process. If it is not running, continue without error.
 3. Start the current built executable:
-   `src\PrivateType.App\bin\Debug\net8.0-windows\PrivateType.exe`.
+   `src\PrivateType.App\bin\Debug\net10.0-windows\PrivateType.exe`.
    For a release-validation task, start the executable in the release folder instead.
 4. Confirm the new `PrivateType` process exists before asking for user input.
 5. Tell the user the app was relaunched and that the requested behavior is ready to test.

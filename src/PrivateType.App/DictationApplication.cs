@@ -23,6 +23,7 @@ internal sealed class DictationApplication : IDisposable
     private readonly LatestAudioMeterQueue pendingAudioMeters = new();
     private readonly WindowsStartupRegistration windowsStartup = new();
     private readonly DispatcherTimer modelIdleTimer;
+    private readonly DispatcherTimer heldKeyWatchdog;
     private readonly InMemoryDiagnostics diagnostics = new();
     private PortableSettingsStore? settingsStore;
     private ModelProvisioner? modelProvisioner;
@@ -54,6 +55,8 @@ internal sealed class DictationApplication : IDisposable
         trayIcon.ContextMenuStrip.Items.Add("Quit", null, (_, _) => Wpf.Application.Current.Shutdown());
         modelIdleTimer = new DispatcherTimer();
         modelIdleTimer.Tick += UnloadModelWhenIdle;
+        heldKeyWatchdog = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
+        heldKeyWatchdog.Tick += ReleaseShortcutIfKeyIsUp;
         hotkey.Held += language => Wpf.Application.Current.Dispatcher.BeginInvoke(new Action(() => _ = BeginDictationAsync(language)));
         hotkey.Released += () => Wpf.Application.Current.Dispatcher.BeginInvoke(new Action(() => _ = EndDictationAsync()));
         bubble.PositionChanged += SavePanelPosition;
@@ -72,6 +75,7 @@ internal sealed class DictationApplication : IDisposable
             return;
         disposed = true;
         modelIdleTimer.Stop();
+        heldKeyWatchdog.Stop();
         provisioningCancellation?.Cancel();
         hotkey.Dispose();
         trayIcon.Dispose();
@@ -97,7 +101,9 @@ internal sealed class DictationApplication : IDisposable
             modelProvisioner = new ModelProvisioner(modelStorage.Directory, PinnedModel.Manifest, downloader);
             if (loaded.Warning is not null)
                 trayIcon.ShowBalloonTip(5000, "PrivateType", loaded.Warning, Forms.ToolTipIcon.Warning);
-            if (!MicrophoneCatalog.Enumerate().Any(microphone => microphone.Id == settings.MicrophoneId))
+            var microphones = MicrophoneCatalog.Enumerate();
+            settings = settings with { MicrophoneId = MicrophoneCatalog.MigrateLegacyId(settings.MicrophoneId, microphones) };
+            if (!microphones.Any(microphone => microphone.Id == settings.MicrophoneId))
                 trayIcon.ShowBalloonTip(5000, "PrivateType", "The saved microphone is unavailable; the system default will be used until you choose another microphone.", Forms.ToolTipIcon.Warning);
 
             if (modelProvisioner.IsAvailable())
@@ -241,7 +247,7 @@ internal sealed class DictationApplication : IDisposable
         this.modelPath = modelPath;
         var availability = hotkey.Start(HotkeyCatalog.FromBindings(settings.Shortcuts));
         settingsItem.Enabled = true;
-        statusItem.Text = $"{DescribeReady(availability)} — model loads on first use";
+        statusItem.Text = $"{DescribeReady(availability)} — loading local model";
         trayIcon.Text = $"PrivateType — {statusItem.Text}";
         ShowReadyPanel();
         if (availability.DisabledHotkeys.Count > 0)
@@ -256,6 +262,7 @@ internal sealed class DictationApplication : IDisposable
         RecordDiagnostic("model.standby");
         await EnsureEngineLoadedAsync();
         ShowReadyPanel();
+        ScheduleModelUnload();
     }
 
     private static string DescribeReady(HotkeyAvailability availability)
@@ -413,6 +420,7 @@ internal sealed class DictationApplication : IDisposable
         shortcutHeld = true;
         var generation = ++heldGeneration;
         modelIdleTimer.Stop();
+        heldKeyWatchdog.Start();
         bubble.MoveToPointerScreen();
         var waitedForModel = !engineLoads.IsLoaded;
         if (waitedForModel)
@@ -477,10 +485,17 @@ internal sealed class DictationApplication : IDisposable
     {
         shortcutHeld = false;
         heldGeneration++;
+        heldKeyWatchdog.Stop();
         await sessions.ReleaseAsync();
         if (!engineLoads.IsLoaded)
             ShowReadyPanel();
         ScheduleModelUnload();
+    }
+
+    private void ReleaseShortcutIfKeyIsUp(object? sender, EventArgs e)
+    {
+        if (hotkey.ReleaseIfKeyIsUp())
+            RecordDiagnostic("shortcut.release.recovered");
     }
 
     private void ScheduleModelUnload()
