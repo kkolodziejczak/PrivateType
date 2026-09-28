@@ -77,8 +77,10 @@ internal sealed class HoldHotkeyHook : IDisposable
 
     public HotkeyAvailability? Resume(IReadOnlyList<HotkeyDefinition> hotkeys)
     {
-        if (reservation is not null)
-            throw new InvalidOperationException("Dictation hotkeys are already active.");
+        // Replace an active reservation rather than failing, so a repeated resume cannot leave
+        // the app without working shortcuts.
+        reservation?.Dispose();
+        reservation = null;
 
         var replacement = HotkeyReservation.Reserve(hotkeys);
         if (!replacement.Availability.CanStart)

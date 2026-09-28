@@ -60,6 +60,8 @@ public partial class SettingsWindow : Window
 
     internal VocabularyEditor Vocabulary => vocabulary;
 
+    internal void ShowVocabularyPage() => VocabularyTab.IsChecked = true;
+
     private void PageChanged(object sender, RoutedEventArgs e)
     {
         if (GeneralPage is null || VocabularyPage is null)

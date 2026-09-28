@@ -26,6 +26,7 @@ internal sealed class DictationApplication : IDisposable
     private readonly DispatcherTimer modelIdleTimer;
     private readonly DispatcherTimer heldKeyWatchdog;
     private readonly InMemoryDiagnostics diagnostics = new();
+    private SettingsWindow? openSettingsWindow;
     private PortableSettingsStore? settingsStore;
     private ModelProvisioner? modelProvisioner;
     private PortableSettings settings = PortableSettings.Default;
@@ -283,12 +284,34 @@ internal sealed class DictationApplication : IDisposable
         if (settingsStore is null || modelProvisioner is null)
             return;
 
+        // The tray menu stays clickable while modal Settings is open. A second window would
+        // interleave hotkey suspend/resume and leave the first dialog disabling the bubble,
+        // so reuse the open window instead.
+        if (openSettingsWindow is not null)
+        {
+            if (openVocabulary)
+                openSettingsWindow.ShowVocabularyPage();
+            BringToForeground(openSettingsWindow);
+            return;
+        }
+
         hotkey.Suspend();
         var window = new SettingsWindow(settings, MicrophoneCatalog.Enumerate(), openVocabulary);
         window.Loaded += (_, _) => BringToForeground(window);
         window.DiagnosticsRequested += () => ShowDiagnostics(window);
         window.LicensesRequested += () => new OpenSourceLicensesWindow { Owner = window }.ShowDialog();
-        if (window.ShowDialog() != true)
+        openSettingsWindow = window;
+        bool? result;
+        try
+        {
+            result = window.ShowDialog();
+        }
+        finally
+        {
+            openSettingsWindow = null;
+        }
+
+        if (result != true)
         {
             RestoreHotkeys(settings.Shortcuts);
             return;
