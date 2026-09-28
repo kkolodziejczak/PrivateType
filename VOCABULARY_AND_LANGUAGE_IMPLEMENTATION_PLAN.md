@@ -709,14 +709,14 @@ Stage 2 acceptance:
 
 Stage 3 acceptance:
 
-- [ ] Users can add, edit, remove, scope, and set influence for desired phrases in Settings.
-- [ ] Shared and base-language inheritance follows the agreed matrix; Auto uses Shared only.
-- [ ] Exact cross-scope duplicates emit once with the stronger influence.
-- [ ] Empty vocabulary preserves the previous recognizer payload behavior.
-- [ ] Low/Normal/Strong use the one calibrated mapping and `prompt` is not sent.
-- [ ] Invalid and oversized data is rejected without truncation, partial save, or sensitive error text.
-- [ ] `Vocabulary…` opens the approved Settings page.
-- [ ] Every Stage 3 mock state passes LayoutProbe and UI-quality verification.
+- [x] Users can add, edit, remove, and scope desired phrases in Settings, with one vocabulary-wide strength (revised decision).
+- [x] Shared and base-language inheritance follows the agreed matrix; Auto uses Shared only.
+- [x] Exact cross-scope duplicates emit once (strength is vocabulary-wide).
+- [x] Empty vocabulary preserves the previous recognizer payload behavior.
+- [x] Low/Normal/Strong use the one calibrated mapping and `prompt` is not sent.
+- [x] Invalid and oversized data is rejected without truncation, partial save, or sensitive error text.
+- [x] `Vocabulary…` opens the approved Settings page.
+- [ ] Every Stage 3 mock state passes LayoutProbe and UI-quality verification. (LayoutProbe passes; no `$verify-ui-quality` tool exists in this repository, and non-96-DPI scales are unchecked.)
 
 ## Stage 4: Simple offline vocabulary-pack sharing
 
