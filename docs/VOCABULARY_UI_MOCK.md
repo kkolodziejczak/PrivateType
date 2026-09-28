@@ -131,7 +131,7 @@ Validation behavior:
 
 ## Vocabulary page with packs (Stage 4, redesigned)
 
-> **Redesigned 2026-09-28 (proposed, awaiting owner approval).** This replaces the Personal/Installed-packs sub-tabs, per-row export checkboxes, and per-entry influence shown in the original Stage 4 drawings below, which remain only for history. Settings already has General/Vocabulary tabs, so packs become a second section on the same page instead of nested tabs.
+> **Redesigned and approved by the owner 2026-09-28** (JSON phrase array; 200-phrase per-dictation and 1,000-phrase stored budgets; single Vocabulary page with Your phrases and Packs sections). This replaces the Personal/Installed-packs sub-tabs, per-row export checkboxes, and per-entry influence shown in the original Stage 4 drawings below, which remain only for history. Settings already has General/Vocabulary tabs, so packs become a second section on the same page instead of nested tabs.
 
 ```text
 ┌────────────────────────────────────────────────────────────────────────┐

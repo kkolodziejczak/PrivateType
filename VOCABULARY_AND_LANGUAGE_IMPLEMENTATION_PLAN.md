@@ -386,7 +386,7 @@ The `0.0` is deliberately not a proposed production value. Stage 1 must replace 
 
 ### 5. Shareable vocabulary-pack contract
 
-> **Redesigned 2026-09-28 (proposed, awaiting owner approval).** Strength is vocabulary-wide (see the revision note under Agreed decisions), so packs carry phrases only. The per-entry `weight` format, pack precedence by influence, and the persisted-entry budget below were replaced.
+> **Redesigned and approved by the owner 2026-09-28** (JSON phrase array; 200-phrase per-dictation and 1,000-phrase stored budgets; single Vocabulary page with Your phrases and Packs sections). Strength is vocabulary-wide (see the revision note under Agreed decisions), so packs carry phrases only. The per-entry `weight` format, pack precedence by influence, and the persisted-entry budget below were replaced.
 
 The share file is a UTF-8 JSON array of phrase strings. It is intentionally not a package manifest:
 
@@ -726,7 +726,7 @@ Stage 3 acceptance:
 
 ## Stage 4: Simple offline vocabulary-pack sharing
 
-> **Redesigned 2026-09-28 (proposed, awaiting owner approval).** Packs hold phrases only; strength stays vocabulary-wide. The Personal/Installed sub-tabs and per-row export checkboxes of the original mock are replaced by one Vocabulary page with two sections and a reviewed export dialog.
+> **Redesigned and approved by the owner 2026-09-28** (JSON phrase array; 200-phrase per-dictation and 1,000-phrase stored budgets; single Vocabulary page with Your phrases and Packs sections). Packs hold phrases only; strength stays vocabulary-wide. The Personal/Installed sub-tabs and per-row export checkboxes of the original mock are replaced by one Vocabulary page with two sections and a reviewed export dialog.
 
 **Goal:** Let users import, manage, and export named local phrase collections through a phrase-only JSON array, with no network, identity, versioning, or hidden metadata.
 
