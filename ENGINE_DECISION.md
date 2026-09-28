@@ -1,4 +1,4 @@
-﻿# Speech engine decision
+# Speech engine decision
 
 **Status: selected for the Windows portable release.**
 
