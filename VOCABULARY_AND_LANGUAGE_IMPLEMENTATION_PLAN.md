@@ -895,7 +895,7 @@ Evidence (2026-09-28): Core 137, App 118, and probe 10 tests pass; LayoutProbe r
 - [x] Every curated repository share file passes the production validator.
 - [x] Portable release verification passes and contains no curated packs, test probe, or private artifacts.
 - [x] No obsolete enum/hard-coded language path, unintended production sample vocabulary, debug UI, stale link, or private evidence remains.
-- [ ] The verified executable is relaunched before user testing.
+- [x] The verified executable is relaunched before user testing.
 
 ## Test strategy
 
