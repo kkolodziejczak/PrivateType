@@ -438,7 +438,7 @@ internal sealed class DictationApplication : IDisposable
             new RealtimeRecognizer(engine.RealtimeEndpoint),
             new ForegroundTargetGuard(new Win32ForegroundTarget()),
             settings.InsertionMode == TextInsertionModes.Paste ? new ClipboardPasteInjector() : new UnicodeTextInjector(),
-            new RecognitionRequest(localeCode, VocabularyComposer.Compose(settings.Vocabulary, localeCode), settings.VocabularyStrength),
+            new RecognitionRequest(localeCode, VocabularyComposer.Compose(settings.Vocabulary, settings.VocabularyPacks, localeCode), settings.VocabularyStrength),
             diagnostics: diagnostics);
         session.PresentationChanged += presentation => Present(localeCode, presentation);
         session.AudioMeterChanged += PresentAudioMeter;

@@ -99,6 +99,13 @@ try {
         throw 'Portable archive must not contain a downloaded model.'
     }
 
+    # Curated vocabulary packs and the engine probe are repository-only.
+    $repositoryOnly = Get-ChildItem -LiteralPath $releaseDirectory -Recurse -Force |
+        Where-Object { $_.Name -like '*.privatetype-vocabulary.json' -or $_.Name -eq 'vocabulary-packs' -or $_.Name -like 'PrivateType.EngineProbe*' }
+    if ($repositoryOnly) {
+        throw "Portable archive must not contain repository-only files: $($repositoryOnly.Name -join ', ')"
+    }
+
     $relocatedRoot = Join-Path $WorkingDirectory 'relocated'
     $relocatedDirectory = Join-Path $relocatedRoot "PrivateType $ExpectedVersion"
     New-Item -ItemType Directory -Path $relocatedRoot | Out-Null

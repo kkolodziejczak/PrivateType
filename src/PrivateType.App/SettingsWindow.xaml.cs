@@ -21,8 +21,10 @@ public partial class SettingsWindow : Window
     public SettingsWindow(PortableSettings settings, IReadOnlyList<MicrophoneOption> microphones, bool openVocabulary = false)
     {
         InitializeComponent();
-        vocabulary = new VocabularyEditor(settings.Vocabulary, settings.VocabularyStrength);
+        vocabulary = new VocabularyEditor(settings.Vocabulary, settings.VocabularyStrength, settings.VocabularyPacks);
         VocabularyPage.DataContext = vocabulary;
+        ChoosePackFile = PickPackFile;
+        ConfirmPackRemoval = AskToRemovePack;
         if (openVocabulary)
             VocabularyTab.IsChecked = true;
         MaxHeight = Math.Max(320, SystemParameters.WorkArea.Height - 24);
@@ -103,6 +105,83 @@ public partial class SettingsWindow : Window
     {
         vocabulary.Remove((VocabularyPhraseEditor)((FrameworkElement)sender).Tag);
         ValidationText.Text = string.Empty;
+    }
+
+    // Test seams: the layout probe replaces the file picker and confirmation.
+    internal Func<string?> ChoosePackFile { get; set; }
+    internal Func<string, bool> ConfirmPackRemoval { get; set; }
+
+    private string? PickPackFile()
+    {
+        var picker = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = "Import vocabulary pack",
+            Filter = $"PrivateType vocabulary pack (*{VocabularyPackCodec.Extension})|*{VocabularyPackCodec.Extension}|JSON files (*.json)|*.json",
+            CheckFileExists = true,
+            Multiselect = false
+        };
+        return picker.ShowDialog(this) == true ? picker.FileName : null;
+    }
+
+    private bool AskToRemovePack(string name) =>
+        System.Windows.MessageBox.Show(this,
+            $"Remove the vocabulary pack \"{name}\"?\n\nIt is removed when you save Settings. The file you imported it from is not changed.",
+            "Remove vocabulary pack", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No) == MessageBoxResult.Yes;
+
+    private void ImportPack(object sender, RoutedEventArgs e)
+    {
+        if (ChoosePackFile() is not { } path)
+            return;
+
+        IReadOnlyList<string> phrases;
+        try
+        {
+            phrases = VocabularyPackCodec.Read(path);
+        }
+        catch (VocabularyPackFormatException exception)
+        {
+            ValidationText.Text = $"That pack could not be imported. {exception.Message}";
+            return;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            ValidationText.Text = "That pack file could not be read.";
+            return;
+        }
+
+        var dialog = new ImportPackWindow(System.IO.Path.GetFileName(path), phrases, vocabulary) { Owner = this };
+        if (dialog.ShowDialog() == true && dialog.Result is { } pack)
+        {
+            vocabulary.AddPack(pack);
+            ValidationText.Text = string.Empty;
+        }
+    }
+
+    private void EditPack(object sender, RoutedEventArgs e)
+    {
+        var item = (VocabularyPackItem)((FrameworkElement)sender).Tag;
+        var dialog = new PackEditorWindow(item, vocabulary) { Owner = this };
+        if (dialog.ShowDialog() == true && dialog.Result is { } pack)
+            vocabulary.ReplacePack(item, pack);
+    }
+
+    private void ExportPack(object sender, RoutedEventArgs e)
+    {
+        var item = (VocabularyPackItem)((FrameworkElement)sender).Tag;
+        new ExportPhrasesWindow($"Export {item.Name}", item.Phrases, item.Name) { Owner = this }.ShowDialog();
+    }
+
+    private void ExportPersonalPhrases(object sender, RoutedEventArgs e)
+    {
+        var scopeName = VocabularyScopes.Get(vocabulary.Scope).DisplayName;
+        new ExportPhrasesWindow($"Export {scopeName} phrases", vocabulary.VisiblePhrases, $"My {scopeName} phrases") { Owner = this }.ShowDialog();
+    }
+
+    private void RemovePack(object sender, RoutedEventArgs e)
+    {
+        var item = (VocabularyPackItem)((FrameworkElement)sender).Tag;
+        if (ConfirmPackRemoval(item.Name))
+            vocabulary.RemovePack(item);
     }
 
     private static T? FindChild<T>(DependencyObject parent) where T : DependencyObject
@@ -275,6 +354,7 @@ public partial class SettingsWindow : Window
             ShortcutMode = ShortcutModeBox.SelectedValue as string ?? DictationShortcutModes.Hold,
             InsertionMode = InsertionModeBox.SelectedValue as string ?? PortableSettings.Default.InsertionMode,
             Vocabulary = vocabulary.Entries,
+            VocabularyPacks = vocabulary.Packs,
             VocabularyStrength = vocabulary.Strength,
             ModelIdleTimeoutMinutes = IdleTimeoutBox.SelectedValue is int minutes ? minutes : 10
         };
@@ -282,7 +362,7 @@ public partial class SettingsWindow : Window
         if (validationError is not null)
         {
             ValidationText.Text = validationError;
-            if (VocabularyRules.Validate(settings.Vocabulary) is not null)
+            if (VocabularyRules.Validate(settings.Vocabulary, settings.VocabularyPacks) is not null)
                 VocabularyTab.IsChecked = true;
             return;
         }

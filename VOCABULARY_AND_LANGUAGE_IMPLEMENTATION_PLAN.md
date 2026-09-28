@@ -753,15 +753,17 @@ Stage 3 acceptance:
 
 Stage 4 acceptance:
 
-- [ ] A user can import a validated `.privatetype-vocabulary.json` string array after reviewing every phrase and choosing one scope, a unique local name, and the enabled state.
-- [ ] Files with objects, weights, or other non-string items are rejected with a content-free message.
-- [ ] Installed packs can be enabled, disabled, renamed, re-scoped, edited, exported, and removed with confirmation.
-- [ ] No network access, discovery, synchronization, ID, version, provenance, attribution, license, or update behavior exists.
-- [ ] Each dictation sends personal plus applicable enabled-pack phrases once each, within 200 phrases / 16 KiB for every scope combination, validated on save.
-- [ ] Personal export writes only phrases reviewed in the export dialog from the visible scope; both export paths show the exact array before an atomic write.
-- [ ] Invalid or over-budget imports and failed settings/export writes cause no truncation, partial change, sensitive error, or source-file change.
-- [ ] Repository example files use the production format, pass the shared validator in targeted CI, and are absent from release output.
-- [ ] Every Stage 4 mock state passes LayoutProbe.
+Evidence (2026-09-28): `VocabularyPackTests`, `CuratedVocabularyPackTests`, `VocabularyEditorTests`, and `SettingsPackProbe` (section, filters, toggles, removal confirmation, content-free bad-file rejection, import preview/collision, editor error, export review and atomic canonical write). The repository has no curated packs yet; `Test-PortableRelease.ps1` now fails if packs or the engine probe reach release output. Settings-save I/O failure is handled by the existing save path and not separately probed.
+
+- [x] A user can import a validated `.privatetype-vocabulary.json` string array after reviewing every phrase and choosing one scope, a unique local name, and the enabled state.
+- [x] Files with objects, weights, or other non-string items are rejected with a content-free message.
+- [x] Installed packs can be enabled, disabled, renamed, re-scoped, edited, exported, and removed with confirmation.
+- [x] No network access, discovery, synchronization, ID, version, provenance, attribution, license, or update behavior exists.
+- [x] Each dictation sends personal plus applicable enabled-pack phrases once each, within 200 phrases / 16 KiB for every scope combination, validated on save.
+- [x] Personal export writes only phrases reviewed in the export dialog from the visible scope; both export paths show the exact array before an atomic write.
+- [x] Invalid or over-budget imports and failed settings/export writes cause no truncation, partial change, sensitive error, or source-file change.
+- [x] Repository example files use the production format, pass the shared validator in targeted CI, and are absent from release output.
+- [x] Every Stage 4 mock state passes LayoutProbe.
 
 ## Stage 5: Ephemeral quick teaching from the bubble
 

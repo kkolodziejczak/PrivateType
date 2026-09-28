@@ -29,6 +29,7 @@ public sealed record PortableSettings(
     // Pasting is atomic, so an early Enter cannot send half-typed text.
     public string InsertionMode { get; init; } = TextInsertionModes.Paste;
     public IReadOnlyList<VocabularyEntry> Vocabulary { get; init; } = [];
+    public IReadOnlyList<VocabularyPack> VocabularyPacks { get; init; } = [];
     public string VocabularyStrength { get; init; } = VocabularyStrengths.Normal;
 
     public static PortableSettings Default { get; } = new("default", ShortcutBinding.Defaults);
@@ -80,8 +81,14 @@ public static class PortableSettingsValidator
             settings => settings.InsertionMode is not (TextInsertionModes.Type or TextInsertionModes.Paste) ? "Choose how dictated text is inserted." : null,
             settings => settings with { InsertionMode = PortableSettings.Default.InsertionMode }),
         new("vocabulary",
-            settings => settings.Vocabulary is null ? "Vocabulary is missing." : VocabularyRules.Validate(settings.Vocabulary),
-            settings => settings with { Vocabulary = VocabularyRules.KeepValid(settings.Vocabulary) }),
+            settings => settings.Vocabulary is null || settings.VocabularyPacks is null
+                ? "Vocabulary is missing."
+                : VocabularyRules.Validate(settings.Vocabulary, settings.VocabularyPacks),
+            settings =>
+            {
+                var personal = VocabularyRules.KeepValid(settings.Vocabulary);
+                return settings with { Vocabulary = personal, VocabularyPacks = VocabularyRules.KeepValidPacks(personal, settings.VocabularyPacks) };
+            }),
         new("vocabulary strength",
             settings => VocabularyStrengths.IsSupported(settings.VocabularyStrength) ? null : "Choose a supported vocabulary strength.",
             settings => settings with { VocabularyStrength = VocabularyStrengths.Normal }),

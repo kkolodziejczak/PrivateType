@@ -1,0 +1,2 @@
+# Curated packs must stay byte-identical to PrivateType's canonical export.
+vocabulary-packs/*.json text eol=lf

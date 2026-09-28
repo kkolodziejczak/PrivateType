@@ -6,246 +6,11 @@
         Background="Transparent" Foreground="{DynamicResource ColorText}" FontFamily="{DynamicResource AppFont}"
         PreviewKeyDown="SwitchPageWithKeyboard">
   <Window.Resources>
-    <Style x:Key="SoundVolumeSlider" TargetType="Slider">
-      <Setter Property="Template">
-        <Setter.Value>
-          <ControlTemplate TargetType="Slider">
-            <Border x:Name="FocusBorder" BorderBrush="Transparent" BorderThickness="1" CornerRadius="4" Padding="3" Height="28" Background="Transparent">
-              <Track x:Name="PART_Track" Minimum="{TemplateBinding Minimum}" Maximum="{TemplateBinding Maximum}" Value="{TemplateBinding Value}">
-                <Track.DecreaseRepeatButton>
-                  <RepeatButton Command="Slider.DecreaseLarge" Focusable="False">
-                    <RepeatButton.Template><ControlTemplate TargetType="RepeatButton"><Border Height="4" VerticalAlignment="Center" Background="{DynamicResource ColorAccent}" CornerRadius="2" /></ControlTemplate></RepeatButton.Template>
-                  </RepeatButton>
-                </Track.DecreaseRepeatButton>
-                <Track.Thumb>
-                  <Thumb Width="16" Height="16">
-                    <Thumb.Template><ControlTemplate TargetType="Thumb"><Ellipse Fill="{DynamicResource ColorAccent}" Stroke="{DynamicResource ColorAccent300}" StrokeThickness="1" /></ControlTemplate></Thumb.Template>
-                  </Thumb>
-                </Track.Thumb>
-                <Track.IncreaseRepeatButton>
-                  <RepeatButton Command="Slider.IncreaseLarge" Focusable="False">
-                    <RepeatButton.Template><ControlTemplate TargetType="RepeatButton"><Border Height="4" VerticalAlignment="Center" Background="{DynamicResource ColorDivider}" CornerRadius="2" /></ControlTemplate></RepeatButton.Template>
-                  </RepeatButton>
-                </Track.IncreaseRepeatButton>
-              </Track>
-            </Border>
-            <ControlTemplate.Triggers>
-              <Trigger Property="IsKeyboardFocusWithin" Value="True"><Setter TargetName="FocusBorder" Property="BorderBrush" Value="{DynamicResource ColorAccent300}" /></Trigger>
-            </ControlTemplate.Triggers>
-          </ControlTemplate>
-        </Setter.Value>
-      </Setter>
-    </Style>
-    <Style TargetType="TextBlock">
-      <Setter Property="FontFamily" Value="{DynamicResource AppFont}" />
-    </Style>
-    <Style TargetType="Button">
-      <Setter Property="Foreground" Value="{DynamicResource ColorText}" />
-      <Setter Property="Background" Value="{DynamicResource ColorSurface}" />
-      <Setter Property="BorderBrush" Value="{DynamicResource ColorDivider}" />
-      <Setter Property="BorderThickness" Value="1" />
-      <Setter Property="Padding" Value="12,7" />
-      <Setter Property="Cursor" Value="Hand" />
-      <Setter Property="Template">
-        <Setter.Value>
-          <ControlTemplate TargetType="Button">
-            <Border x:Name="ButtonBorder" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
-                    BorderThickness="{TemplateBinding BorderThickness}" Padding="{TemplateBinding Padding}" CornerRadius="8">
-              <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" RecognizesAccessKey="True" />
-            </Border>
-            <ControlTemplate.Triggers>
-              <Trigger Property="IsMouseOver" Value="True">
-                <Setter TargetName="ButtonBorder" Property="Background" Value="{DynamicResource ColorNeutral900}" />
-                <Setter TargetName="ButtonBorder" Property="BorderBrush" Value="{DynamicResource ColorAccent}" />
-              </Trigger>
-              <Trigger Property="IsPressed" Value="True">
-                <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.78" />
-              </Trigger>
-              <Trigger Property="IsKeyboardFocused" Value="True">
-                <Setter TargetName="ButtonBorder" Property="BorderBrush" Value="{DynamicResource ColorAccent300}" />
-              </Trigger>
-              <Trigger Property="IsEnabled" Value="False">
-                <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.45" />
-              </Trigger>
-            </ControlTemplate.Triggers>
-          </ControlTemplate>
-        </Setter.Value>
-      </Setter>
-    </Style>
-    <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-      <Setter Property="Background" Value="{DynamicResource ColorAccent800}" />
-      <Setter Property="BorderBrush" Value="{DynamicResource ColorAccent}" />
-      <Setter Property="Foreground" Value="{DynamicResource ColorAccent100}" />
-      <Setter Property="FontWeight" Value="SemiBold" />
-    </Style>
-    <Style x:Key="GhostButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-      <Setter Property="Background" Value="Transparent" />
-      <Setter Property="BorderBrush" Value="Transparent" />
-      <Setter Property="Foreground" Value="{DynamicResource ColorAccent300}" />
-      <Setter Property="Padding" Value="0,6" />
-    </Style>
-    <Style TargetType="CheckBox">
-      <Setter Property="Foreground" Value="{DynamicResource ColorText}" />
-      <Setter Property="Cursor" Value="Hand" />
-      <Setter Property="Template">
-        <Setter.Value>
-          <ControlTemplate TargetType="CheckBox">
-            <Grid>
-              <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="22" />
-                <ColumnDefinition Width="10" />
-                <ColumnDefinition Width="Auto" />
-              </Grid.ColumnDefinitions>
-              <Border x:Name="CheckBoxBorder" Grid.Column="0" Width="22" Height="22" VerticalAlignment="Center" Background="{DynamicResource ColorBg}"
-                      BorderBrush="{DynamicResource ColorAccent}" BorderThickness="2" CornerRadius="4">
-                <Path x:Name="CheckMark" Data="M3,9 L7,13 L15,4" Stroke="{DynamicResource ColorAccent100}" StrokeThickness="2" StrokeLineJoin="Round" Visibility="Collapsed" />
-              </Border>
-              <ContentPresenter Grid.Column="2" VerticalAlignment="Center" RecognizesAccessKey="True" />
-            </Grid>
-            <ControlTemplate.Triggers>
-              <Trigger Property="IsChecked" Value="True">
-                <Setter TargetName="CheckBoxBorder" Property="Background" Value="{DynamicResource ColorAccent800}" />
-                <Setter TargetName="CheckBoxBorder" Property="BorderBrush" Value="{DynamicResource ColorAccent}" />
-                <Setter TargetName="CheckMark" Property="Visibility" Value="Visible" />
-              </Trigger>
-              <Trigger Property="IsKeyboardFocused" Value="True">
-                <Setter TargetName="CheckBoxBorder" Property="BorderBrush" Value="{DynamicResource ColorAccent300}" />
-              </Trigger>
-            </ControlTemplate.Triggers>
-          </ControlTemplate>
-        </Setter.Value>
-      </Setter>
-    </Style>
-    <Style TargetType="TextBox">
-      <Setter Property="Foreground" Value="{DynamicResource ColorAccent300}" />
-      <Setter Property="Background" Value="{DynamicResource ColorBg}" />
-      <Setter Property="BorderBrush" Value="{DynamicResource ColorDivider}" />
-      <Setter Property="BorderThickness" Value="1" />
-      <Setter Property="FontWeight" Value="SemiBold" />
-      <Setter Property="VerticalContentAlignment" Value="Center" />
-      <Setter Property="Template">
-        <Setter.Value>
-          <ControlTemplate TargetType="TextBox">
-            <Border x:Name="TextBoxBorder" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
-                    BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="8" Padding="{TemplateBinding Padding}">
-              <ScrollViewer x:Name="PART_ContentHost" />
-            </Border>
-            <ControlTemplate.Triggers>
-              <Trigger Property="IsKeyboardFocused" Value="True">
-                <Setter TargetName="TextBoxBorder" Property="BorderBrush" Value="{DynamicResource ColorAccent}" />
-              </Trigger>
-            </ControlTemplate.Triggers>
-          </ControlTemplate>
-        </Setter.Value>
-      </Setter>
-    </Style>
-    <Style x:Key="ComboBoxToggleButton" TargetType="ToggleButton">
-      <Setter Property="Foreground" Value="{DynamicResource ColorText}" />
-      <Setter Property="Template">
-        <Setter.Value>
-          <ControlTemplate TargetType="ToggleButton">
-            <Border x:Name="ToggleBorder" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
-                    BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="8">
-              <ContentPresenter />
-            </Border>
-            <ControlTemplate.Triggers>
-              <Trigger Property="IsMouseOver" Value="True">
-                <Setter TargetName="ToggleBorder" Property="BorderBrush" Value="{DynamicResource ColorAccent}" />
-              </Trigger>
-              <Trigger Property="IsChecked" Value="True">
-                <Setter TargetName="ToggleBorder" Property="BorderBrush" Value="{DynamicResource ColorAccent}" />
-              </Trigger>
-              <Trigger Property="IsEnabled" Value="False">
-                <Setter TargetName="ToggleBorder" Property="Opacity" Value="0.45" />
-              </Trigger>
-            </ControlTemplate.Triggers>
-          </ControlTemplate>
-        </Setter.Value>
-      </Setter>
-    </Style>
-    <Style TargetType="ComboBox">
-      <Style.Triggers>
-        <Trigger Property="IsKeyboardFocusWithin" Value="True">
-          <Setter Property="BorderBrush" Value="{DynamicResource ColorAccent300}" />
-        </Trigger>
-      </Style.Triggers>
-      <Setter Property="Foreground" Value="{DynamicResource ColorText}" />
-      <Setter Property="Background" Value="{DynamicResource ColorBg}" />
-      <Setter Property="BorderBrush" Value="{DynamicResource ColorDivider}" />
-      <Setter Property="Template">
-        <Setter.Value>
-          <ControlTemplate TargetType="ComboBox">
-            <Grid>
-              <ToggleButton x:Name="ToggleButton" Style="{StaticResource ComboBoxToggleButton}" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1"
-                            IsChecked="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}">
-                <Grid>
-                  <ContentPresenter Margin="10,0,30,0" VerticalAlignment="Center" Content="{TemplateBinding SelectionBoxItem}"
-                                    ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}" />
-                  <Path HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,11,0" Fill="{DynamicResource ColorNeutral400}" Data="M0,0 L10,0 L5,6 Z" />
-                </Grid>
-              </ToggleButton>
-              <Popup x:Name="Popup" Placement="Bottom" AllowsTransparency="True" IsOpen="{TemplateBinding IsDropDownOpen}" PopupAnimation="Fade">
-                <Border MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}" Margin="0,4,0,0" Background="{DynamicResource ColorSurface}" BorderBrush="{DynamicResource ColorDivider}" BorderThickness="1" CornerRadius="8">
-                  <ScrollViewer MaxHeight="240" CanContentScroll="True">
-                    <ItemsPresenter />
-                  </ScrollViewer>
-                </Border>
-              </Popup>
-            </Grid>
-          </ControlTemplate>
-        </Setter.Value>
-      </Setter>
-    </Style>
-    <Style TargetType="ComboBoxItem">
-      <Setter Property="Foreground" Value="{DynamicResource ColorText}" />
-      <Setter Property="Padding" Value="10,8" />
-      <Setter Property="Template">
-        <Setter.Value>
-          <ControlTemplate TargetType="ComboBoxItem">
-            <Border x:Name="ItemBorder" Background="Transparent" CornerRadius="6" Padding="{TemplateBinding Padding}">
-              <ContentPresenter />
-            </Border>
-            <ControlTemplate.Triggers>
-              <Trigger Property="IsHighlighted" Value="True">
-                <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource ColorNeutral900}" />
-              </Trigger>
-              <Trigger Property="IsSelected" Value="True">
-                <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource ColorAccent800}" />
-              </Trigger>
-            </ControlTemplate.Triggers>
-          </ControlTemplate>
-        </Setter.Value>
-      </Setter>
-    </Style>
-    <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
-    <Style x:Key="PageTab" TargetType="RadioButton">
-      <Setter Property="Foreground" Value="{DynamicResource ColorText}" />
-      <Setter Property="FontSize" Value="13" />
-      <Setter Property="Cursor" Value="Hand" />
-      <Setter Property="Template">
-        <Setter.Value>
-          <ControlTemplate TargetType="RadioButton">
-            <Border x:Name="TabShell" Padding="16,7" CornerRadius="8" Background="Transparent" BorderBrush="{DynamicResource ColorDivider}" BorderThickness="1">
-              <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
-            </Border>
-            <ControlTemplate.Triggers>
-              <Trigger Property="IsMouseOver" Value="True">
-                <Setter TargetName="TabShell" Property="BorderBrush" Value="{DynamicResource ColorAccent}" />
-              </Trigger>
-              <Trigger Property="IsKeyboardFocused" Value="True">
-                <Setter TargetName="TabShell" Property="BorderBrush" Value="{DynamicResource ColorAccent400}" />
-              </Trigger>
-              <Trigger Property="IsChecked" Value="True">
-                <Setter TargetName="TabShell" Property="Background" Value="{DynamicResource ColorAccent800}" />
-                <Setter TargetName="TabShell" Property="BorderBrush" Value="{DynamicResource ColorAccent}" />
-                <Setter Property="Foreground" Value="{DynamicResource ColorAccent100}" />
-                <Setter Property="FontWeight" Value="SemiBold" />
-              </Trigger>
-            </ControlTemplate.Triggers>
-          </ControlTemplate>
-        </Setter.Value>
-      </Setter>
-    </Style>
+    <ResourceDictionary>
+      <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="FormStyles.xaml" />
+      </ResourceDictionary.MergedDictionaries>
+    </ResourceDictionary>
   </Window.Resources>
   <Border Margin="8" Background="{DynamicResource ColorSurface}" BorderBrush="{DynamicResource ColorDivider}" BorderThickness="1" CornerRadius="16">
     <Grid>
@@ -543,11 +308,16 @@
           <TextBlock Margin="0,10,0,0" Foreground="{DynamicResource ColorText}" Opacity="0.55" FontSize="12" TextWrapping="Wrap" Text="{Binding ScopeHint}" />
           <TextBlock Margin="0,4,0,0" Foreground="{DynamicResource ColorText}" Opacity="0.55" FontSize="12" TextWrapping="Wrap"
                      Text="Strength applies to every phrase. Stronger settings help rare words more but can also insert them where they were not said." />
-          <Border x:Name="VocabularyEmptyState" Margin="0,16,0,0" Padding="12" Background="{DynamicResource ColorBg}" BorderBrush="{DynamicResource ColorDivider}" BorderThickness="1" CornerRadius="8"
+          <Grid Margin="0,22,0,0">
+            <TextBlock VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold" Opacity="0.7" Text="YOUR PHRASES" />
+            <Button x:Name="ExportPhrasesButton" HorizontalAlignment="Right" FontSize="12" Padding="10,5" Content="Export…" Click="ExportPersonalPhrases"
+                    IsEnabled="{Binding HasVisiblePhrases}" AutomationProperties.Name="Export your phrases" />
+          </Grid>
+          <Border x:Name="VocabularyEmptyState" Margin="0,10,0,0" Padding="12" Background="{DynamicResource ColorBg}" BorderBrush="{DynamicResource ColorDivider}" BorderThickness="1" CornerRadius="8"
                   Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVisibility}}">
             <TextBlock Foreground="{DynamicResource ColorText}" Opacity="0.8" FontSize="13" TextWrapping="Wrap" Text="{Binding EmptyText}" />
           </Border>
-          <ItemsControl x:Name="VocabularyList" Margin="0,16,0,0" ItemsSource="{Binding Visible}" KeyboardNavigation.TabNavigation="Continue">
+          <ItemsControl x:Name="VocabularyList" Margin="0,10,0,0" ItemsSource="{Binding Visible}" KeyboardNavigation.TabNavigation="Continue">
             <ItemsControl.ItemTemplate>
               <DataTemplate>
                 <Grid Margin="0,0,0,8">
@@ -563,9 +333,46 @@
             </ItemsControl.ItemTemplate>
           </ItemsControl>
           <Button x:Name="AddPhraseButton" Style="{StaticResource GhostButton}" Margin="0,4,0,0" Width="136" HorizontalAlignment="Left" Content="+ Add phrase" Click="AddVocabularyPhrase" />
-          <TextBlock Margin="0,10,0,0" Foreground="{DynamicResource ColorText}" Opacity="0.55" FontSize="12" Text="{Binding CountText}" />
+          <Grid Margin="0,22,0,0">
+            <TextBlock VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold" Opacity="0.7" Text="PACKS" />
+            <StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
+              <CheckBox x:Name="ShowAllPacksBox" Margin="0,0,12,0" VerticalAlignment="Center" Content="Show all packs" IsChecked="{Binding ShowAllPacks, Mode=TwoWay}"
+                        AutomationProperties.Name="Show packs for every language" />
+              <Button x:Name="ImportPackButton" FontSize="12" Padding="10,5" Content="Import pack…" Click="ImportPack" AutomationProperties.Name="Import vocabulary pack" />
+            </StackPanel>
+          </Grid>
+          <Border x:Name="PacksEmptyState" Margin="0,10,0,0" Padding="12" Background="{DynamicResource ColorBg}" BorderBrush="{DynamicResource ColorDivider}" BorderThickness="1" CornerRadius="8"
+                  Visibility="{Binding HasNoVisiblePacks, Converter={StaticResource BoolToVisibility}}">
+            <TextBlock Foreground="{DynamicResource ColorText}" Opacity="0.8" FontSize="13" TextWrapping="Wrap" Text="{Binding PacksEmptyText}" />
+          </Border>
+          <ItemsControl x:Name="PackList" Margin="0,10,0,0" ItemsSource="{Binding VisiblePacks}" KeyboardNavigation.TabNavigation="Continue">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Border Margin="0,0,0,8" Padding="12,10" Background="{DynamicResource ColorBg}" BorderBrush="{DynamicResource ColorDivider}" BorderThickness="1" CornerRadius="8">
+                  <Grid>
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="*" />
+                      <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel VerticalAlignment="Center">
+                      <CheckBox IsChecked="{Binding IsEnabled, Mode=TwoWay}" AutomationProperties.Name="{Binding ToggleName}">
+                        <TextBlock FontWeight="SemiBold" Text="{Binding Name}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Name}" />
+                      </CheckBox>
+                      <TextBlock Margin="28,4,0,0" FontSize="12" Opacity="0.6" Text="{Binding Summary}" TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center" Orientation="Horizontal">
+                      <Button Margin="0,0,6,0" FontSize="12" Padding="10,5" Content="Edit" Tag="{Binding}" Click="EditPack" AutomationProperties.Name="Edit pack" />
+                      <Button Margin="0,0,6,0" FontSize="12" Padding="10,5" Content="Export…" Tag="{Binding}" Click="ExportPack" AutomationProperties.Name="Export pack" />
+                      <Button FontSize="12" Padding="10,5" Content="Remove…" Tag="{Binding}" Click="RemovePack" AutomationProperties.Name="Remove pack" />
+                    </StackPanel>
+                  </Grid>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <TextBlock x:Name="VocabularyBudgetText" Margin="0,14,0,0" Foreground="{DynamicResource ColorText}" Opacity="0.55" FontSize="12" TextWrapping="Wrap" Text="{Binding BudgetText}" />
           <TextBlock Margin="0,4,0,0" Foreground="{DynamicResource ColorText}" Opacity="0.55" FontSize="12" TextWrapping="Wrap"
-                     Text="Phrases stay on this computer and are only given to the local speech engine." />
+                     Text="Phrases stay on this computer unless you export them, and are only given to the local speech engine." />
         </StackPanel>
         </Grid>
           </ScrollViewer>
