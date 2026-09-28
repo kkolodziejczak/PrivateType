@@ -15,11 +15,16 @@ public partial class SettingsWindow : Window
     private readonly ObservableCollection<ShortcutBindingEditor> bindings;
     private readonly PortableSettings originalSettings;
     private readonly ModelReadySound soundPreview = new();
+    private readonly VocabularyEditor vocabulary;
     private string? customSoundPath;
 
-    public SettingsWindow(PortableSettings settings, IReadOnlyList<MicrophoneOption> microphones)
+    public SettingsWindow(PortableSettings settings, IReadOnlyList<MicrophoneOption> microphones, bool openVocabulary = false)
     {
         InitializeComponent();
+        vocabulary = new VocabularyEditor(settings.Vocabulary, settings.VocabularyStrength);
+        VocabularyPage.DataContext = vocabulary;
+        if (openVocabulary)
+            VocabularyTab.IsChecked = true;
         MaxHeight = Math.Max(320, SystemParameters.WorkArea.Height - 24);
         Height = Math.Min(800, MaxHeight);
         var version = ApplicationVersion.Current;
@@ -52,6 +57,64 @@ public partial class SettingsWindow : Window
     public PortableSettings? SavedSettings { get; private set; }
     public event Action? DiagnosticsRequested;
     public event Action? LicensesRequested;
+
+    internal VocabularyEditor Vocabulary => vocabulary;
+
+    private void PageChanged(object sender, RoutedEventArgs e)
+    {
+        if (GeneralPage is null || VocabularyPage is null)
+            return;
+
+        var showVocabulary = VocabularyTab.IsChecked == true;
+        GeneralPage.Visibility = showVocabulary ? Visibility.Collapsed : Visibility.Visible;
+        VocabularyPage.Visibility = showVocabulary ? Visibility.Visible : Visibility.Collapsed;
+        SettingsScrollViewer.ScrollToTop();
+    }
+
+    // Ctrl+Tab and Ctrl+Shift+Tab switch between the two pages.
+    private void SwitchPageWithKeyboard(object sender, Input.KeyEventArgs e)
+    {
+        if (e.Key != Input.Key.Tab || (Input.Keyboard.Modifiers & Input.ModifierKeys.Control) == 0)
+            return;
+
+        var target = VocabularyTab.IsChecked == true ? GeneralTab : VocabularyTab;
+        target.IsChecked = true;
+        target.Focus();
+        e.Handled = true;
+    }
+
+    private void AddVocabularyPhrase(object sender, RoutedEventArgs e)
+    {
+        var row = vocabulary.Add();
+        ValidationText.Text = string.Empty;
+        Dispatcher.BeginInvoke(() =>
+        {
+            if (VocabularyList.ItemContainerGenerator.ContainerFromItem(row) is FrameworkElement container)
+            {
+                container.BringIntoView();
+                FindChild<System.Windows.Controls.TextBox>(container)?.Focus();
+            }
+        }, System.Windows.Threading.DispatcherPriority.Loaded);
+    }
+
+    private void RemoveVocabularyPhrase(object sender, RoutedEventArgs e)
+    {
+        vocabulary.Remove((VocabularyPhraseEditor)((FrameworkElement)sender).Tag);
+        ValidationText.Text = string.Empty;
+    }
+
+    private static T? FindChild<T>(DependencyObject parent) where T : DependencyObject
+    {
+        for (var index = 0; index < System.Windows.Media.VisualTreeHelper.GetChildrenCount(parent); index++)
+        {
+            var child = System.Windows.Media.VisualTreeHelper.GetChild(parent, index);
+            if (child is T match)
+                return match;
+            if (FindChild<T>(child) is { } nested)
+                return nested;
+        }
+        return null;
+    }
 
     private void InsertionModeChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
     {
@@ -209,12 +272,16 @@ public partial class SettingsWindow : Window
             StartWithWindows = StartWithWindowsCheckBox.IsChecked == true,
             ShortcutMode = ShortcutModeBox.SelectedValue as string ?? DictationShortcutModes.Hold,
             InsertionMode = InsertionModeBox.SelectedValue as string ?? TextInsertionModes.Type,
+            Vocabulary = vocabulary.Entries,
+            VocabularyStrength = vocabulary.Strength,
             ModelIdleTimeoutMinutes = IdleTimeoutBox.SelectedValue is int minutes ? minutes : 10
         };
         var validationError = PortableSettingsValidator.Validate(settings);
         if (validationError is not null)
         {
             ValidationText.Text = validationError;
+            if (VocabularyRules.Validate(settings.Vocabulary) is not null)
+                VocabularyTab.IsChecked = true;
             return;
         }
 

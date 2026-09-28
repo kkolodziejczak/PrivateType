@@ -53,6 +53,7 @@ public partial class DictationBubble : Window
 
     public event Action<string, double, double>? PositionChanged;
     public event Action? SettingsRequested;
+    public event Action? VocabularyRequested;
     public event Action? QuitRequested;
     public event Action<bool>? RecordingIndicatorChanged;
 
@@ -472,6 +473,8 @@ public partial class DictationBubble : Window
     }
 
     private void OpenSettings(object sender, RoutedEventArgs e) => SettingsRequested?.Invoke();
+
+    private void OpenVocabulary(object sender, RoutedEventArgs e) => VocabularyRequested?.Invoke();
 
     private void Quit(object sender, RoutedEventArgs e) => QuitRequested?.Invoke();
 

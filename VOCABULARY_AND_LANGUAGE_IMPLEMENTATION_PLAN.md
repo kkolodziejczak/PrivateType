@@ -8,6 +8,8 @@ The feature must preserve PrivateType's defining behavior: hold-to-dictate, loca
 
 ## Agreed decisions
 
+> **Revised 2026-09-28 (Stage 3):** Stage 1 proved the pinned engine applies one boost per request (the maximum across contexts). By the owner's decision, influence is now a single vocabulary-wide **strength** (Low/Normal/Strong, default Normal) instead of a per-entry value. Entries store only phrase and scope. Items below that mention per-entry influence or pack `weight` are superseded for Stage 3 and must be redesigned before Stage 4.
+
 - [x] Maintain one personal vocabulary plus separately named, enableable installed packs; do not turn personal vocabulary into named profiles.
 - [x] Vocabulary has `Shared` and base-language scopes.
 - [x] A base-language scope applies to every regional locale for that language.
@@ -686,16 +688,16 @@ Stage 2 acceptance:
 
 | ID | Public seam | Planned red test | Expected observation | Final evidence |
 |---|---|---|---|---|
-| R1 | `Compose(entries, locale)` | explicit and Auto matrices | exact selected set, strongest duplicate wins, stable groups | Pending |
-| R2 | Settings store/validator | boundary and injected save-failure tests | no truncation/partial update/sensitive error | Pending |
-| R3 | serialized `session.update` | snapshot/JSON semantic assertions | calibrated values grouped under `speech_contexts`; empty omitted | Pending |
-| R4 | Settings + LayoutProbe | every Stage 3 mock state | flow matches mock; PASS from UI-quality gate | Pending |
+| R1 | `Compose(entries, locale)` | explicit and Auto matrices | exact selected set, strongest duplicate wins, stable groups | `VocabularyTests` compose matrix: Shared + base language for explicit locales, Shared only for Auto, distinct ordinal order. With one strength, duplicate precedence reduces to de-duplication. |
+| R2 | Settings store/validator | boundary and injected save-failure tests | no truncation/partial update/sensitive error | Length, count, payload, duplicate, scope, and control-character tests; messages never quote phrases; save path unchanged (atomic temp-file replace); damaged files keep valid entries. |
+| R3 | serialized `session.update` | snapshot/JSON semantic assertions | calibrated values grouped under `speech_contexts`; empty omitted | One `speech_contexts` object with boost 0.5/1.0/2.0; omitted when empty; `prompt` never sent (`WindowsBoundaryTests`). |
+| R4 | Settings + LayoutProbe | every Stage 3 mock state | flow matches mock; PASS from UI-quality gate | `SettingsVocabularyProbe`: tabs, direct open, empty/populated/long-Unicode/scroll states, validation keeps page open, saved entries. Ctrl+Tab and non-96-DPI scales not probed. |
 
 #### Budget and Environment
 
 | ID | File, module, provider, or tool | Current fact | Planned limit or required proof | Final fact |
 |---|---|---|---|---|
-| R2 | vocabulary payload | no vocabulary today | 200 entries, 120 chars each, 16 KiB normalized UTF-8 total | Pending |
+| R2 | vocabulary payload | no vocabulary today | 200 entries, 120 chars each, 16 KiB normalized UTF-8 total | Enforced by `VocabularyRules`; engine accepted 200 phrases / 16 KiB in Stage 1. |
 | R3 | boost calibration | established only by Stage 1 | one mapping owner; exact three recorded values | Pending |
 | R4 | `SettingsWindow.xaml(.cs)` | already owns general form interactions | new focused Vocabulary control/view model; no vocabulary domain rules in window code-behind | Pending |
 

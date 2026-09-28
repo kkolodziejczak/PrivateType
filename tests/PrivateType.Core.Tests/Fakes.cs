@@ -67,8 +67,11 @@ internal sealed class FakeRecognizer : IStreamingRecognizer
     public Exception? StartFailure { get; set; }
     private int activePushes;
 
-    public Task StartAsync(string localeCode, CancellationToken cancellationToken)
+    public RecognitionRequest? StartedRequest { get; private set; }
+
+    public Task StartAsync(RecognitionRequest request, CancellationToken cancellationToken)
     {
+        StartedRequest = request;
         if (StartFailure is not null)
             throw StartFailure;
         return Task.CompletedTask;

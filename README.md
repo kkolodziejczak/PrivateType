@@ -84,6 +84,21 @@ previous clipboard back afterwards (unless you copied something new meanwhile)
 and marks the dictated text so Windows clipboard history and cloud clipboard
 skip it.
 
+### Vocabulary
+
+If the model keeps misspelling a name, acronym, or technical term, add it in
+**Settings → Vocabulary** (or **Vocabulary…** in the bubble or tray menu).
+Type each word or phrase exactly as it should be written. Phrases under
+**Shared across languages** are used with every shortcut; phrases under a
+language, such as Polish, are used only with that language's shortcuts.
+Automatic uses shared phrases only.
+
+**Strength** applies to all phrases. Normal suits most people; Strong helps
+stubborn words more but can also insert them where they were not said. On
+PrivateType's recognition tests, vocabulary raised correctly spelled technical
+terms from about 1 in 5 to about half. Vocabulary stays in the settings file on
+this computer and is only given to the local speech engine.
+
 In **Settings → Ready sound**, choose Ping, Chime, Bell, or your own WAV/MP3,
 and adjust the volume from 0% (muted) to 100%. **Preview** plays your pending
 choice immediately, without loading the model. **Save changes** keeps your
@@ -131,7 +146,7 @@ if it is not already installed.
 
 - PrivateType does not retain raw audio or inserted transcripts.
 - `app/data/settings.json` stores only the selected microphone, shortcuts and
-  their languages, shortcut behavior, insertion mode, bubble location,
+  their languages, shortcut behavior, insertion mode, vocabulary, bubble location,
   Windows-startup preference, model idle timeout, and ready-sound choice.
 - The model is downloaded separately from NVIDIA; it is not included in the
   app ZIP. See [MODEL_ARTIFACT.md](MODEL_ARTIFACT.md) for its source and

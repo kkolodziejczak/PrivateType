@@ -15,20 +15,34 @@ internal sealed class RealtimeRecognizer(Uri endpoint) : IStreamingRecognizer
     private string provisionalText = string.Empty;
     private long completedTranscriptSequence;
 
-    public async Task StartAsync(string localeCode, CancellationToken cancellationToken)
+    public async Task StartAsync(RecognitionRequest request, CancellationToken cancellationToken)
     {
-        var update = SessionUpdate(localeCode);
+        var update = SessionUpdate(request);
         await socket.ConnectAsync(endpoint, cancellationToken);
         await SendTextAsync(update, cancellationToken);
     }
 
     // Catalog codes are the engine's language values; unsupported codes never fall back to automatic.
-    internal static string SessionUpdate(string localeCode) =>
-        JsonSerializer.Serialize(new
+    // Vocabulary goes in speech_contexts (never the prompt field) and is omitted when empty.
+    internal static string SessionUpdate(RecognitionRequest request)
+    {
+        var session = new System.Text.Json.Nodes.JsonObject
         {
-            type = "session.update",
-            session = new { sample_rate = 16000, language = RecognitionLocaleCatalog.Get(localeCode).Code, automatic_punctuation = true }
-        });
+            ["sample_rate"] = 16000,
+            ["language"] = RecognitionLocaleCatalog.Get(request.LocaleCode).Code,
+            ["automatic_punctuation"] = true
+        };
+        if (request.Phrases.Count > 0)
+        {
+            session["speech_contexts"] = new System.Text.Json.Nodes.JsonArray(new System.Text.Json.Nodes.JsonObject
+            {
+                ["phrases"] = new System.Text.Json.Nodes.JsonArray(request.Phrases.Select(phrase => (System.Text.Json.Nodes.JsonNode)System.Text.Json.Nodes.JsonValue.Create(phrase)!).ToArray()),
+                ["boost"] = VocabularyStrengths.Boost(request.VocabularyStrength)
+            });
+        }
+
+        return new System.Text.Json.Nodes.JsonObject { ["type"] = "session.update", ["session"] = session }.ToJsonString();
+    }
 
     public async Task PushPcmAsync(ReadOnlyMemory<byte> pcm16KhzMono, CancellationToken cancellationToken)
     {

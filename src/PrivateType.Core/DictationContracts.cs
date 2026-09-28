@@ -30,7 +30,7 @@ public enum TargetEligibility
 
 public interface IStreamingRecognizer : IAsyncDisposable
 {
-    Task StartAsync(string localeCode, CancellationToken cancellationToken);
+    Task StartAsync(RecognitionRequest request, CancellationToken cancellationToken);
     Task PushPcmAsync(ReadOnlyMemory<byte> pcm16KhzMono, CancellationToken cancellationToken);
     Task CompleteAsync(CancellationToken cancellationToken);
     IAsyncEnumerable<TranscriptUpdate> ReadUpdatesAsync(CancellationToken cancellationToken);
@@ -54,4 +54,10 @@ public interface IForegroundTarget
 public interface ITextInjector
 {
     void Inject(string text);
+}
+
+// One recognition session: the exact locale plus the already composed vocabulary phrases.
+public sealed record RecognitionRequest(string LocaleCode, IReadOnlyList<string> Phrases, string VocabularyStrength)
+{
+    public static RecognitionRequest WithoutVocabulary(string localeCode) => new(localeCode, [], VocabularyStrengths.Normal);
 }

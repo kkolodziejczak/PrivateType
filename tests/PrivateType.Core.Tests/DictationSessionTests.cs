@@ -24,6 +24,19 @@ public sealed class DictationSessionTests
         Assert.True(recognizer.Disposed);
     }
 
+    [Fact]
+    public async Task Starts_the_recognizer_with_the_composed_request()
+    {
+        var recognizer = new FakeRecognizer();
+        await using var session = CreateSession(new FakeCapture(), recognizer, new FakeForegroundTarget(), new FakeInjector());
+
+        await session.StartAsync();
+
+        Assert.Equal("pl-PL", recognizer.StartedRequest!.LocaleCode);
+        Assert.Equal(["PrivateType"], recognizer.StartedRequest.Phrases);
+        Assert.Equal("strong", recognizer.StartedRequest.VocabularyStrength);
+    }
+
     [Theory]
     [InlineData(TargetEligibility.Changed)]
     [InlineData(TargetEligibility.Invalid)]
@@ -340,7 +353,7 @@ public sealed class DictationSessionTests
             recognizer,
             new ForegroundTargetGuard(target),
             injector,
-            "pl-PL",
+            new RecognitionRequest("pl-PL", ["PrivateType"], VocabularyStrengths.Strong),
             finalizationTimeout ?? TimeSpan.FromSeconds(1),
             diagnostics);
     }

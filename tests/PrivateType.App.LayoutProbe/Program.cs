@@ -63,6 +63,7 @@ static void RenderWindows(bool pointerPlacementOnly)
         VerifySettingsVersion);
     SettingsSoundProbe.Run(outputDirectory);
     SettingsLanguageProbe.Run(outputDirectory);
+    SettingsVocabularyProbe.Run(outputDirectory);
     Render(new DiagnosticsWindow(new InMemoryDiagnostics()), Path.Combine(outputDirectory, "diagnostics-empty.png"));
     Render(new OpenSourceLicensesWindow(), Path.Combine(outputDirectory, "open-source-licenses.png"));
     var sharedModelSetup = new ModelSetupWindow();

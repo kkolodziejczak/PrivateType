@@ -3,7 +3,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="PrivateType settings" Icon="/PrivateType;component/Assets/PrivateType.ready.ico" Width="620" Height="800"
         WindowStartupLocation="CenterScreen" ResizeMode="NoResize" WindowStyle="None" AllowsTransparency="True"
-        Background="Transparent" Foreground="{DynamicResource ColorText}" FontFamily="{DynamicResource AppFont}">
+        Background="Transparent" Foreground="{DynamicResource ColorText}" FontFamily="{DynamicResource AppFont}"
+        PreviewKeyDown="SwitchPageWithKeyboard">
   <Window.Resources>
     <Style x:Key="SoundVolumeSlider" TargetType="Slider">
       <Setter Property="Template">
@@ -216,6 +217,35 @@
         </Setter.Value>
       </Setter>
     </Style>
+    <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+    <Style x:Key="PageTab" TargetType="RadioButton">
+      <Setter Property="Foreground" Value="{DynamicResource ColorText}" />
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="Cursor" Value="Hand" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="RadioButton">
+            <Border x:Name="TabShell" Padding="16,7" CornerRadius="8" Background="Transparent" BorderBrush="{DynamicResource ColorDivider}" BorderThickness="1">
+              <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="TabShell" Property="BorderBrush" Value="{DynamicResource ColorAccent}" />
+              </Trigger>
+              <Trigger Property="IsKeyboardFocused" Value="True">
+                <Setter TargetName="TabShell" Property="BorderBrush" Value="{DynamicResource ColorAccent400}" />
+              </Trigger>
+              <Trigger Property="IsChecked" Value="True">
+                <Setter TargetName="TabShell" Property="Background" Value="{DynamicResource ColorAccent800}" />
+                <Setter TargetName="TabShell" Property="BorderBrush" Value="{DynamicResource ColorAccent}" />
+                <Setter Property="Foreground" Value="{DynamicResource ColorAccent100}" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
   </Window.Resources>
   <Border Margin="8" Background="{DynamicResource ColorSurface}" BorderBrush="{DynamicResource ColorDivider}" BorderThickness="1" CornerRadius="16">
     <Grid>
@@ -233,10 +263,19 @@
       <Border Grid.Row="1" Padding="22" Background="{DynamicResource ColorSurface}" CornerRadius="0,0,14,14">
         <Grid>
           <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
           </Grid.RowDefinitions>
-          <ScrollViewer x:Name="SettingsScrollViewer" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="0,0,0,16" Padding="0,0,12,0" Focusable="False">
+          <StackPanel Grid.Row="0" Margin="0,0,0,18">
+            <TextBlock FontSize="22" FontWeight="SemiBold" Text="Settings" />
+            <TextBlock Margin="0,5,0,0" Foreground="{DynamicResource ColorText}" Opacity="0.7" FontSize="14" TextWrapping="Wrap" Text="Choose your input, shortcuts, vocabulary, and ready sound." />
+            <StackPanel Margin="0,14,0,0" Orientation="Horizontal">
+              <RadioButton x:Name="GeneralTab" Style="{StaticResource PageTab}" GroupName="SettingsPage" Content="General" IsChecked="True" Checked="PageChanged" AutomationProperties.Name="General settings" />
+              <RadioButton x:Name="VocabularyTab" Style="{StaticResource PageTab}" GroupName="SettingsPage" Margin="8,0,0,0" Content="Vocabulary" Checked="PageChanged" AutomationProperties.Name="Vocabulary settings" />
+            </StackPanel>
+          </StackPanel>
+          <ScrollViewer x:Name="SettingsScrollViewer" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="0,0,0,16" Padding="0,0,12,0" Focusable="False">
             <ScrollViewer.Resources>
               <Style TargetType="ScrollBar">
                 <Setter Property="Width" Value="12" />
@@ -254,9 +293,10 @@
               </Style>
             </ScrollViewer.Resources>
         <Grid>
+        <Grid x:Name="GeneralPage">
           <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="22" />
+            <RowDefinition Height="0" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="22" />
             <RowDefinition Height="Auto" />
@@ -268,10 +308,6 @@
             <RowDefinition Height="Auto" />
           </Grid.RowDefinitions>
 
-          <StackPanel Grid.Row="0">
-            <TextBlock FontSize="22" FontWeight="SemiBold" Text="Settings" />
-            <TextBlock Margin="0,5,0,0" Foreground="{DynamicResource ColorText}" Opacity="0.7" FontSize="14" TextWrapping="Wrap" Text="Choose your input, shortcuts, and ready sound." />
-          </StackPanel>
 
           <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
@@ -470,8 +506,70 @@
             </Border>
           </StackPanel>
         </Grid>
+        <StackPanel x:Name="VocabularyPage" Visibility="Collapsed">
+          <TextBlock FontWeight="SemiBold" FontSize="16" Text="Vocabulary" />
+          <TextBlock Margin="0,4,0,0" Foreground="{DynamicResource ColorText}" Opacity="0.7" FontSize="13" TextWrapping="Wrap"
+                     Text="Help the local model recognize names, acronyms, and specialist terms. Type each word or phrase exactly as it should be written." />
+          <Grid Margin="0,18,0,0">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="260" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="10" />
+              <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <TextBlock VerticalAlignment="Center" FontSize="13" Foreground="{DynamicResource ColorText}" Opacity="0.8" Text="Language" />
+            <ComboBox x:Name="VocabularyScopeBox" Grid.Column="1" Height="36" Padding="8,0" ItemsSource="{Binding Scopes}" SelectedValuePath="Code"
+                      SelectedValue="{Binding Scope, Mode=TwoWay}" IsTextSearchEnabled="True" TextSearch.TextPath="DisplayName" MaxDropDownHeight="320"
+                      AutomationProperties.Name="Vocabulary language">
+              <ComboBox.ItemTemplate>
+                <DataTemplate>
+                  <TextBlock Foreground="{DynamicResource ColorText}" Text="{Binding DisplayName}" TextTrimming="CharacterEllipsis" />
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+            <TextBlock Grid.Row="2" VerticalAlignment="Center" FontSize="13" Foreground="{DynamicResource ColorText}" Opacity="0.8" Text="Strength" />
+            <ComboBox x:Name="VocabularyStrengthBox" Grid.Row="2" Grid.Column="1" Height="36" Padding="8,0" ItemsSource="{Binding Strengths}" SelectedValuePath="Id"
+                      SelectedValue="{Binding Strength, Mode=TwoWay}" AutomationProperties.Name="Vocabulary strength">
+              <ComboBox.ItemTemplate>
+                <DataTemplate>
+                  <TextBlock Foreground="{DynamicResource ColorText}" Text="{Binding Label}" />
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+          </Grid>
+          <TextBlock Margin="0,10,0,0" Foreground="{DynamicResource ColorText}" Opacity="0.55" FontSize="12" TextWrapping="Wrap" Text="{Binding ScopeHint}" />
+          <TextBlock Margin="0,4,0,0" Foreground="{DynamicResource ColorText}" Opacity="0.55" FontSize="12" TextWrapping="Wrap"
+                     Text="Strength applies to every phrase. Stronger settings help rare words more but can also insert them where they were not said." />
+          <Border x:Name="VocabularyEmptyState" Margin="0,16,0,0" Padding="12" Background="{DynamicResource ColorBg}" BorderBrush="{DynamicResource ColorDivider}" BorderThickness="1" CornerRadius="8"
+                  Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVisibility}}">
+            <TextBlock Foreground="{DynamicResource ColorText}" Opacity="0.8" FontSize="13" TextWrapping="Wrap" Text="{Binding EmptyText}" />
+          </Border>
+          <ItemsControl x:Name="VocabularyList" Margin="0,16,0,0" ItemsSource="{Binding Visible}" KeyboardNavigation.TabNavigation="Continue">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Grid Margin="0,0,0,8">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                  </Grid.ColumnDefinitions>
+                  <TextBox Height="31" Padding="9,0" MaxLength="120" Text="{Binding Phrase, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Vocabulary phrase" />
+                  <Button Grid.Column="1" Margin="8,0,0,0" Content="—" Tag="{Binding}" Click="RemoveVocabularyPhrase" FontSize="12" Width="31" Height="31" Padding="0"
+                          ToolTip="Remove phrase" AutomationProperties.Name="Remove phrase" />
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <Button x:Name="AddPhraseButton" Style="{StaticResource GhostButton}" Margin="0,4,0,0" Width="136" HorizontalAlignment="Left" Content="+ Add phrase" Click="AddVocabularyPhrase" />
+          <TextBlock Margin="0,10,0,0" Foreground="{DynamicResource ColorText}" Opacity="0.55" FontSize="12" Text="{Binding CountText}" />
+          <TextBlock Margin="0,4,0,0" Foreground="{DynamicResource ColorText}" Opacity="0.55" FontSize="12" TextWrapping="Wrap"
+                     Text="Phrases stay on this computer and are only given to the local speech engine." />
+        </StackPanel>
+        </Grid>
           </ScrollViewer>
-          <StackPanel Grid.Row="1">
+          <StackPanel Grid.Row="2">
             <TextBlock x:Name="ValidationText" TextWrapping="Wrap" Foreground="{DynamicResource ColorAccent300}" Margin="0,0,0,8" AutomationProperties.LiveSetting="Polite" />
             <Grid>
               <Grid.ColumnDefinitions>

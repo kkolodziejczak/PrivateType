@@ -18,6 +18,7 @@ internal sealed class DictationApplication : IDisposable
     private readonly Forms.NotifyIcon trayIcon;
     private readonly Forms.ToolStripMenuItem statusItem;
     private readonly Forms.ToolStripMenuItem settingsItem;
+    private readonly Forms.ToolStripMenuItem vocabularyItem;
     private readonly DictationSessionCoordinator sessions;
     private readonly LatestPresentationQueue pendingPresentations = new();
     private readonly LatestAudioMeterQueue pendingAudioMeters = new();
@@ -52,6 +53,8 @@ internal sealed class DictationApplication : IDisposable
         statusItem.Enabled = false;
         settingsItem = (Forms.ToolStripMenuItem)trayIcon.ContextMenuStrip.Items.Add("Settings…", null, (_, _) => ShowSettings());
         settingsItem.Enabled = false;
+        vocabularyItem = (Forms.ToolStripMenuItem)trayIcon.ContextMenuStrip.Items.Add("Vocabulary…", null, (_, _) => ShowSettings(openVocabulary: true));
+        vocabularyItem.Enabled = false;
         trayIcon.ContextMenuStrip.Items.Add("Quit", null, (_, _) => Wpf.Application.Current.Shutdown());
         modelIdleTimer = new DispatcherTimer();
         modelIdleTimer.Tick += UnloadModelWhenIdle;
@@ -60,7 +63,8 @@ internal sealed class DictationApplication : IDisposable
         hotkey.Held += localeCode => Wpf.Application.Current.Dispatcher.BeginInvoke(new Action(() => _ = BeginDictationAsync(localeCode)));
         hotkey.Released += () => Wpf.Application.Current.Dispatcher.BeginInvoke(new Action(() => _ = EndDictationAsync()));
         bubble.PositionChanged += SavePanelPosition;
-        bubble.SettingsRequested += ShowSettings;
+        bubble.SettingsRequested += () => ShowSettings();
+        bubble.VocabularyRequested += () => ShowSettings(openVocabulary: true);
         bubble.QuitRequested += () => Wpf.Application.Current.Shutdown();
         bubble.RecordingIndicatorChanged += visible => trayIcon.Icon = visible ? trayIcons.Listening : trayIcons.Ready;
     }
@@ -248,6 +252,7 @@ internal sealed class DictationApplication : IDisposable
         hotkey.ToggleMode = settings.ShortcutMode == DictationShortcutModes.Toggle;
         var availability = hotkey.Start(HotkeyCatalog.FromBindings(settings.Shortcuts));
         settingsItem.Enabled = true;
+        vocabularyItem.Enabled = true;
         statusItem.Text = $"{DescribeReady(availability)} — loading local model";
         trayIcon.Text = $"PrivateType — {statusItem.Text}";
         ShowReadyPanel();
@@ -273,13 +278,13 @@ internal sealed class DictationApplication : IDisposable
             : $"Dictation ready — unavailable: {availability.DescribeDisabledHotkeys()}";
     }
 
-    private void ShowSettings()
+    private void ShowSettings(bool openVocabulary = false)
     {
         if (settingsStore is null || modelProvisioner is null)
             return;
 
         hotkey.Suspend();
-        var window = new SettingsWindow(settings, MicrophoneCatalog.Enumerate());
+        var window = new SettingsWindow(settings, MicrophoneCatalog.Enumerate(), openVocabulary);
         window.Loaded += (_, _) => BringToForeground(window);
         window.DiagnosticsRequested += () => ShowDiagnostics(window);
         window.LicensesRequested += () => new OpenSourceLicensesWindow { Owner = window }.ShowDialog();
@@ -410,7 +415,7 @@ internal sealed class DictationApplication : IDisposable
             new RealtimeRecognizer(engine.RealtimeEndpoint),
             new ForegroundTargetGuard(new Win32ForegroundTarget()),
             settings.InsertionMode == TextInsertionModes.Paste ? new ClipboardPasteInjector() : new UnicodeTextInjector(),
-            localeCode,
+            new RecognitionRequest(localeCode, VocabularyComposer.Compose(settings.Vocabulary, localeCode), settings.VocabularyStrength),
             diagnostics: diagnostics);
         session.PresentationChanged += presentation => Present(localeCode, presentation);
         session.AudioMeterChanged += PresentAudioMeter;

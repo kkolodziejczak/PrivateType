@@ -10,7 +10,7 @@ public sealed class DictationSession : IAsyncDisposable
     private readonly IStreamingRecognizer recognizer;
     private readonly ForegroundTargetGuard targetGuard;
     private readonly ITextInjector injector;
-    private readonly string localeCode;
+    private readonly RecognitionRequest request;
     private readonly IDictationDiagnostics diagnostics;
     private readonly TimeSpan finalizationTimeout;
     private readonly string sessionId = Guid.NewGuid().ToString("N");
@@ -36,7 +36,7 @@ public sealed class DictationSession : IAsyncDisposable
         IStreamingRecognizer recognizer,
         ForegroundTargetGuard targetGuard,
         ITextInjector injector,
-        string localeCode,
+        RecognitionRequest request,
         TimeSpan? finalizationTimeout = null,
         IDictationDiagnostics? diagnostics = null)
     {
@@ -44,7 +44,7 @@ public sealed class DictationSession : IAsyncDisposable
         this.recognizer = recognizer;
         this.targetGuard = targetGuard;
         this.injector = injector;
-        this.localeCode = localeCode;
+        this.request = request;
         this.finalizationTimeout = finalizationTimeout ?? DefaultFinalizationTimeout;
         this.diagnostics = diagnostics ?? NullDictationDiagnostics.Instance;
     }
@@ -66,14 +66,14 @@ public sealed class DictationSession : IAsyncDisposable
             throw new InvalidOperationException("A dictation session can be started only once.");
 
         started = true;
-        Diagnose("session.started", ("locale", localeCode));
+        Diagnose("session.started", ("locale", request.LocaleCode), ("vocabularyPhrases", request.Phrases.Count));
         targetGuard.Capture();
         capture.PcmAvailable += QueuePcmAsync;
         capture.Faulted += ReportFailure;
 
         try
         {
-            await recognizer.StartAsync(localeCode, cancellationToken);
+            await recognizer.StartAsync(request, cancellationToken);
             pcmPump = PumpPcmAsync();
             updatePump = PumpUpdatesAsync();
             phase = "capture.start";

@@ -511,19 +511,37 @@ public sealed class WindowsBoundaryTests
     [InlineData("auto")]
     public void Sends_the_catalog_locale_code_verbatim_to_the_local_engine(string localeCode)
     {
-        using var document = System.Text.Json.JsonDocument.Parse(RealtimeRecognizer.SessionUpdate(localeCode));
+        using var document = System.Text.Json.JsonDocument.Parse(RealtimeRecognizer.SessionUpdate(RecognitionRequest.WithoutVocabulary(localeCode)));
         var session = document.RootElement.GetProperty("session");
 
         Assert.Equal("session.update", document.RootElement.GetProperty("type").GetString());
         Assert.Equal(localeCode, session.GetProperty("language").GetString());
         Assert.Equal(16000, session.GetProperty("sample_rate").GetInt32());
         Assert.True(session.GetProperty("automatic_punctuation").GetBoolean());
+        Assert.False(session.TryGetProperty("speech_contexts", out _));
+        Assert.False(session.TryGetProperty("prompt", out _));
+    }
+
+    [Theory]
+    [InlineData("low", 0.5)]
+    [InlineData("normal", 1.0)]
+    [InlineData("strong", 2.0)]
+    public void Sends_vocabulary_as_one_speech_context_with_the_calibrated_boost(string strength, double boost)
+    {
+        var json = RealtimeRecognizer.SessionUpdate(new RecognitionRequest("pl-PL", ["Kubernetes", "Żółw"], strength));
+
+        using var document = System.Text.Json.JsonDocument.Parse(json);
+        var session = document.RootElement.GetProperty("session");
+        var context = Assert.Single(session.GetProperty("speech_contexts").EnumerateArray());
+        Assert.Equal(["Kubernetes", "Żółw"], context.GetProperty("phrases").EnumerateArray().Select(phrase => phrase.GetString()));
+        Assert.Equal(boost, context.GetProperty("boost").GetDouble());
+        Assert.False(session.TryGetProperty("prompt", out _));
     }
 
     [Fact]
     public void Refuses_to_send_an_unsupported_locale_instead_of_falling_back()
     {
-        Assert.Throws<ArgumentOutOfRangeException>(() => RealtimeRecognizer.SessionUpdate("th-TH"));
+        Assert.Throws<ArgumentOutOfRangeException>(() => RealtimeRecognizer.SessionUpdate(RecognitionRequest.WithoutVocabulary("th-TH")));
     }
 
     private sealed class FakeStartupRegistration(string? privateTypeCommand, string? legacyCommand) : IStartupRegistrationWriter

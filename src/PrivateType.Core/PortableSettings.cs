@@ -27,6 +27,8 @@ public sealed record PortableSettings(
     public string? CustomReadySoundPath { get; init; }
     public string ShortcutMode { get; init; } = DictationShortcutModes.Hold;
     public string InsertionMode { get; init; } = TextInsertionModes.Type;
+    public IReadOnlyList<VocabularyEntry> Vocabulary { get; init; } = [];
+    public string VocabularyStrength { get; init; } = VocabularyStrengths.Normal;
 
     public static PortableSettings Default { get; } = new("default", ShortcutBinding.Defaults);
 }
@@ -76,6 +78,12 @@ public static class PortableSettingsValidator
         new("text insertion",
             settings => settings.InsertionMode is not (TextInsertionModes.Type or TextInsertionModes.Paste) ? "Choose how dictated text is inserted." : null,
             settings => settings with { InsertionMode = TextInsertionModes.Type }),
+        new("vocabulary",
+            settings => settings.Vocabulary is null ? "Vocabulary is missing." : VocabularyRules.Validate(settings.Vocabulary),
+            settings => settings with { Vocabulary = VocabularyRules.KeepValid(settings.Vocabulary) }),
+        new("vocabulary strength",
+            settings => VocabularyStrengths.IsSupported(settings.VocabularyStrength) ? null : "Choose a supported vocabulary strength.",
+            settings => settings with { VocabularyStrength = VocabularyStrengths.Normal }),
         new("ready sound volume",
             settings => settings.ReadySoundVolume is < 0 or > 100 ? "Choose a ready sound volume between 0 and 100%." : null,
             settings => settings with { ReadySoundVolume = PortableSettings.Default.ReadySoundVolume })
