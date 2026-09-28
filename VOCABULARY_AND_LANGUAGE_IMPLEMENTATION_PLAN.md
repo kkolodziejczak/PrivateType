@@ -842,14 +842,16 @@ Evidence (2026-09-28): `VocabularyPackTests`, `CuratedVocabularyPackTests`, `Voc
 
 Stage 5 acceptance:
 
-- [ ] Teach is enabled only for one non-empty last result and appears only on demand.
-- [ ] The previous result is cleared before the next dictation starts and on every agreed terminal path.
-- [ ] One word or a contiguous range can be selected with mouse and keyboard.
-- [ ] Scope is suggested but editable; the taught phrase uses the vocabulary-wide strength (no per-entry influence, per the 2026-09-28 revision).
-- [ ] Only the desired entry persists; heard text and transcript never enter settings or diagnostics.
-- [ ] Save failure supports retry without partial in-memory update.
-- [ ] Already injected text and clipboard remain untouched.
-- [ ] Every Stage 5 mock state passes LayoutProbe and UI-quality verification.
+Evidence (2026-09-28): `QuickTeachTests` (buffer lifecycle, word spans, range selection, session result event including skipped insertion), `TeachProbe` (menu disabled/enabled without transcript text, no-selection/one-word/range/edited states, keyboard extension, Escape, save failure keeps dialog and selection, retry saves only the typed phrase). `DictationApplication` clears the buffer synchronously at dictation start, drops results from superseded dictations, clears on every dialog exit and on disposal, and updates settings only after the atomic save succeeds. Diagnostics record only event names and error types.
+
+- [x] Teach is enabled only for one non-empty last result and appears only on demand.
+- [x] The previous result is cleared before the next dictation starts and on every agreed terminal path.
+- [x] One word or a contiguous range can be selected with mouse and keyboard.
+- [x] Scope is suggested but editable; the taught phrase uses the vocabulary-wide strength (no per-entry influence, per the 2026-09-28 revision).
+- [x] Only the desired entry persists; heard text and transcript never enter settings or diagnostics.
+- [x] Save failure supports retry without partial in-memory update.
+- [x] Already injected text and clipboard remain untouched.
+- [ ] Every Stage 5 mock state passes LayoutProbe and UI-quality verification. (LayoutProbe passes; no UI-quality tool exists in this repository.)
 
 ## Stage 6: Full-system verification and user documentation
 

@@ -55,6 +55,10 @@ public sealed class DictationSession : IAsyncDisposable
     public event Action<AudioMeter>? AudioMeterChanged;
     public event Action<Exception>? Faulted;
 
+    // Raised once with the recognized text, whether or not insertion succeeds. Only the
+    // quick-teach buffer consumes it; the session itself keeps no transcript.
+    public event Action<FinalizedDictation>? Finalized;
+
     public Task StartAsync(CancellationToken cancellationToken = default)
     {
         return RunSerializedAsync(() => StartCoreAsync(cancellationToken));
@@ -141,6 +145,8 @@ public sealed class DictationSession : IAsyncDisposable
             Diagnose("injection.skipped", ("reason", "empty-transcript"));
             return;
         }
+
+        Finalized?.Invoke(new FinalizedDictation(text, request.LocaleCode));
 
         var eligibility = targetGuard.GetEligibility();
         if (eligibility != TargetEligibility.Eligible)

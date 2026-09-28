@@ -100,6 +100,23 @@ PrivateType's recognition tests, vocabulary raised correctly spelled technical
 terms from about 1 in 5 to about half. Vocabulary stays in the settings file on
 this computer and is only given to the local speech engine.
 
+**Teach from last dictation…** in the bubble menu is the quickest way to add a
+phrase. It shows the sentence you just dictated as words: click the first and
+last words it got wrong, type the correct spelling, and choose **Save term**.
+Only your typed spelling is saved. The sentence itself lives only in memory,
+and is discarded when that window closes, when you start the next dictation, or
+when PrivateType exits. The text already typed into the other app is not
+changed.
+
+**Packs** are named phrase lists you can share. **Import pack…** reads a
+`.privatetype-vocabulary.json` file (a JSON list of phrases), shows every
+phrase, and asks which language it is for before copying it in. Turn packs on
+or off, edit, export, or remove them in the same section; **Export…** writes
+only the phrases you leave ticked. Each dictation uses at most 200 phrases from
+your own list and switched-on packs for its language, and up to 1,000 phrases
+can be stored. PrivateType never downloads packs; curated examples may appear in
+[vocabulary-packs](vocabulary-packs/) for manual download.
+
 In **Settings → Ready sound**, choose Ping, Chime, Bell, or your own WAV/MP3,
 and adjust the volume from 0% (muted) to 100%. **Preview** plays your pending
 choice immediately, without loading the model. **Save changes** keeps your
@@ -145,7 +162,9 @@ if it is not already installed.
 
 ## Privacy, limits, and troubleshooting
 
-- PrivateType does not retain raw audio or inserted transcripts.
+- PrivateType does not retain raw audio or a transcript history. The most
+  recent sentence is kept in memory only for **Teach from last dictation…**,
+  until the next dictation starts, the teach window closes, or the app exits.
 - `app/data/settings.json` stores only the selected microphone, shortcuts and
   their languages, shortcut behavior, insertion mode, vocabulary, bubble location,
   Windows-startup preference, model idle timeout, and ready-sound choice.

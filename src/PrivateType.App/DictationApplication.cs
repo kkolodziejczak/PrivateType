@@ -27,6 +27,9 @@ internal sealed class DictationApplication : IDisposable
     private readonly DispatcherTimer heldKeyWatchdog;
     private readonly InMemoryDiagnostics diagnostics = new();
     private SettingsWindow? openSettingsWindow;
+    private TeachWindow? openTeachWindow;
+    private readonly EphemeralTranscriptBuffer lastDictation = new();
+    private long dictationSequence;
     private PortableSettingsStore? settingsStore;
     private ModelProvisioner? modelProvisioner;
     private PortableSettings settings = PortableSettings.Default;
@@ -66,6 +69,8 @@ internal sealed class DictationApplication : IDisposable
         bubble.PositionChanged += SavePanelPosition;
         bubble.SettingsRequested += () => ShowSettings();
         bubble.VocabularyRequested += () => ShowSettings(openVocabulary: true);
+        bubble.TeachRequested += ShowTeach;
+        lastDictation.Changed += () => bubble.SetTeachAvailable(lastDictation.HasValue);
         bubble.QuitRequested += () => Wpf.Application.Current.Shutdown();
         bubble.RecordingIndicatorChanged += visible => trayIcon.Icon = visible ? trayIcons.Listening : trayIcons.Ready;
     }
@@ -79,6 +84,7 @@ internal sealed class DictationApplication : IDisposable
         if (disposed)
             return;
         disposed = true;
+        lastDictation.Clear();
         modelIdleTimer.Stop();
         heldKeyWatchdog.Stop();
         provisioningCancellation?.Cancel();
@@ -284,7 +290,7 @@ internal sealed class DictationApplication : IDisposable
         if (settingsStore is null || modelProvisioner is null)
             return;
 
-        // The tray menu stays clickable while modal Settings is open. A second window would
+        // The tray menu stays clickable while a modal window is open. A second window would
         // interleave hotkey suspend/resume and leave the first dialog disabling the bubble,
         // so reuse the open window instead.
         if (openSettingsWindow is not null)
@@ -292,6 +298,11 @@ internal sealed class DictationApplication : IDisposable
             if (openVocabulary)
                 openSettingsWindow.ShowVocabularyPage();
             BringToForeground(openSettingsWindow);
+            return;
+        }
+        if (openTeachWindow is not null)
+        {
+            BringToForeground(openTeachWindow);
             return;
         }
 
@@ -431,8 +442,58 @@ internal sealed class DictationApplication : IDisposable
 
     internal static string StartupFailureMessage(string message) => message;
 
+    // Opens on demand only. The sentence is discarded when the dialog closes, however it closes.
+    private void ShowTeach()
+    {
+        if (openSettingsWindow is not null || openTeachWindow is not null || lastDictation.Current is not { } dictation)
+            return;
+
+        hotkey.Suspend();
+        var window = new TeachWindow(dictation, settings.VocabularyStrength, SaveTaughtPhrase);
+        window.Loaded += (_, _) => BringToForeground(window);
+        openTeachWindow = window;
+        try
+        {
+            window.ShowDialog();
+        }
+        finally
+        {
+            openTeachWindow = null;
+            lastDictation.Clear();
+            RestoreHotkeys(settings.Shortcuts);
+        }
+    }
+
+    // Adds the phrase to personal vocabulary. In-memory settings change only after the file is saved.
+    private string? SaveTaughtPhrase(VocabularyEntry entry)
+    {
+        if (settingsStore is null)
+            return "Settings are not available yet.";
+
+        var candidate = settings.Vocabulary.Contains(entry)
+            ? settings
+            : settings with { Vocabulary = [.. settings.Vocabulary, entry] };
+        if (PortableSettingsValidator.Validate(candidate) is { } error)
+            return error;
+
+        try
+        {
+            settingsStore.Save(candidate);
+        }
+        catch (Exception exception)
+        {
+            RecordDiagnostic("vocabulary.teach.save.failed", exception);
+            return "The phrase could not be saved. Check that the PrivateType folder is writable, then try again.";
+        }
+
+        settings = candidate;
+        RecordDiagnostic("vocabulary.taught");
+        return null;
+    }
+
     private DictationSession CreateSession(string localeCode)
     {
+        var sequence = Interlocked.Read(ref dictationSequence);
         var session = new DictationSession(
             new DefaultMicrophoneCapture(settings.MicrophoneId),
             new RealtimeRecognizer(engine.RealtimeEndpoint),
@@ -442,11 +503,20 @@ internal sealed class DictationApplication : IDisposable
             diagnostics: diagnostics);
         session.PresentationChanged += presentation => Present(localeCode, presentation);
         session.AudioMeterChanged += PresentAudioMeter;
+        // Keep the result only if no newer dictation has started since this one.
+        session.Finalized += result => Wpf.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+        {
+            if (!disposed && sequence == Interlocked.Read(ref dictationSequence))
+                lastDictation.Replace(result);
+        }));
         return session;
     }
 
     private async Task BeginDictationAsync(string localeCode)
     {
+        // Discard the previous sentence before anything else happens for the new dictation.
+        lastDictation.Clear();
+        Interlocked.Increment(ref dictationSequence);
         shortcutHeld = true;
         var generation = ++heldGeneration;
         modelIdleTimer.Stop();
