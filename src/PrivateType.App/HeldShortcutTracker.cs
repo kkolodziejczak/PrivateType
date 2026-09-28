@@ -57,5 +57,45 @@ internal sealed class HeldShortcutTracker
     {
         Held = null;
         recoveredVirtualKey = null;
+        toggleKeyDown = null;
     }
+
+    // Toggle mode: the first press starts, the next press of the same shortcut stops.
+    // Auto-repeat while the key stays down and every matching key-up are swallowed.
+    private int? toggleKeyDown;
+
+    public ToggleKeyResult ToggleKeyDown(HotkeyDefinition hotkey)
+    {
+        if (toggleKeyDown == hotkey.VirtualKey)
+            return ToggleKeyResult.Swallowed;
+
+        toggleKeyDown = hotkey.VirtualKey;
+        if (Held is null)
+        {
+            Held = hotkey;
+            return ToggleKeyResult.Started;
+        }
+
+        if (Held.VirtualKey != hotkey.VirtualKey)
+            return ToggleKeyResult.Swallowed;
+
+        Held = null;
+        return ToggleKeyResult.Stopped;
+    }
+
+    public bool ToggleKeyUp(int virtualKey)
+    {
+        if (toggleKeyDown != virtualKey)
+            return false;
+
+        toggleKeyDown = null;
+        return true;
+    }
+}
+
+internal enum ToggleKeyResult
+{
+    Started,
+    Stopped,
+    Swallowed
 }

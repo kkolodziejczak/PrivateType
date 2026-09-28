@@ -17,6 +17,7 @@ public partial class DictationBubble : Window
     internal const int SpectrumBarCount = 44;
     internal const string ModelLoadingTitle = "Loading local model…";
     internal const string ModelLoadingHint = "This may take a few seconds. Keep holding to dictate.";
+    internal const string ModelLoadingToggleHint = "This may take a few seconds. Listening starts when it's ready.";
 
     private const int GwlExStyle = -20;
     private const int WsExNoActivate = 0x08000000;
@@ -109,7 +110,7 @@ public partial class DictationBubble : Window
         ClampToWorkAreaAfterLayout(selectedWorkArea);
     }
 
-    public void ShowModelLoading()
+    public void ShowModelLoading(bool toggleMode = false)
     {
         active = true;
         recordingVisualsActive = false;
@@ -117,7 +118,7 @@ public partial class DictationBubble : Window
         BubbleShell.Opacity = 1;
         ApplyExpandedVisuals(ModelLoadingTitle, "ColorAccent900", "ColorAccent300", "ColorAccent300");
         SetWidthAroundCenter(ActiveWidth);
-        Hint.Text = ModelLoadingHint;
+        Hint.Text = toggleMode ? ModelLoadingToggleHint : ModelLoadingHint;
         Hint.Visibility = Visibility.Visible;
         WaveformBars.Visibility = Visibility.Collapsed;
         TranscriptViewport.Visibility = Visibility.Collapsed;

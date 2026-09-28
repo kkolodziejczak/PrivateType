@@ -47,6 +47,22 @@ internal static class SettingsLanguageProbe
                 "Shortcut labels must fit their boxes.");
             Capture(window, outputDirectory, "settings-languages.png");
 
+            foreach (var name in new[] { "ShortcutModeBox", "InsertionModeBox" })
+            {
+                var box = (ComboBox)window.FindName(name);
+                Require(box.Items.Count == 2 && box.SelectedIndex == 0, $"{name} must offer two choices with the default selected.");
+                Require(AutomationPeer(box).GetName().Length > 0 && box.Focus(), $"{name} needs an accessible name and keyboard focus.");
+            }
+            var hint = (TextBlock)window.FindName("InsertionModeHint");
+            var typingHint = hint.Text;
+            ((ComboBox)window.FindName("InsertionModeBox")).SelectedValue = "paste";
+            Flush(window);
+            Require(hint.Text.Length > 0 && hint.Text != typingHint && hint.Text.Contains("clipboard", StringComparison.Ordinal),
+                "Choosing paste must explain clipboard handling.");
+            hint.BringIntoView();
+            Flush(window);
+            Capture(window, outputDirectory, "settings-dictation-modes.png");
+
             var first = selectors[0];
             first.Focus();
             first.IsDropDownOpen = true;
@@ -70,7 +86,7 @@ internal static class SettingsLanguageProbe
         }
 
         VerifySavedLocaleCodes(settings);
-        Console.WriteLine("PASS: Settings offers 33 language choices without clipping, opens the list, supports type-ahead and focus, and saves locale codes.");
+        Console.WriteLine("PASS: Settings offers 33 language choices without clipping, opens the list, supports type-ahead and focus, and saves locale codes, shortcut behavior, and insertion mode.");
     }
 
     private static void VerifySavedLocaleCodes(PortableSettings settings)
@@ -83,6 +99,8 @@ internal static class SettingsLanguageProbe
             {
                 var first = Descendants(window).OfType<ComboBox>().First(box => box.ItemsSource is IEnumerable<LanguageOption>);
                 first.SelectedItem = TextSearch(first, "Spanish (Spain)");
+                ((ComboBox)window.FindName("ShortcutModeBox")).SelectedValue = "toggle";
+                ((ComboBox)window.FindName("InsertionModeBox")).SelectedValue = "paste";
                 Click(window, "SaveSettingsButton");
             }
             catch (Exception exception)
@@ -96,6 +114,8 @@ internal static class SettingsLanguageProbe
             throw failure;
         Require(window.SavedSettings is { } saved && saved.Shortcuts[0].LocaleCode == "es-ES" && saved.Shortcuts[2].LocaleCode == "auto",
             "Saved shortcuts must carry locale codes.");
+        Require(window.SavedSettings!.ShortcutMode == "toggle" && window.SavedSettings.InsertionMode == "paste",
+            "Saved settings must carry the chosen shortcut behavior and insertion mode.");
     }
 
     private static object TextSearch(ComboBox box, string prefix) =>

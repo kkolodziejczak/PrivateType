@@ -25,8 +25,22 @@ public sealed record PortableSettings(
     public string ReadySound { get; init; } = "ping";
     public int ReadySoundVolume { get; init; } = 80;
     public string? CustomReadySoundPath { get; init; }
+    public string ShortcutMode { get; init; } = DictationShortcutModes.Hold;
+    public string InsertionMode { get; init; } = TextInsertionModes.Type;
 
     public static PortableSettings Default { get; } = new("default", ShortcutBinding.Defaults);
+}
+
+public static class DictationShortcutModes
+{
+    public const string Hold = "hold";
+    public const string Toggle = "toggle";
+}
+
+public static class TextInsertionModes
+{
+    public const string Type = "type";
+    public const string Paste = "paste";
 }
 
 public sealed record SettingsLoadResult(PortableSettings Settings, string? Warning = null);
@@ -56,6 +70,12 @@ public static class PortableSettingsValidator
         new("ready sound",
             ValidateReadySound,
             settings => settings with { ReadySound = PortableSettings.Default.ReadySound, CustomReadySoundPath = null }),
+        new("shortcut behavior",
+            settings => settings.ShortcutMode is not (DictationShortcutModes.Hold or DictationShortcutModes.Toggle) ? "Choose how shortcuts start and stop dictation." : null,
+            settings => settings with { ShortcutMode = DictationShortcutModes.Hold }),
+        new("text insertion",
+            settings => settings.InsertionMode is not (TextInsertionModes.Type or TextInsertionModes.Paste) ? "Choose how dictated text is inserted." : null,
+            settings => settings with { InsertionMode = TextInsertionModes.Type }),
         new("ready sound volume",
             settings => settings.ReadySoundVolume is < 0 or > 100 ? "Choose a ready sound volume between 0 and 100%." : null,
             settings => settings with { ReadySoundVolume = PortableSettings.Default.ReadySoundVolume })

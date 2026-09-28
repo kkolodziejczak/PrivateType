@@ -33,6 +33,10 @@ public partial class SettingsWindow : Window
         bindings = new(settings.Shortcuts.Select(binding => new ShortcutBindingEditor(binding, supportedLanguages)));
         BindingsList.ItemsSource = bindings;
         StartWithWindowsCheckBox.IsChecked = settings.StartWithWindows;
+        ShortcutModeBox.ItemsSource = ChoiceOption.ShortcutModes;
+        ShortcutModeBox.SelectedValue = settings.ShortcutMode;
+        InsertionModeBox.ItemsSource = ChoiceOption.InsertionModes;
+        InsertionModeBox.SelectedValue = settings.InsertionMode;
         IdleTimeoutBox.ItemsSource = IdleTimeoutOption.Supported;
         IdleTimeoutBox.SelectedValue = settings.ModelIdleTimeoutMinutes;
         customSoundPath = settings.CustomReadySoundPath;
@@ -48,6 +52,13 @@ public partial class SettingsWindow : Window
     public PortableSettings? SavedSettings { get; private set; }
     public event Action? DiagnosticsRequested;
     public event Action? LicensesRequested;
+
+    private void InsertionModeChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    {
+        InsertionModeHint.Text = InsertionModeBox.SelectedValue as string == TextInsertionModes.Paste
+            ? "Pasting is faster for long text and works in more apps. Your clipboard is restored afterwards, and dictated text is kept out of clipboard history."
+            : "Typing sends each character, which works in most text fields and never touches the clipboard.";
+    }
 
     private void ReadySoundChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
     {
@@ -196,6 +207,8 @@ public partial class SettingsWindow : Window
             MicrophoneId = MicrophoneBox.SelectedValue as string ?? "default",
             Shortcuts = bindings.Select(binding => new ShortcutBinding(binding.LocaleCode, binding.VirtualKey)).ToArray(),
             StartWithWindows = StartWithWindowsCheckBox.IsChecked == true,
+            ShortcutMode = ShortcutModeBox.SelectedValue as string ?? DictationShortcutModes.Hold,
+            InsertionMode = InsertionModeBox.SelectedValue as string ?? TextInsertionModes.Type,
             ModelIdleTimeoutMinutes = IdleTimeoutBox.SelectedValue is int minutes ? minutes : 10
         };
         var validationError = PortableSettingsValidator.Validate(settings);
@@ -236,6 +249,21 @@ public partial class SettingsWindow : Window
 }
 
 public sealed record LanguageOption(string LocaleCode, string Label);
+
+public sealed record ChoiceOption(string Id, string Label)
+{
+    public static IReadOnlyList<ChoiceOption> ShortcutModes { get; } =
+    [
+        new(DictationShortcutModes.Hold, "Hold to talk"),
+        new(DictationShortcutModes.Toggle, "Press to start and stop")
+    ];
+
+    public static IReadOnlyList<ChoiceOption> InsertionModes { get; } =
+    [
+        new(TextInsertionModes.Type, "Typing characters"),
+        new(TextInsertionModes.Paste, "Pasting")
+    ];
+}
 
 public sealed record ReadySoundOption(string Id, string Label)
 {

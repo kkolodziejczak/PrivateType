@@ -72,6 +72,18 @@ holding the shortcut while **Loading local model…** is shown. A short ping
 signals that loading has finished and the microphone is ready: you can speak.
 The ping plays only when that hold waited for the model to load.
 
+Prefer not to hold? Set **Settings → Shortcuts → Shortcut behavior** to
+**Press to start and stop**: press the shortcut once to start listening and
+again to insert the text. If the model is still loading, listening starts by
+itself when it is ready.
+
+**Insert text by** chooses how text reaches the target app. **Typing
+characters** (default) never touches the clipboard. **Pasting** is faster for
+long text and works in apps that ignore simulated typing; PrivateType puts your
+previous clipboard back afterwards (unless you copied something new meanwhile)
+and marks the dictated text so Windows clipboard history and cloud clipboard
+skip it.
+
 In **Settings → Ready sound**, choose Ping, Chime, Bell, or your own WAV/MP3,
 and adjust the volume from 0% (muted) to 100%. **Preview** plays your pending
 choice immediately, without loading the model. **Save changes** keeps your
@@ -118,8 +130,9 @@ if it is not already installed.
 ## Privacy, limits, and troubleshooting
 
 - PrivateType does not retain raw audio or inserted transcripts.
-- `app/data/settings.json` stores only the selected microphone, shortcuts, bubble
-  location, Windows-startup preference, and model idle timeout.
+- `app/data/settings.json` stores only the selected microphone, shortcuts and
+  their languages, shortcut behavior, insertion mode, bubble location,
+  Windows-startup preference, model idle timeout, and ready-sound choice.
 - The model is downloaded separately from NVIDIA; it is not included in the
   app ZIP. See [MODEL_ARTIFACT.md](MODEL_ARTIFACT.md) for its source and
   checksum.

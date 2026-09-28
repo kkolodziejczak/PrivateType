@@ -23,6 +23,20 @@ internal sealed class HoldHotkeyHook : IDisposable
     public event Action<string>? Held;
     public event Action? Released;
 
+    // Hold: dictate while the shortcut is down. Toggle: press to start, press again to stop.
+    public bool ToggleMode
+    {
+        get => toggleMode;
+        set
+        {
+            if (toggleMode != value)
+                held.Clear();
+            toggleMode = value;
+        }
+    }
+
+    private bool toggleMode;
+
     public HotkeyAvailability Start(IReadOnlyList<HotkeyDefinition> hotkeys)
     {
         reservation = HotkeyReservation.Reserve(hotkeys);
@@ -96,6 +110,9 @@ internal sealed class HoldHotkeyHook : IDisposable
         var key = Marshal.ReadInt32(lParam);
         var hotkey = reservation?.Availability.EnabledHotkeys.SingleOrDefault(candidate => candidate.VirtualKey == key);
 
+        if (ToggleMode)
+            return HandleToggle(code, wParam, lParam, key, hotkey);
+
         if (HotkeyMessage.IsKeyDown(wParam) && held.Held is null && hotkey is not null && IsPressed(VkControl) && IsPressed(VkShift))
         {
             held.TryPress(hotkey);
@@ -113,6 +130,26 @@ internal sealed class HoldHotkeyHook : IDisposable
                     return 1;
             }
         }
+        return CallNextHookEx(hook, code, wParam, lParam);
+    }
+
+    private nint HandleToggle(int code, nint wParam, nint lParam, int key, HotkeyDefinition? hotkey)
+    {
+        if (HotkeyMessage.IsKeyDown(wParam) && hotkey is not null && IsPressed(VkControl) && IsPressed(VkShift))
+        {
+            switch (held.ToggleKeyDown(hotkey))
+            {
+                case ToggleKeyResult.Started:
+                    Held?.Invoke(hotkey.LocaleCode);
+                    break;
+                case ToggleKeyResult.Stopped:
+                    Released?.Invoke();
+                    break;
+            }
+            return 1;
+        }
+        if (HotkeyMessage.IsKeyUp(wParam) && held.ToggleKeyUp(key))
+            return 1;
         return CallNextHookEx(hook, code, wParam, lParam);
     }
 

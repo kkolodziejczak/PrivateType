@@ -245,6 +245,7 @@ internal sealed class DictationApplication : IDisposable
     private async Task ConfigureReadyAsync(string modelPath)
     {
         this.modelPath = modelPath;
+        hotkey.ToggleMode = settings.ShortcutMode == DictationShortcutModes.Toggle;
         var availability = hotkey.Start(HotkeyCatalog.FromBindings(settings.Shortcuts));
         settingsItem.Enabled = true;
         statusItem.Text = $"{DescribeReady(availability)} — loading local model";
@@ -327,6 +328,7 @@ internal sealed class DictationApplication : IDisposable
                     settingsStore.Save(newSettings);
                 });
             settings = newSettings;
+            hotkey.ToggleMode = settings.ShortcutMode == DictationShortcutModes.Toggle;
             statusItem.Text = DescribeReady(availability);
             trayIcon.Text = $"PrivateType — {statusItem.Text}";
             ShowReadyPanel();
@@ -407,7 +409,7 @@ internal sealed class DictationApplication : IDisposable
             new DefaultMicrophoneCapture(settings.MicrophoneId),
             new RealtimeRecognizer(engine.RealtimeEndpoint),
             new ForegroundTargetGuard(new Win32ForegroundTarget()),
-            new UnicodeTextInjector(),
+            settings.InsertionMode == TextInsertionModes.Paste ? new ClipboardPasteInjector() : new UnicodeTextInjector(),
             localeCode,
             diagnostics: diagnostics);
         session.PresentationChanged += presentation => Present(localeCode, presentation);
@@ -420,11 +422,13 @@ internal sealed class DictationApplication : IDisposable
         shortcutHeld = true;
         var generation = ++heldGeneration;
         modelIdleTimer.Stop();
-        heldKeyWatchdog.Start();
+        // In toggle mode the key is up while dictating, so only hold mode needs the watchdog.
+        if (!hotkey.ToggleMode)
+            heldKeyWatchdog.Start();
         bubble.MoveToPointerScreen();
         var waitedForModel = !engineLoads.IsLoaded;
         if (waitedForModel)
-            bubble.ShowModelLoading();
+            bubble.ShowModelLoading(hotkey.ToggleMode);
         try
         {
             await EnsureEngineLoadedAsync();
