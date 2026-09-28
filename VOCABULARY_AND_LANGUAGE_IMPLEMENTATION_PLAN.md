@@ -386,46 +386,52 @@ The `0.0` is deliberately not a proposed production value. Stage 1 must replace 
 
 ### 5. Shareable vocabulary-pack contract
 
-The share format is intentionally not a package manifest. It is a UTF-8 JSON array whose entries contain a desired phrase and an optional symbolic weight:
+> **Redesigned 2026-09-28 (proposed, awaiting owner approval).** Strength is vocabulary-wide (see the revision note under Agreed decisions), so packs carry phrases only. The per-entry `weight` format, pack precedence by influence, and the persisted-entry budget below were replaced.
+
+The share file is a UTF-8 JSON array of phrase strings. It is intentionally not a package manifest:
 
 ```json
-[
-  { "phrase": "MVVM", "weight": "strong" },
-  { "phrase": "dependency injection" },
-  { "phrase": "array", "weight": "low" }
-]
+["MVVM", "dependency injection", "PostgreSQL"]
 ```
 
 File contract:
 
 - Use the extension `.privatetype-vocabulary.json`; the base filename proposes the installed pack name.
-- The top level must be an array. Each item must be an object with required string `phrase` and optional `weight` (`low`, `normal`, or `strong`); omitted weight means `normal`.
-- Reject unknown properties, duplicate normalized phrases, malformed JSON, non-UTF-8 content, and values that fail the normal phrase validator. Accept UTF-8 with or without its optional byte-order mark.
-- A share file contains no scope. Import requires the user to choose exactly one Shared/base-language scope, applied to every entry.
-- A share file contains no executable content, path, URL, ID, version, author, attribution, license, provenance, transcript, or settings payload.
+- The top level must be an array of strings. Reject objects, numbers, nulls, nested arrays, malformed JSON, non-UTF-8 content, and phrases that fail the normal phrase validator. Accept UTF-8 with or without its byte-order mark.
+- Duplicate phrases inside one file (after normalization) are rejected, not silently merged, so the preview always matches the file.
+- A share file contains no scope, strength, name, executable content, path, URL, ID, version, author, attribution, license, provenance, transcript, or settings payload.
 - Require a regular file no larger than 64 KiB selected by the user; never follow content-provided paths and never perform network access.
-- Show the proposed name, selected scope, every normalized phrase, effective weight, and validation counts before installation. Do not persist until the user confirms.
-- Installed pack names are unique ordinally. A collision does not imply an update; propose a unique local suffix and let the user edit it before confirmation.
-- Imported data is copied into the versioned settings model. It has no live relationship to its source file and no automatic update behavior.
-- Editing an installed pack edits that local collection directly. Removing it deletes only the installed collection after confirmation, never the source file.
-- Export personal entries only from the currently selected scope. The user explicitly selects entries and reviews the exact phrase/weight array before choosing a destination.
-- Exporting an installed pack serializes its entire local entry array after the same preview. Scope, enabled state, and local name are not written into the file.
-- Write exports through a temporary file and atomic replace/create in the chosen directory; a failure leaves the prior destination and application state intact.
-- Personal and installed-pack entries share one bounded validation budget: at most 200 total persisted entries, 120 UTF-16 code units per phrase, and 16 KiB normalized phrase UTF-8 payload. Import that would exceed it is rejected without truncation.
+- Show the proposed name, the chosen scope, and every normalized phrase before installation. Do not persist until the user confirms.
+- Installed pack names are unique ordinally. A collision does not imply an update; propose a unique local suffix such as `Software development (2)` and let the user edit it.
+- Imported data is copied into the settings model with no live relationship to its source file and no automatic update behavior.
+- Editing an installed pack edits that local collection. Removing it deletes only the installed collection after confirmation, never the source file.
+- Export writes the reviewed phrases as the same canonical array (ordinal order, two-space indented), through a temporary sibling file and atomic replace/create. Failure leaves any existing destination and all application state intact.
+
+Settings model (additive to schema 2; no version bump):
+
+```csharp
+public sealed record VocabularyPack(string Name, string Scope, bool IsEnabled, IReadOnlyList<string> Phrases);
+// PortableSettings gains: IReadOnlyList<VocabularyPack> VocabularyPacks = []
+```
+
+Budgets:
+
+- **Per request (engine-proven):** for every scope combination a dictation can use (Shared alone for Automatic, and Shared plus each base language), the composed set of personal and enabled-pack phrases stays within 200 phrases and 16 KiB normalized UTF-8. Settings validation checks every combination on save, so a dictation can never exceed the budget and nothing is truncated at request time.
+- **Stored:** at most 1,000 phrases across personal vocabulary and all installed packs (enabled or not), 120 UTF-16 code units per phrase, and at most 50 installed packs. Disabled packs and packs for other languages do not count toward the per-request budget.
+- An import or enable action that would break either budget is rejected with a content-free message naming the language whose budget it would exceed.
 
 Composition contract:
 
-- Compose applicable personal entries plus entries from enabled packs whose scope is Shared or matches the explicit locale's base language. Automatic uses Shared personal entries and Shared enabled packs only.
-- For an exact phrase collision, an applicable personal entry wins regardless of weight. If only packs collide, emit the strongest influence once; ties are immaterial and must remain deterministic.
-- Disabled packs never contribute contexts. Enabling a pack validates the complete global budget before settings are saved.
+- Compose personal phrases plus phrases from enabled packs whose scope is Shared or matches the explicit locale's base language. Automatic uses Shared personal phrases and Shared enabled packs only.
+- Collisions between personal and pack phrases, or between packs, are emitted once. With one vocabulary-wide strength there is no precedence to resolve.
+- Output remains distinct and ordinal-sorted, sent as one `speech_contexts` group at the calibrated strength.
 
 Repository contract:
 
 - Curated examples live under `vocabulary-packs/` and use the exact production file format.
-- Add a repository validator that calls the same parser/validator used by the app. CI checks every curated file for extension, UTF-8, schema, limits, normalized duplicates, and deterministic canonical serialization.
-- Repository pack files are never copied into the application output or portable release. README may link to the directory and explain manual download/import.
-- Repository review and the repository's contribution/license policy govern curated files; the runtime format carries no trust or licensing claims.
-- This plan does not invent an initial domain pack. Add curated content only when its phrases have been intentionally reviewed as public repository data.
+- A repository validator calls the same parser/validator as the app. CI checks every curated file for extension, UTF-8, schema, limits, duplicates, and canonical serialization.
+- Repository pack files are never copied into application output or the portable release. README may link to the directory and explain manual download and import.
+- This plan does not invent an initial domain pack. Add curated content only after its phrases are intentionally reviewed as public repository data.
 
 ### 6. Ephemeral transcript ownership
 
@@ -720,95 +726,42 @@ Stage 3 acceptance:
 
 ## Stage 4: Simple offline vocabulary-pack sharing
 
-**Goal:** Let users install, manage, and export named local vocabulary collections through a deliberately small weighted-entry JSON format, with no network, identity, versioning, or hidden metadata.
+> **Redesigned 2026-09-28 (proposed, awaiting owner approval).** Packs hold phrases only; strength stays vocabulary-wide. The Personal/Installed sub-tabs and per-row export checkboxes of the original mock are replaced by one Vocabulary page with two sections and a reviewed export dialog.
 
-**Dependencies:** Stage 3 personal vocabulary validation, composition, settings persistence, and UI shell complete.
+**Goal:** Let users import, manage, and export named local phrase collections through a phrase-only JSON array, with no network, identity, versioning, or hidden metadata.
 
-**Allowed files/modules:** pack entry/installed-pack domain types; bounded JSON codec and atomic exporter; vocabulary composition/validation extensions; version-2 settings DTO/store; Vocabulary page controls/view models and local file dialogs; repository `vocabulary-packs/` directory, validator, and targeted CI workflow; Core/App tests; LayoutProbe; mock and README pack documentation.
+**Dependencies:** Stage 3 vocabulary validation, composition, settings persistence, and Vocabulary page complete (done).
 
-**Do not change:** recognition model/runtime pins, calibrated influence mapping, transcript retention, bubble Teach action, target injection, cloud/network behavior, settings schema version, UI localization, or automatic update/synchronization behavior.
+**Allowed files/modules:** pack domain types and codec; atomic exporter; vocabulary validation/composition extensions; settings model; Vocabulary page controls/view models, import/export dialogs, and local file pickers; repository `vocabulary-packs/` directory, validator, and targeted CI; Core/App tests; LayoutProbe; mock and README.
+
+**Do not change:** model/runtime pins, calibrated strength mapping, transcript retention, target injection, network behavior, settings schema version, UI localization, or update behavior.
 
 **Required sequence:**
 
-1. Add failing codec tests for the exact array schema, optional/default weights, UTF-8 with/without BOM, normalization, unknown fields, duplicates, malformed/oversized input, and content-free errors.
-2. Add failing settings round-trip/atomic-failure tests for pack name, scope, enabled state, entries, editing, renaming, and removal.
-3. Add failing import orchestration tests proving preview-before-confirmation, explicit scope, unique-name collision handling, cancel/no-mutation, and source-file independence.
-4. Extend failing composer tests for disabled packs, locale applicability, personal-over-pack precedence, strongest-pack duplicate resolution, deterministic output, and the combined budget.
-5. Add failing export tests for selected personal entries from one visible scope, complete installed-pack export, optional-weight canonical JSON, preview/cancel, and atomic destination failure.
-6. Implement the shared pack codec/validator first, then installed persistence/composition, then import/export orchestration. Keep file dialogs and code-behind free of domain rules.
-7. Add `vocabulary-packs/` contributor guidance and a validator that reuses the production codec; run it from targeted CI whenever pack files, the codec, or validator change, and explicitly exclude the directory from release output.
-8. Implement the Personal/Installed packs UI, import preview, export selection/preview, empty/error/collision states, and destructive removal confirmation from the approved mock.
-9. Extend LayoutProbe for every Stage 4 mock state and run `$verify-ui-quality` before handoff.
-10. Update README with the exact simple schema, manual workflow, offline guarantee, scope-at-import rule, and repository-download-only policy.
+1. Add failing codec tests: string-array schema, UTF-8 with/without BOM, normalization, rejected non-string items, in-file duplicates, malformed/oversized input, and content-free errors.
+2. Add failing settings tests: pack round-trip, legacy files load with no packs, damaged-pack repair, and both budgets (per-request per scope combination; stored totals).
+3. Add failing composer tests: disabled packs, Shared/matching/non-matching scopes, Automatic, personal/pack and pack/pack de-duplication, deterministic order.
+4. Add failing import tests: preview before confirmation, explicit scope, unique-name suggestion, cancel without mutation, budget rejection naming the language, source-file independence.
+5. Add failing export tests: reviewed personal phrases from one scope, whole installed pack, canonical output, cancel, and atomic destination failure.
+6. Implement codec and validation, then persistence and composition, then import/export orchestration. Keep file dialogs and code-behind free of domain rules.
+7. Add `vocabulary-packs/` contributor guidance and a validator reusing the production codec; run it in CI when pack files, the codec, or the validator change; assert the directory is absent from release output.
+8. Build the UI from the redesigned mock: "Your phrases" and "Packs" sections, import preview, export review, edit, rename, enable/disable, and confirmed removal.
+9. Extend LayoutProbe for every Stage 4 mock state.
+10. Update README with the format, manual workflow, offline guarantee, scope-at-import rule, and budgets.
 
-**Risk Manifest:** Required — untrusted local files, persistent private data, destructive removal, cross-source precedence, and file writes cross boundaries.
-
-### Risk Manifest
-
-#### Risks and Owners
-
-| ID | Risk | Canonical owner | Consumers |
-|---|---|---|---|
-| R1 | Malformed, hostile, or oversized JSON causes unbounded reads, ambiguous interpretation, path misuse, or sensitive errors. | bounded pack codec/validator | import UI and repository validator |
-| R2 | Import/edit/remove partially mutates installed state or mistakes a same-name file for an update. | pack transaction orchestrator + atomic settings store | Vocabulary view model and composer |
-| R3 | Pack scope, enabled state, duplicate precedence, or aggregate limits send the wrong phrases or exceed provider budgets. | pure `VocabularyComposer` + vocabulary validator | session factory and recognizer |
-| R4 | Export writes unreviewed/private settings, corrupts an existing destination, or leaks scope/metadata beyond the simple schema. | selection model + atomic pack exporter | personal and installed-pack views |
-| R5 | Pack UI obscures source/scope/enabled state, makes destructive removal accidental, or becomes inaccessible at scale. | pack view models/controls + approved mock | Settings shell and LayoutProbe |
-
-#### States and Variants
-
-| ID | States or variants | Required paths | Failure edges |
-|---|---|---|---|
-| R1 | valid; missing/default weight; malformed; unknown field; duplicate; non-UTF-8; byte/count/payload boundaries | picker -> bounded read -> parse -> normalize -> preview | partial parse, silent ignore, content in error, content-controlled path |
-| R2 | new unique name; name collision; cancel; confirm; edit; rename; disable; remove-confirm/cancel; save failure | preview -> transaction -> atomic save -> refresh | inferred update, partial memory mutation, source deletion, lost pack |
-| R3 | Shared/matching/nonmatching; Auto; disabled; personal collision; pack collision; limit boundary | settings -> validate -> compose -> request | disabled contribution, weaker/wrong owner wins, silent truncation |
-| R4 | no selection; selected visible-scope entries; installed pack; preview cancel/confirm; new/existing destination; write failure | select -> serialize -> preview -> atomic write | whole-settings export, hidden entries, partial overwrite, metadata leakage |
-| R5 | empty/list/expanded editor; import valid/error/collision; export selection/preview; removal confirmation; max-scroll | mouse, keyboard, automation, DPI/text scale | unclear enabled state, clipped content, irreversible single action |
-
-#### Persistence
-
-| ID | Invariant | Enforcement | Transaction boundary | Concurrency |
-|---|---|---|---|---|
-| R2 | one complete validated settings replacement; imported pack has no source-file linkage; removal affects installed state only | immutable candidate + injected store failures | existing temp-file replacement | hotkeys suspended while modal Settings saves |
-| R4 | export contains only reviewed phrase/weight entries; existing destination remains intact on failure | pure serializer + temporary sibling file + replace/create | one chosen destination | one modal export operation on UI dispatcher |
-
-#### Proof
-
-| ID | Public seam | Planned red test | Expected observation | Final evidence |
-|---|---|---|---|---|
-| R1 | `VocabularyPackCodec.Parse` | schema/encoding/size/adversarial boundary matrix | exact accept/reject behavior, bounded read, errors contain no phrases | Pending |
-| R2 | import/edit/remove transaction | cancel and injected save-failure matrix | settings/memory unchanged until successful atomic commit; source untouched | Pending |
-| R3 | `Compose(personal, packs, locale)` | applicability/precedence/budget matrix | personal wins, strongest enabled pack otherwise, exact deterministic groups | Pending |
-| R4 | selection + `ExportAsync` | selected-scope, preview, cancel, replace-failure tests | canonical simple array only; destination atomic; app state unchanged | Pending |
-| R5 | Settings + LayoutProbe | every approved pack state | complete keyboard-accessible flow and confirmed removal; PASS UI gate | Pending |
-
-#### Budget and Environment
-
-| ID | File, module, provider, or tool | Current fact | Planned limit or required proof | Final fact |
-|---|---|---|---|---|
-| R1 | local share file | no import boundary today | regular UTF-8 file up to 64 KiB; top-level array; 200 entries; 120 chars/phrase; 16 KiB phrase payload | Pending |
-| R3 | recognizer contexts | Stage 3 owns calibrated payload | combined personal + installed packs remain inside the proven 200-entry/16-KiB budget; no truncation | Pending |
-| R4 | filesystem export | existing app does not export vocabulary | explicit destination; temporary sibling + atomic completion; no source/settings mutation | Pending |
-| R5 | Vocabulary Settings control | Stage 3 has personal editor only | focused Personal/Installed packs views; bounded scroll; all mock states in LayoutProbe | Pending |
-
-**Tests/proof:** Core codec/settings/composer/export tests, App import/export/transaction/UI tests, repository validator over `vocabulary-packs/`, LayoutProbe, affected Core/App projects, `$verify-ui-quality`, release-content assertion, `git diff --check`, and path/link validation.
-
-**Stop conditions:** the runtime/provider cannot safely accept the combined planned budget; parser cannot enforce a bounded deterministic schema; an import/export error reveals content; file replacement is not atomic on the supported target; removal can touch the source file; UI needs automatic download/update or hidden metadata to function.
-
-**Implementation prompt:** Implement Stage 4 only. Begin with failing codec, transaction, precedence, and export proofs; add the minimal weighted-entry array format and local pack management; reuse one validator in app and repository CI; prove preview/atomic/privacy/release-exclusion behavior; run UI-quality verification; stop on any stop condition.
+**Stop conditions:** the parser cannot enforce a bounded deterministic schema; an import/export error reveals phrase content; file replacement is not atomic on Windows; removal could touch the source file; the UI would need download, update, or hidden metadata to work.
 
 Stage 4 acceptance:
 
-- [ ] A user can manually import a validated `.privatetype-vocabulary.json` array after reviewing every phrase/effective weight and choosing one scope, unique local name, and enabled state.
-- [ ] Missing `weight` imports as Normal; only Low/Normal/Strong are accepted; no numeric boost is exposed.
-- [ ] Installed packs can be enabled, disabled, renamed, edited locally, exported, and removed with confirmation.
-- [ ] There is no network access, discovery, synchronization, ID, version, provenance, attribution, license, or automatic update behavior.
-- [ ] Personal entries override identical pack entries; otherwise the strongest applicable enabled-pack entry wins once.
-- [ ] Personal export includes only explicitly selected entries from the visible scope and both export paths show the exact final array before an atomic write.
-- [ ] Invalid/oversized imports and failed settings/export writes cause no truncation, partial mutation, sensitive error, or source-file change.
-- [ ] Repository example files use the production format, pass the shared validator, and are absent from application/release output.
-- [ ] Targeted CI invokes the shared validator for relevant pack/codec/validator changes.
-- [ ] Every Stage 4 mock state passes LayoutProbe and UI-quality verification.
+- [ ] A user can import a validated `.privatetype-vocabulary.json` string array after reviewing every phrase and choosing one scope, a unique local name, and the enabled state.
+- [ ] Files with objects, weights, or other non-string items are rejected with a content-free message.
+- [ ] Installed packs can be enabled, disabled, renamed, re-scoped, edited, exported, and removed with confirmation.
+- [ ] No network access, discovery, synchronization, ID, version, provenance, attribution, license, or update behavior exists.
+- [ ] Each dictation sends personal plus applicable enabled-pack phrases once each, within 200 phrases / 16 KiB for every scope combination, validated on save.
+- [ ] Personal export writes only phrases reviewed in the export dialog from the visible scope; both export paths show the exact array before an atomic write.
+- [ ] Invalid or over-budget imports and failed settings/export writes cause no truncation, partial change, sensitive error, or source-file change.
+- [ ] Repository example files use the production format, pass the shared validator in targeted CI, and are absent from release output.
+- [ ] Every Stage 4 mock state passes LayoutProbe.
 
 ## Stage 5: Ephemeral quick teaching from the bubble
 
@@ -890,7 +843,7 @@ Stage 5 acceptance:
 - [ ] Teach is enabled only for one non-empty last result and appears only on demand.
 - [ ] The previous result is cleared before the next dictation starts and on every agreed terminal path.
 - [ ] One word or a contiguous range can be selected with mouse and keyboard.
-- [ ] Scope is suggested but editable; influence defaults to Normal but is editable.
+- [ ] Scope is suggested but editable; the taught phrase uses the vocabulary-wide strength (no per-entry influence, per the 2026-09-28 revision).
 - [ ] Only the desired entry persists; heard text and transcript never enter settings or diagnostics.
 - [ ] Save failure supports retry without partial in-memory update.
 - [ ] Already injected text and clipboard remain untouched.

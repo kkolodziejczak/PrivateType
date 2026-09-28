@@ -129,7 +129,97 @@ Validation behavior:
 - Hitting a vocabulary count or payload budget explains the limit without truncating or silently discarding entries.
 - Removing a row is reversible until `Save changes` is pressed.
 
-## Vocabulary page — Installed packs
+## Vocabulary page with packs (Stage 4, redesigned)
+
+> **Redesigned 2026-09-28 (proposed, awaiting owner approval).** This replaces the Personal/Installed-packs sub-tabs, per-row export checkboxes, and per-entry influence shown in the original Stage 4 drawings below, which remain only for history. Settings already has General/Vocabulary tabs, so packs become a second section on the same page instead of nested tabs.
+
+```text
+┌────────────────────────────────────────────────────────────────────────┐
+│ Vocabulary                                                             │
+│ Help the local model recognize names, acronyms, and specialist terms.  │
+│                                                                        │
+│ Language   [ Shared across languages                               ▾ ] │
+│ Strength   [ Normal                                                ▾ ] │
+│                                                                        │
+│ YOUR PHRASES                                            [ Export… ]    │
+│ ┌──────────────────────────────────────────────────────────────┐       │
+│ │ MVVM                                                         │ [—]   │
+│ └──────────────────────────────────────────────────────────────┘       │
+│ + Add phrase                                                           │
+│                                                                        │
+│ PACKS                                              [ Import pack… ]    │
+│ ┌────────────────────────────────────────────────────────────────────┐ │
+│ │ [✓] Software development                                            │ │
+│ │     English · 24 phrases           [Edit] [Export…] [Remove…]      │ │
+│ └────────────────────────────────────────────────────────────────────┘ │
+│ ┌────────────────────────────────────────────────────────────────────┐ │
+│ │ [ ] Product names                                                   │ │
+│ │     Shared across languages · 8 phrases  [Edit] [Export…] [Remove…]│ │
+│ └────────────────────────────────────────────────────────────────────┘ │
+│                                                                        │
+│ Polish dictation uses 31 of 200 phrases. 212 of 1,000 stored.          │
+│ Phrases stay on this computer unless you export them.                  │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+Behavior:
+
+- **Language** filters "Your phrases" and the pack list to that scope. Packs for other languages stay installed; a "Show all packs" toggle lists every pack regardless of scope.
+- **Strength** stays vocabulary-wide and applies to personal and pack phrases alike.
+- The pack checkbox enables or disables the whole pack. Disabled packs stay editable and exportable but are never sent to the engine.
+- **Edit** opens the Stage 3 phrase editor for that pack, plus editable Name and Language. Saving changes the local copy only.
+- **Remove…** asks for confirmation naming the pack, and takes effect when Settings is saved. The original file is never touched.
+- The budget line shows the selected language's per-dictation usage (personal plus enabled Shared and matching packs) against 200, and the stored total against 1,000. Exceeding either blocks Save with a message naming the language, never the phrases.
+- Empty packs state: "No packs yet. Packs are files you download or receive, then import here. PrivateType never downloads them."
+
+## Import pack preview (redesigned)
+
+```text
+┌────────────────────────────────────────────────────────────────────────┐
+│ Import vocabulary pack                                             ×  │
+├────────────────────────────────────────────────────────────────────────┤
+│ File: software-development.privatetype-vocabulary.json                 │
+│ Name      [ Software development                                     ] │
+│ Language  [ English                                               ▾ ] │
+│ [✓] Use this pack now                                                  │
+│                                                                        │
+│ 24 phrases                                                             │
+│ ┌────────────────────────────────────────────────────────────────────┐ │
+│ │ MVVM                                                               │ │
+│ │ dependency injection                                               │ │
+│ │ …                                                                  │ │
+│ └────────────────────────────────────────────────────────────────────┘ │
+│ This copies the phrases locally. It does not link to or update from    │
+│ the file.                                    [Cancel] [Import pack]    │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+- Language has no default: the user must choose one before Import is enabled.
+- A name collision proposes `Name (2)`; Import stays disabled until the name is unique and non-empty.
+- Invalid files show one content-free error and no partial preview.
+- If importing would exceed a budget, the error names the language and the limit; nothing is installed.
+
+## Export review (redesigned)
+
+```text
+┌────────────────────────────────────────────────────────────────────────┐
+│ Export phrases                                                     ×  │
+├────────────────────────────────────────────────────────────────────────┤
+│ [✓] MVVM                                                               │
+│ [✓] PrivateType                                                        │
+│ [ ] internal-codename                                                  │
+│                                                                        │
+│ 2 phrases will be written. Language, name, and strength are not        │
+│ included.                                   [Cancel] [Save as…]        │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+- Personal export lists the visible language's phrases, all ticked; untick anything private. Pack export lists the whole pack the same way.
+- The written file is exactly the ticked phrases as a canonical JSON string array.
+- Cancel writes nothing; a failed write keeps any existing file intact and leaves the dialog open for retry.
+
+## Vocabulary page — Installed packs (original, superseded)
+
 
 ```text
 ┌────────────────────────────────────────────────────────────────────────┐
@@ -162,7 +252,7 @@ Installed-pack behavior:
 - `Remove…` requires confirmation naming the pack and removes only the installed collection after Settings is successfully saved. It never deletes or modifies the file originally imported.
 - Empty state explains that packs are manually downloaded or received, then imported from a local file. It contains no online gallery or download action.
 
-## Import pack preview
+## Import pack preview (original, superseded)
 
 ```text
 ┌────────────────────────────────────────────────────────────────────────┐
@@ -197,7 +287,7 @@ Import behavior:
 - Cancel and window close make no settings changes. `Import pack` commits one complete candidate through the normal atomic Settings save.
 - Invalid JSON, encoding, fields, weights, duplicates, or limits show a content-free error with no partial preview or installation.
 
-## Export selection and preview
+## Export selection and preview (original, superseded)
 
 Personal export begins with the checked rows from the currently visible scope. Installed-pack export includes the complete selected pack. Both routes then show the exact outgoing array before opening the destination picker:
 
