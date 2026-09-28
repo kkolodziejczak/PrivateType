@@ -475,21 +475,22 @@ public sealed class WindowsBoundaryTests
         var first = new DictationPresentation(DictationState.Recording, "first", null, 0.25);
         var latest = new DictationPresentation(DictationState.Recording, "latest", null, 0.75);
 
-        Assert.True(queue.Enqueue(RecognitionLanguage.English, first));
-        Assert.False(queue.Enqueue(RecognitionLanguage.English, latest));
+        Assert.True(queue.Enqueue("en-US", first));
+        Assert.False(queue.Enqueue("en-US", latest));
         Assert.True(queue.TryTake(out var rendered));
         Assert.Equal("latest", rendered!.Presentation.ProvisionalText);
         Assert.Equal(0.75, rendered.Presentation.AudioLevel);
-        Assert.True(queue.Enqueue(RecognitionLanguage.English, first));
+        Assert.True(queue.Enqueue("en-US", first));
     }
 
     [Theory]
-    [InlineData(RecognitionLanguage.Polish, "● Słucham")]
-    [InlineData(RecognitionLanguage.English, "● Listening")]
-    [InlineData(RecognitionLanguage.Auto, "● Listening")]
-    public void Uses_a_recording_status_in_the_selected_recognition_language(RecognitionLanguage language, string expected)
+    [InlineData("pl-PL")]
+    [InlineData("en-US")]
+    [InlineData("auto")]
+    [InlineData("ja-JP")]
+    public void Uses_the_english_recording_status_for_every_recognition_locale(string localeCode)
     {
-        Assert.Equal(expected, DictationStatusText.ForRecording(language));
+        Assert.Equal("● Listening", DictationStatusText.ForRecording(localeCode));
     }
 
     [Theory]
@@ -504,12 +505,25 @@ public sealed class WindowsBoundaryTests
     }
 
     [Theory]
-    [InlineData(RecognitionLanguage.Polish, "pl-PL")]
-    [InlineData(RecognitionLanguage.English, "en-US")]
-    [InlineData(RecognitionLanguage.Auto, "auto")]
-    public void Maps_each_stage_two_recognition_language_to_the_local_engine(RecognitionLanguage language, string expected)
+    [InlineData("pl-PL")]
+    [InlineData("en-GB")]
+    [InlineData("zh-CN")]
+    [InlineData("auto")]
+    public void Sends_the_catalog_locale_code_verbatim_to_the_local_engine(string localeCode)
     {
-        Assert.Equal(expected, RealtimeRecognizer.ToEngineLanguage(language));
+        using var document = System.Text.Json.JsonDocument.Parse(RealtimeRecognizer.SessionUpdate(localeCode));
+        var session = document.RootElement.GetProperty("session");
+
+        Assert.Equal("session.update", document.RootElement.GetProperty("type").GetString());
+        Assert.Equal(localeCode, session.GetProperty("language").GetString());
+        Assert.Equal(16000, session.GetProperty("sample_rate").GetInt32());
+        Assert.True(session.GetProperty("automatic_punctuation").GetBoolean());
+    }
+
+    [Fact]
+    public void Refuses_to_send_an_unsupported_locale_instead_of_falling_back()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => RealtimeRecognizer.SessionUpdate("th-TH"));
     }
 
     private sealed class FakeStartupRegistration(string? privateTypeCommand, string? legacyCommand) : IStartupRegistrationWriter

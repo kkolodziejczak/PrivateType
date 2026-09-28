@@ -24,8 +24,8 @@ public sealed class PortableSetupTests : IDisposable
     public void Rejects_conflicting_shortcut_bindings()
     {
         var settings = new PortableSettings("wavein:1", [
-            new ShortcutBinding(RecognitionLanguage.Polish, 0x52),
-            new ShortcutBinding(RecognitionLanguage.English, 0x52)
+            new ShortcutBinding("pl-PL", 0x52),
+            new ShortcutBinding("en-US", 0x52)
         ]);
 
         Assert.Equal("Each shortcut must use a different key.", PortableSettingsValidator.Validate(settings));
@@ -35,8 +35,8 @@ public sealed class PortableSetupTests : IDisposable
     public void Rejects_unknown_shortcut_languages()
     {
         var settings = new PortableSettings("wavein:1", [
-            new ShortcutBinding((RecognitionLanguage)99, 0x52),
-            new ShortcutBinding(RecognitionLanguage.English, 0x45)
+            new ShortcutBinding("xx-XX", 0x52),
+            new ShortcutBinding("en-US", 0x45)
         ]);
 
         Assert.Equal("Choose a supported recognition language.", PortableSettingsValidator.Validate(settings));
@@ -46,10 +46,10 @@ public sealed class PortableSetupTests : IDisposable
     public void Accepts_multiple_bindings_for_the_same_supported_language_and_automatic_recognition()
     {
         var settings = new PortableSettings("wavein:1", [
-            new ShortcutBinding(RecognitionLanguage.Polish, 0x52),
-            new ShortcutBinding(RecognitionLanguage.English, 0x45),
-            new ShortcutBinding(RecognitionLanguage.Polish, 0x50),
-            new ShortcutBinding(RecognitionLanguage.Auto, 0x41)
+            new ShortcutBinding("pl-PL", 0x52),
+            new ShortcutBinding("en-US", 0x45),
+            new ShortcutBinding("pl-PL", 0x50),
+            new ShortcutBinding("auto", 0x41)
         ]);
 
         Assert.Null(PortableSettingsValidator.Validate(settings));

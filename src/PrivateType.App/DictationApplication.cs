@@ -57,7 +57,7 @@ internal sealed class DictationApplication : IDisposable
         modelIdleTimer.Tick += UnloadModelWhenIdle;
         heldKeyWatchdog = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
         heldKeyWatchdog.Tick += ReleaseShortcutIfKeyIsUp;
-        hotkey.Held += language => Wpf.Application.Current.Dispatcher.BeginInvoke(new Action(() => _ = BeginDictationAsync(language)));
+        hotkey.Held += localeCode => Wpf.Application.Current.Dispatcher.BeginInvoke(new Action(() => _ = BeginDictationAsync(localeCode)));
         hotkey.Released += () => Wpf.Application.Current.Dispatcher.BeginInvoke(new Action(() => _ = EndDictationAsync()));
         bubble.PositionChanged += SavePanelPosition;
         bubble.SettingsRequested += ShowSettings;
@@ -401,21 +401,21 @@ internal sealed class DictationApplication : IDisposable
 
     internal static string StartupFailureMessage(string message) => message;
 
-    private DictationSession CreateSession(RecognitionLanguage language)
+    private DictationSession CreateSession(string localeCode)
     {
         var session = new DictationSession(
             new DefaultMicrophoneCapture(settings.MicrophoneId),
             new RealtimeRecognizer(engine.RealtimeEndpoint),
             new ForegroundTargetGuard(new Win32ForegroundTarget()),
             new UnicodeTextInjector(),
-            language,
+            localeCode,
             diagnostics: diagnostics);
-        session.PresentationChanged += presentation => Present(language, presentation);
+        session.PresentationChanged += presentation => Present(localeCode, presentation);
         session.AudioMeterChanged += PresentAudioMeter;
         return session;
     }
 
-    private async Task BeginDictationAsync(RecognitionLanguage language)
+    private async Task BeginDictationAsync(string localeCode)
     {
         shortcutHeld = true;
         var generation = ++heldGeneration;
@@ -436,7 +436,7 @@ internal sealed class DictationApplication : IDisposable
                 return;
             }
 
-            await sessions.HoldAsync(language);
+            await sessions.HoldAsync(localeCode);
             if (waitedForModel && shortcutHeld && generation == heldGeneration && sessions.IsRecording)
                 PlayModelReadySound();
         }
@@ -522,9 +522,9 @@ internal sealed class DictationApplication : IDisposable
         RecordDiagnostic("model.unloaded");
     }
 
-    private void Present(RecognitionLanguage language, DictationPresentation presentation)
+    private void Present(string localeCode, DictationPresentation presentation)
     {
-        if (!pendingPresentations.Enqueue(language, presentation))
+        if (!pendingPresentations.Enqueue(localeCode, presentation))
             return;
 
         _ = Wpf.Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Render, new Action(RenderLatestPresentation));
@@ -535,17 +535,17 @@ internal sealed class DictationApplication : IDisposable
         if (!pendingPresentations.TryTake(out var request))
             return;
 
-        RenderPresentation(request!.Language, request.Presentation);
+        RenderPresentation(request!.LocaleCode, request.Presentation);
     }
 
-    private void RenderPresentation(RecognitionLanguage language, DictationPresentation presentation)
+    private void RenderPresentation(string localeCode, DictationPresentation presentation)
     {
         var version = ++presentationVersion;
         var bubblePresentation = BubblePresentationMapper.Map(presentation);
         switch (bubblePresentation.Kind)
         {
             case BubblePresentationKind.Recording:
-                bubble.ShowRecording(language);
+                bubble.ShowRecording(localeCode);
                 bubble.ShowTranscript(bubblePresentation.Text);
                 break;
             case BubblePresentationKind.Finalizing:

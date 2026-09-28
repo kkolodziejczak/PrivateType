@@ -4,13 +4,6 @@ namespace PrivateType.App;
 
 internal static class DictationStatusText
 {
-    public static string ForRecording(RecognitionLanguage language)
-    {
-        return language switch
-        {
-            RecognitionLanguage.English => "● Listening",
-            RecognitionLanguage.Auto => "● Listening",
-            _ => "● Słucham"
-        };
-    }
+    // The UI stays in English for every recognition locale.
+    public static string ForRecording(string localeCode) => "● Listening";
 }

@@ -2,7 +2,7 @@ namespace PrivateType.Core;
 
 public sealed class DictationSessionCoordinator : IAsyncDisposable
 {
-    private readonly Func<RecognitionLanguage, DictationSession> createSession;
+    private readonly Func<string, DictationSession> createSession;
     private readonly object commandLock = new();
     private Task commands = Task.CompletedTask;
     private DictationSession? activeSession;
@@ -10,9 +10,9 @@ public sealed class DictationSessionCoordinator : IAsyncDisposable
     private long holdGeneration;
     private bool hotkeyHeld;
     private bool disposed;
-    private RecognitionLanguage heldLanguage;
+    private string heldLocale = RecognitionLocaleCatalog.Automatic;
 
-    public DictationSessionCoordinator(Func<RecognitionLanguage, DictationSession> createSession)
+    public DictationSessionCoordinator(Func<string, DictationSession> createSession)
     {
         this.createSession = createSession;
     }
@@ -27,13 +27,13 @@ public sealed class DictationSessionCoordinator : IAsyncDisposable
         }
     }
 
-    public Task HoldAsync(RecognitionLanguage language)
+    public Task HoldAsync(string localeCode)
     {
         lock (commandLock)
         {
             ThrowIfDisposed();
             hotkeyHeld = true;
-            heldLanguage = language;
+            heldLocale = localeCode;
             holdGeneration++;
             return EnqueueLocked(StartIfHeldAsync);
         }
@@ -83,7 +83,7 @@ public sealed class DictationSessionCoordinator : IAsyncDisposable
         if (!hotkeyHeld || activeSession is not null || disposed)
             return;
 
-        var session = createSession(heldLanguage);
+        var session = createSession(heldLocale);
         var sessionHoldGeneration = holdGeneration;
         session.Faulted += _ => QueueFaultCleanup(session, sessionHoldGeneration);
         activeSession = session;

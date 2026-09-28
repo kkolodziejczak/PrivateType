@@ -10,7 +10,7 @@ public sealed class DictationSession : IAsyncDisposable
     private readonly IStreamingRecognizer recognizer;
     private readonly ForegroundTargetGuard targetGuard;
     private readonly ITextInjector injector;
-    private readonly RecognitionLanguage language;
+    private readonly string localeCode;
     private readonly IDictationDiagnostics diagnostics;
     private readonly TimeSpan finalizationTimeout;
     private readonly string sessionId = Guid.NewGuid().ToString("N");
@@ -36,7 +36,7 @@ public sealed class DictationSession : IAsyncDisposable
         IStreamingRecognizer recognizer,
         ForegroundTargetGuard targetGuard,
         ITextInjector injector,
-        RecognitionLanguage language,
+        string localeCode,
         TimeSpan? finalizationTimeout = null,
         IDictationDiagnostics? diagnostics = null)
     {
@@ -44,7 +44,7 @@ public sealed class DictationSession : IAsyncDisposable
         this.recognizer = recognizer;
         this.targetGuard = targetGuard;
         this.injector = injector;
-        this.language = language;
+        this.localeCode = localeCode;
         this.finalizationTimeout = finalizationTimeout ?? DefaultFinalizationTimeout;
         this.diagnostics = diagnostics ?? NullDictationDiagnostics.Instance;
     }
@@ -66,14 +66,14 @@ public sealed class DictationSession : IAsyncDisposable
             throw new InvalidOperationException("A dictation session can be started only once.");
 
         started = true;
-        Diagnose("session.started", ("language", language));
+        Diagnose("session.started", ("locale", localeCode));
         targetGuard.Capture();
         capture.PcmAvailable += QueuePcmAsync;
         capture.Faulted += ReportFailure;
 
         try
         {
-            await recognizer.StartAsync(language, cancellationToken);
+            await recognizer.StartAsync(localeCode, cancellationToken);
             pcmPump = PumpPcmAsync();
             updatePump = PumpUpdatesAsync();
             phase = "capture.start";

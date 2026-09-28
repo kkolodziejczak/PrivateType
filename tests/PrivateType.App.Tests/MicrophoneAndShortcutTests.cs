@@ -6,7 +6,7 @@ namespace PrivateType.App.Tests;
 
 public sealed class MicrophoneAndShortcutTests
 {
-    private static readonly HotkeyDefinition Polish = new(1, RecognitionLanguage.Polish, 0x52, 0, "Ctrl+Shift+R");
+    private static readonly HotkeyDefinition Polish = new(1, "pl-PL", 0x52, 0, "Ctrl+Shift+R");
 
     private static readonly IReadOnlyList<MicrophoneOption> Microphones =
     [

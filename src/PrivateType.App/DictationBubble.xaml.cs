@@ -87,7 +87,7 @@ public partial class DictationBubble : Window
         Top = MapCoordinateToWorkArea(Top, bubbleHeight, sourceWorkArea.Top, sourceWorkArea.Height, targetWorkArea.Top, targetWorkArea.Height);
     }
 
-    public void ShowRecording(RecognitionLanguage language)
+    public void ShowRecording(string localeCode)
     {
         if (recordingVisualsActive)
             return;
@@ -589,12 +589,5 @@ public partial class DictationBubble : Window
     }
 
     private static string DescribeBindings(IReadOnlyList<ShortcutBinding> bindings) =>
-        string.Join("\n", HotkeyCatalog.FromBindings(bindings).Select(binding => $"{LanguageLabel(binding.Language)} — {binding.Label}"));
-
-    private static string LanguageLabel(RecognitionLanguage language) => language switch
-    {
-        RecognitionLanguage.Polish => "Polish",
-        RecognitionLanguage.English => "English",
-        _ => "Automatic"
-    };
+        string.Join("\n", HotkeyCatalog.FromBindings(bindings).Select(binding => $"{RecognitionLocaleCatalog.Get(binding.LocaleCode).DisplayName} — {binding.Label}"));
 }

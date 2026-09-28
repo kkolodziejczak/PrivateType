@@ -20,7 +20,7 @@ internal sealed class HoldHotkeyHook : IDisposable
 
     public HoldHotkeyHook() => callback = HookCallback;
 
-    public event Action<RecognitionLanguage>? Held;
+    public event Action<string>? Held;
     public event Action? Released;
 
     public HotkeyAvailability Start(IReadOnlyList<HotkeyDefinition> hotkeys)
@@ -99,7 +99,7 @@ internal sealed class HoldHotkeyHook : IDisposable
         if (HotkeyMessage.IsKeyDown(wParam) && held.Held is null && hotkey is not null && IsPressed(VkControl) && IsPressed(VkShift))
         {
             held.TryPress(hotkey);
-            Held?.Invoke(hotkey.Language);
+            Held?.Invoke(hotkey.LocaleCode);
             return 1;
         }
         if (HotkeyMessage.IsKeyUp(wParam))

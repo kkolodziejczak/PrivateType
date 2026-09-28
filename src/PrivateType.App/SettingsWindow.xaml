@@ -309,21 +309,23 @@
                     <Border Margin="0,0,0,8" Padding="8" Background="{DynamicResource ColorBg}" BorderBrush="{DynamicResource ColorDivider}" BorderThickness="1" CornerRadius="8">
                       <Grid>
                         <Grid.ColumnDefinitions>
-                          <ColumnDefinition Width="130" />
                           <ColumnDefinition Width="*" />
+                          <ColumnDefinition Width="128" />
                           <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <ComboBox Grid.Column="0" Height="31" Padding="7,0" ItemsSource="{Binding SupportedLanguages}" SelectedValuePath="Language"
-                                  SelectedValue="{Binding Language, Mode=TwoWay}">
+                        <ComboBox Grid.Column="0" Height="31" Padding="7,0" ItemsSource="{Binding SupportedLanguages}" SelectedValuePath="LocaleCode"
+                                  SelectedValue="{Binding LocaleCode, Mode=TwoWay}" IsTextSearchEnabled="True" TextSearch.TextPath="Label"
+                                  AutomationProperties.Name="Recognition language" MaxDropDownHeight="320">
                           <ComboBox.ItemTemplate>
                             <DataTemplate>
-                              <TextBlock Foreground="{DynamicResource ColorText}" Text="{Binding Label}" />
+                              <TextBlock Foreground="{DynamicResource ColorText}" Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
                             </DataTemplate>
                           </ComboBox.ItemTemplate>
                         </ComboBox>
                         <TextBox Grid.Column="1" Margin="8,0" Height="31" Padding="9,0" IsReadOnly="True" Text="{Binding ShortcutLabel, Mode=OneWay}" PreviewKeyDown="RecordShortcut"
                                  ToolTip="Click, then press Ctrl+Shift plus a key." />
-                        <Button Grid.Column="2" Content="Remove" Tag="{Binding}" Click="RemoveBinding" FontSize="12" Padding="10,6" />
+                        <Button Grid.Column="2" Content="—" Tag="{Binding}" Click="RemoveBinding" FontSize="12" Width="31" Height="31" Padding="0"
+                                ToolTip="Remove shortcut" AutomationProperties.Name="Remove shortcut" />
                       </Grid>
                     </Border>
                   </DataTemplate>
@@ -331,7 +333,7 @@
               </ItemsControl>
               <Button Style="{StaticResource GhostButton}" Width="136" HorizontalAlignment="Left" Content="+ Add shortcut" Click="AddBinding" />
               <TextBlock Margin="0,8,0,0" Foreground="{DynamicResource ColorText}" Opacity="0.55" FontSize="12" TextWrapping="Wrap"
-                         Text="Choose Polish, English, or Automatic. Then click a shortcut and press Ctrl+Shift plus a letter, number, or function key." />
+                         Text="Choose a recognition language or Automatic. Then click a shortcut and press Ctrl+Shift plus a letter, number, or function key." />
             </StackPanel>
           </Grid>
 

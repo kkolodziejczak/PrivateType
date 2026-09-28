@@ -62,6 +62,7 @@ static void RenderWindows(bool pointerPlacementOnly)
         Path.Combine(outputDirectory, "settings.png"),
         VerifySettingsVersion);
     SettingsSoundProbe.Run(outputDirectory);
+    SettingsLanguageProbe.Run(outputDirectory);
     Render(new DiagnosticsWindow(new InMemoryDiagnostics()), Path.Combine(outputDirectory, "diagnostics-empty.png"));
     Render(new OpenSourceLicensesWindow(), Path.Combine(outputDirectory, "open-source-licenses.png"));
     var sharedModelSetup = new ModelSetupWindow();
@@ -98,14 +99,14 @@ static void RenderWindows(bool pointerPlacementOnly)
 
     var recordingPanel = new DictationBubble();
     recordingPanel.ShowReady(PortableSettings.Default, modelLoaded: true);
-    recordingPanel.ShowRecording(RecognitionLanguage.English);
+    recordingPanel.ShowRecording("en-US");
     recordingPanel.ShowAudioMeter(new AudioMeter(0.72, Enumerable.Range(0, 44).Select(index => index is > 15 and < 28 ? 0.95 : 0.24).ToArray()));
     recordingPanel.ShowTranscript("First transcript line with enough realistic words to wrap.\nSecond transcript line.\nThird transcript line.\nFourth transcript line stays latest.");
     Render(recordingPanel, Path.Combine(outputDirectory, "status-panel-recording.png"));
 
     var quietRecordingPanel = new DictationBubble();
     quietRecordingPanel.ShowReady(PortableSettings.Default, modelLoaded: true);
-    quietRecordingPanel.ShowRecording(RecognitionLanguage.English);
+    quietRecordingPanel.ShowRecording("en-US");
     quietRecordingPanel.ShowAudioMeter(new AudioMeter(0.05, Enumerable.Range(0, 44).Select(index => index is > 15 and < 28 ? 0.16 : 0.03).ToArray()));
     quietRecordingPanel.ShowTranscript("Quiet speech still has a readable spectrum.");
     Render(quietRecordingPanel, Path.Combine(outputDirectory, "status-panel-recording-quiet.png"));
@@ -117,7 +118,7 @@ static void RenderWindows(bool pointerPlacementOnly)
 
     var finalizingPanel = new DictationBubble();
     finalizingPanel.ShowReady(PortableSettings.Default, modelLoaded: true);
-    finalizingPanel.ShowRecording(RecognitionLanguage.English);
+    finalizingPanel.ShowRecording("en-US");
     finalizingPanel.ShowFinalizing();
     Render(finalizingPanel, Path.Combine(outputDirectory, "status-panel-finalizing.png"));
 
@@ -272,7 +273,7 @@ static void VerifyTranscriptPreviewClearsTaskbar(Forms.Screen screen, string pre
     panel.Left = screen.WorkingArea.Left + 16;
     panel.Top = screen.WorkingArea.Bottom - panel.ActualHeight;
     panel.UpdateLayout();
-    panel.ShowRecording(RecognitionLanguage.English);
+    panel.ShowRecording("en-US");
     FlushRender(panel);
     var leftBeforePreview = panel.Left;
 
@@ -363,7 +364,7 @@ static void VerifyPointerMonitorPlacement()
         targetScreen);
     VerifyPointerMonitorPlacementThrough(
         "recording",
-        panel => panel.ShowRecording(RecognitionLanguage.English),
+        panel => panel.ShowRecording("en-US"),
         sourceScreen,
         targetScreen);
 }
@@ -414,7 +415,7 @@ static void VerifyPointerMonitorPlacementFromOffscreenCoordinates(string outputD
     VerifyPointerMonitorRecoveryThrough(
         "recording",
         "pointer-recovery-recording.png",
-        panel => panel.ShowRecording(RecognitionLanguage.English),
+        panel => panel.ShowRecording("en-US"),
         outputDirectory,
         targetScreen);
 }

@@ -1,13 +1,14 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace PrivateType.Core;
 
-public sealed record ShortcutBinding(RecognitionLanguage Language, int VirtualKey)
+public sealed record ShortcutBinding(string LocaleCode, int VirtualKey)
 {
     public static readonly IReadOnlyList<ShortcutBinding> Defaults =
     [
-        new(RecognitionLanguage.Polish, 0x52),
-        new(RecognitionLanguage.English, 0x45)
+        new(RecognitionLocaleCatalog.Polish, 0x52),
+        new(RecognitionLocaleCatalog.English, 0x45)
     ];
 }
 
@@ -20,6 +21,7 @@ public sealed record PortableSettings(
     bool StartWithWindows = false,
     int ModelIdleTimeoutMinutes = 10)
 {
+    public int SchemaVersion { get; init; } = PortableSettingsMigration.CurrentSchemaVersion;
     public string ReadySound { get; init; } = "ping";
     public int ReadySoundVolume { get; init; } = 80;
     public string? CustomReadySoundPath { get; init; }
@@ -93,7 +95,7 @@ public static class PortableSettingsValidator
         if (settings.Shortcuts.Any(binding => binding is null))
             return "Add at least one shortcut.";
 
-        if (settings.Shortcuts.Any(binding => binding.Language is not RecognitionLanguage.Polish and not RecognitionLanguage.English and not RecognitionLanguage.Auto))
+        if (settings.Shortcuts.Any(binding => !RecognitionLocaleCatalog.IsSupported(binding.LocaleCode)))
             return "Choose a supported recognition language.";
 
         if (settings.Shortcuts.Any(binding => binding.VirtualKey is < 0x30 or > 0xFE))
@@ -131,7 +133,8 @@ public sealed class PortableSettingsStore(string dataDirectory)
             if (!File.Exists(SettingsPath))
                 return new SettingsLoadResult(PortableSettings.Default);
 
-            var settings = JsonSerializer.Deserialize<PortableSettings>(File.ReadAllText(SettingsPath), JsonOptions);
+            var root = JsonNode.Parse(File.ReadAllText(SettingsPath));
+            var settings = root is null ? null : PortableSettingsMigration.MigrateToCurrent(root).Deserialize<PortableSettings>(JsonOptions);
             if (settings is null)
                 return new SettingsLoadResult(PortableSettings.Default, "Saved settings were ignored: Settings file is empty.");
 
@@ -160,7 +163,7 @@ public sealed class PortableSettingsStore(string dataDirectory)
         var temporaryPath = $"{SettingsPath}.{Guid.NewGuid():N}.tmp";
         try
         {
-            File.WriteAllText(temporaryPath, JsonSerializer.Serialize(settings, JsonOptions));
+            File.WriteAllText(temporaryPath, JsonSerializer.Serialize(settings with { SchemaVersion = PortableSettingsMigration.CurrentSchemaVersion }, JsonOptions));
             File.Move(temporaryPath, SettingsPath, true);
         }
         finally

@@ -523,19 +523,19 @@ Create a Unicode-aware word-span tokenizer/selector that returns source offsets 
 
 | ID | Public seam | Planned red test | Expected observation | Final evidence |
 |---|---|---|---|---|
-| R1 | pinned `/v1/realtime` | probe request with a known invalid context shape, then valid shape | invalid is rejected; valid completes and changes target-term outcomes versus baseline | Pending |
-| R2 | candidate mapping | target/control matrix with no mapping selected | chosen levels are ordered by influence, improve target recognition, and Strong inserts boosted terms in no more than 1 of 20 unrelated controls | Pending |
-| R3 | repo and temp state | pre-run clean status and temp inventory | post-run repository has no audio/transcript artifacts and temp inputs are removed | Pending |
-| R4 | pinned `/v1/realtime` | generated boundary payload | request completes or lower accepted count/bytes are recorded before Stage 3 limits are frozen | Pending |
+| R1 | pinned `/v1/realtime` | probe request with a known invalid context shape, then valid shape | invalid is rejected; valid completes and changes target-term outcomes versus baseline | **Failed (2026-09-28).** Invalid shape rejected; valid requests complete but change nothing: the engine logs "RNNT word boosting requested but no phrases could be tokenized (no embedded SentencePiece tokenizer in the GGUF?); boosting disabled." |
+| R2 | candidate mapping | target/control matrix with no mapping selected | chosen levels are ordered by influence, improve target recognition, and Strong inserts boosted terms in no more than 1 of 20 unrelated controls | **Not calibratable.** Boosts 1–5 each matched baseline exactly: en-US 5/24 target terms, pl-PL 3/8, 0/21 control insertions. |
+| R3 | repo and temp state | pre-run clean status and temp inventory | post-run repository has no audio/transcript artifacts and temp inputs are removed | Synthetic TTS clips and one public FLEURS clip in a temp folder, deleted after the run; probe prints aggregates only. |
+| R4 | pinned `/v1/realtime` | generated boundary payload | request completes or lower accepted count/bytes are recorded before Stage 3 limits are frozen | 200 phrases / 16,200 normalized bytes accepted and completed (~0.8 s); meaningless while boosting is disabled. |
 
 #### Budget and Environment
 
 | ID | File, module, provider, or tool | Current fact | Planned limit or required proof | Final fact |
 |---|---|---|---|---|
-| R1 | NeMo-Speech.cpp `1118951…` + pinned Q8_0 model | API documents `speech_contexts`; PrivateType does not send it | exact local artifact proof | Pending |
-| R2 | boost numbers | no safe model-specific range documented | three distinct positive values; Strong control false-insertion <= 1/20 | Pending |
-| R3 | evaluation data | repo forbids private audio/transcripts in artifacts | temporary local data only; aggregate counts only | Pending |
-| R4 | phrase-context payload | no model-specific limit established | prove 200 phrases/16 KiB or revise every downstream validator/budget consistently | Pending |
+| R1 | NeMo-Speech.cpp `1118951…` + pinned Q8_0 model | API documents `speech_contexts`; PrivateType does not send it | exact local artifact proof | Engine source: RNNT phrases are tokenized only by the SentencePiece model embedded in the GGUF (`asr.tokenizer.spm_model`); `asr.decoder.tokenizer_path` applies to Flashlight CTC only. The pinned GGUF has no embedded tokenizer. Also: one request applies a single alpha, the maximum boost across all contexts, so per-entry influence cannot mix within one request. |
+| R2 | boost numbers | no safe model-specific range documented | three distinct positive values; Strong control false-insertion <= 1/20 | Not established (stop condition). |
+| R3 | evaluation data | repo forbids private audio/transcripts in artifacts | temporary local data only; aggregate counts only | Met. |
+| R4 | phrase-context payload | no model-specific limit established | prove 200 phrases/16 KiB or revise every downstream validator/budget consistently | Transport accepts 200 phrases / 16 KiB. |
 
 **Tests/proof:** probe unit tests, successful engine completion for baseline and biased requests, aggregate A/B matrix, `git status --short`, and explicit temp cleanup verification.
 
@@ -545,13 +545,15 @@ Create a Unicode-aware word-span tokenizer/selector that returns source offsets 
 
 Stage 1 acceptance:
 
-- [ ] The exact pinned runtime/model completes realtime recognition with `speech_contexts`.
+**Outcome (2026-09-28): stopped.** The pinned runtime accepts `speech_contexts` but disables RNNT boosting because the pinned GGUF lacks an embedded SentencePiece tokenizer. Stages 3, 4, and 6 are blocked until one of these is chosen and proven: a model artifact that embeds the tokenizer, an engine patch that loads the tokenizer for RNNT boosting, or a different engine/model. Any replacement must also address the single-alpha behavior before per-entry Low/Normal/Strong influence can work. The probe lives in `tests/PrivateType.EngineProbe`.
+
+- [x] The exact pinned runtime/model completes realtime recognition with `speech_contexts`.
 - [ ] Aggregate evidence shows useful target-term improvement over baseline.
 - [ ] Low/Normal/Strong map to three recorded, distinct, positive values satisfying the control threshold.
-- [ ] English and Polish-with-English-terms paths are both exercised.
+- [x] English and Polish-with-English-terms paths are both exercised.
 - [ ] The 200-phrase/16-KiB context budget is proven or every downstream planned limit is revised to the lower proven boundary.
-- [ ] No audio, transcript, phrase list, or sensitive path is committed or logged.
-- [ ] The repository remains working and the probe is excluded from portable release output.
+- [x] No audio, transcript, phrase list, or sensitive path is committed or logged.
+- [x] The repository remains working and the probe is excluded from portable release output.
 
 ## Stage 2: Expand recognition locales and migrate settings
 
@@ -602,16 +604,16 @@ Stage 1 acceptance:
 
 | ID | Public seam | Planned red test | Expected observation | Final evidence |
 |---|---|---|---|---|
-| R1 | catalog and recognizer request | every required code plus invalid code | 33 unique choices; exact engine code; invalid rejected | Pending |
-| R2 | `PortableSettingsStore.Load/Save` | representative schema-1 JSON | migrated settings equal old choices and next save writes schema 2 | Pending |
-| R3 | Settings selector | populated layout/automation probe | all choices searchable/reachable with no clipping | Pending |
+| R1 | catalog and recognizer request | every required code plus invalid code | 33 unique choices; exact engine code; invalid rejected | `RecognitionLocaleTests`, `Sends_the_catalog_locale_code_verbatim_to_the_local_engine`, `Refuses_to_send_an_unsupported_locale_instead_of_falling_back`. |
+| R2 | `PortableSettingsStore.Load/Save` | representative schema-1 JSON | migrated settings equal old choices and next save writes schema 2 | `Migrates_schema_1_numeric_languages_without_losing_other_settings`, `Loading_a_legacy_file_does_not_rewrite_it`, `Saves_schema_2_with_locale_codes_and_reloads_it`. |
+| R3 | Settings selector | populated layout/automation probe | all choices searchable/reachable with no clipping | `SettingsLanguageProbe`: 33 choices, no clipped labels, open list rendered, type-ahead, focus, saved codes. Type-ahead matches display names only, not locale codes. |
 
 #### Budget and Environment
 
 | ID | File, module, provider, or tool | Current fact | Planned limit or required proof | Final fact |
 |---|---|---|---|---|
-| R1 | `PortableSettings.cs` and enum consumers | language rules are duplicated | split catalog/migration/validation owners; no 33-arm switches | Pending |
-| R3 | fixed Settings window | current selector has three items | bounded content and verified supported DPI/text scales | Pending |
+| R1 | `PortableSettings.cs` and enum consumers | language rules are duplicated | split catalog/migration/validation owners; no 33-arm switches | `RecognitionLocales.cs`, `PortableSettingsMigration.cs`, validator in `PortableSettings.cs`; enum removed. |
+| R3 | fixed Settings window | current selector has three items | bounded content and verified supported DPI/text scales | Verified at 96 DPI only; other scales not yet checked. |
 
 **Tests/proof:** Core migration/catalog/validator tests, App hotkey/status/recognizer tests, Settings automation/layout probe, affected Core/App projects, `git diff --check`.
 
@@ -621,13 +623,13 @@ Stage 1 acceptance:
 
 Stage 2 acceptance:
 
-- [ ] Automatic plus exactly 32 usable explicit locales are selectable and sent verbatim to the engine.
-- [ ] The eight adaptation-only locales are absent.
-- [ ] `en-US`/`en-GB`, `es-US`/`es-ES`, `fr-FR`/`fr-CA`, and `pt-BR`/`pt-PT` map to shared base languages correctly.
-- [ ] Existing Polish/English/Auto settings migrate without losing any unrelated setting.
-- [ ] New installs retain Polish and English defaults.
-- [ ] Invalid locale codes fail validation without silently becoming Auto.
-- [ ] The old enum and duplicated language switch arms are removed.
+- [x] Automatic plus exactly 32 usable explicit locales are selectable and sent verbatim to the engine.
+- [x] The eight adaptation-only locales are absent.
+- [x] `en-US`/`en-GB`, `es-US`/`es-ES`, `fr-FR`/`fr-CA`, and `pt-BR`/`pt-PT` map to shared base languages correctly.
+- [x] Existing Polish/English/Auto settings migrate without losing any unrelated setting.
+- [x] New installs retain Polish and English defaults.
+- [x] Invalid locale codes fail validation without silently becoming Auto.
+- [x] The old enum and duplicated language switch arms are removed.
 - [ ] Settings language selection passes layout and keyboard/accessibility checks.
 
 ## Stage 3: Persistent vocabulary and decoder biasing

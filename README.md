@@ -56,8 +56,14 @@ The reported hash must exactly match the accompanying `.zip.sha256` file.
 
 | Language | Default shortcut |
 | --- | --- |
-| Polish | `Ctrl+Shift+R` |
-| English | `Ctrl+Shift+E` |
+| Polish (Poland) | `Ctrl+Shift+R` |
+| English (United States) | `Ctrl+Shift+E` |
+
+In **Settings → Shortcuts**, each shortcut can use Automatic or any of 32
+languages and regions the local model recognizes, including German, French,
+Spanish, Italian, Portuguese, Dutch, Ukrainian, Russian, Czech, Swedish,
+Japanese, Korean, and Chinese (Simplified). Add as many shortcuts as you need.
+The app's own interface stays in English.
 
 Hold a shortcut while speaking, then release it to insert the final text. The
 model loads when PrivateType starts; after the selected idle timeout unloads

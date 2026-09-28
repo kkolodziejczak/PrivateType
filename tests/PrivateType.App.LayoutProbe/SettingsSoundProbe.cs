@@ -30,7 +30,7 @@ internal static class SettingsSoundProbe
         var settings = PortableSettings.Default with
         {
             Shortcuts = dense
-                ? Enumerable.Range(0x70, 12).Select(key => new ShortcutBinding(RecognitionLanguage.English, key)).ToArray()
+                ? Enumerable.Range(0x70, 12).Select(key => new ShortcutBinding("en-US", key)).ToArray()
                 : ShortcutBinding.Defaults
         };
         var window = CreateWindow(settings);

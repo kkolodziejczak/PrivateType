@@ -165,7 +165,7 @@ public sealed class DictationSessionTests
         };
         var firstCapture = new FakeCapture();
         var createdSessions = 0;
-        var languages = new List<RecognitionLanguage>();
+        var languages = new List<string>();
         var coordinator = new DictationSessionCoordinator(language =>
         {
             languages.Add(language);
@@ -178,16 +178,16 @@ public sealed class DictationSessionTests
             return CreateSession(new FakeCapture(), new FakeRecognizer(), new FakeForegroundTarget(), new FakeInjector());
         });
 
-        await coordinator.HoldAsync(RecognitionLanguage.Polish);
+        await coordinator.HoldAsync("pl-PL");
         var release = coordinator.ReleaseAsync();
         await firstRecognizer.CompleteStarted.Task.WaitAsync(TimeSpan.FromSeconds(1));
-        var nextHold = coordinator.HoldAsync(RecognitionLanguage.English);
+        var nextHold = coordinator.HoldAsync("en-US");
         firstRecognizer.CompleteGate.SetResult();
         await release;
         await nextHold;
 
         Assert.Equal(2, createdSessions);
-        Assert.Equal([RecognitionLanguage.Polish, RecognitionLanguage.English], languages);
+        Assert.Equal(["pl-PL", "en-US"], languages);
         await coordinator.DisposeAsync();
     }
 
@@ -241,11 +241,11 @@ public sealed class DictationSessionTests
             return CreateSession(new FakeCapture(), new FakeRecognizer(), new FakeForegroundTarget(), new FakeInjector());
         });
 
-        await coordinator.HoldAsync(RecognitionLanguage.Polish);
+        await coordinator.HoldAsync("pl-PL");
         await firstCapture.EmitAsync(1, 2, 3);
         await firstRecognizer.PushStarted.Task.WaitAsync(TimeSpan.FromSeconds(1));
         var release = coordinator.ReleaseAsync();
-        var nextHold = coordinator.HoldAsync(RecognitionLanguage.English);
+        var nextHold = coordinator.HoldAsync("en-US");
         await release;
         await nextHold;
 
@@ -264,7 +264,7 @@ public sealed class DictationSessionTests
             CreateSession(capture, new FakeRecognizer(), new FakeForegroundTarget(), new FakeInjector()));
 
         Assert.False(coordinator.IsRecording);
-        var hold = coordinator.HoldAsync(RecognitionLanguage.Polish);
+        var hold = coordinator.HoldAsync("pl-PL");
         await capture.StartEntered.Task.WaitAsync(TimeSpan.FromSeconds(1));
         var recordingBeforeMicrophoneReady = coordinator.IsRecording;
         capture.StartGate.SetResult();
@@ -286,7 +286,7 @@ public sealed class DictationSessionTests
         await using var coordinator = new DictationSessionCoordinator(_ =>
             CreateSession(capture, new FakeRecognizer(), new FakeForegroundTarget(), new FakeInjector()));
 
-        var hold = coordinator.HoldAsync(RecognitionLanguage.Polish);
+        var hold = coordinator.HoldAsync("pl-PL");
         await capture.StartEntered.Task.WaitAsync(TimeSpan.FromSeconds(1));
         var release = coordinator.ReleaseAsync();
         capture.StartGate.SetResult();
@@ -307,7 +307,7 @@ public sealed class DictationSessionTests
         await using var coordinator = new DictationSessionCoordinator(_ =>
             CreateSession(capture, recognizer, new FakeForegroundTarget(), new FakeInjector()));
 
-        await coordinator.HoldAsync(RecognitionLanguage.Polish);
+        await coordinator.HoldAsync("pl-PL");
 
         Assert.False(coordinator.IsRecording);
         Assert.True(capture.Disposed);
@@ -320,7 +320,7 @@ public sealed class DictationSessionTests
         var capture = new FakeCapture();
         await using var coordinator = new DictationSessionCoordinator(_ =>
             CreateSession(capture, new FakeRecognizer(), new FakeForegroundTarget(), new FakeInjector()));
-        await coordinator.HoldAsync(RecognitionLanguage.Polish);
+        await coordinator.HoldAsync("pl-PL");
 
         capture.Fail(new InvalidOperationException("capture failed"));
 
@@ -340,7 +340,7 @@ public sealed class DictationSessionTests
             recognizer,
             new ForegroundTargetGuard(target),
             injector,
-            RecognitionLanguage.Polish,
+            "pl-PL",
             finalizationTimeout ?? TimeSpan.FromSeconds(1),
             diagnostics);
     }

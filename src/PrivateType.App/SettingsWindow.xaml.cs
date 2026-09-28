@@ -11,11 +11,7 @@ namespace PrivateType.App;
 public partial class SettingsWindow : Window
 {
     private static readonly IReadOnlyList<LanguageOption> supportedLanguages =
-    [
-        new(RecognitionLanguage.Polish, "Polish"),
-        new(RecognitionLanguage.English, "English"),
-        new(RecognitionLanguage.Auto, "Automatic")
-    ];
+        RecognitionLocaleCatalog.All.Select(locale => new LanguageOption(locale.Code, locale.DisplayName)).ToArray();
     private readonly ObservableCollection<ShortcutBindingEditor> bindings;
     private readonly PortableSettings originalSettings;
     private readonly ModelReadySound soundPreview = new();
@@ -152,7 +148,7 @@ public partial class SettingsWindow : Window
             return;
         }
 
-        bindings.Add(new ShortcutBindingEditor(new ShortcutBinding(RecognitionLanguage.Polish, key), supportedLanguages));
+        bindings.Add(new ShortcutBindingEditor(new ShortcutBinding(RecognitionLocaleCatalog.Polish, key), supportedLanguages));
         ValidationText.Text = string.Empty;
     }
 
@@ -198,7 +194,7 @@ public partial class SettingsWindow : Window
         var settings = PendingSoundSettings() with
         {
             MicrophoneId = MicrophoneBox.SelectedValue as string ?? "default",
-            Shortcuts = bindings.Select(binding => new ShortcutBinding(binding.Language, binding.VirtualKey)).ToArray(),
+            Shortcuts = bindings.Select(binding => new ShortcutBinding(binding.LocaleCode, binding.VirtualKey)).ToArray(),
             StartWithWindows = StartWithWindowsCheckBox.IsChecked == true,
             ModelIdleTimeoutMinutes = IdleTimeoutBox.SelectedValue is int minutes ? minutes : 10
         };
@@ -239,7 +235,7 @@ public partial class SettingsWindow : Window
     }
 }
 
-public sealed record LanguageOption(RecognitionLanguage Language, string Label);
+public sealed record LanguageOption(string LocaleCode, string Label);
 
 public sealed record ReadySoundOption(string Id, string Label)
 {
@@ -265,12 +261,12 @@ public sealed record IdleTimeoutOption(int Minutes, string Label)
 
 public sealed class ShortcutBindingEditor : INotifyPropertyChanged
 {
-    private RecognitionLanguage language;
+    private string localeCode;
     private int virtualKey;
 
     public ShortcutBindingEditor(ShortcutBinding binding, IReadOnlyList<LanguageOption> supportedLanguages)
     {
-        language = binding.Language;
+        localeCode = binding.LocaleCode;
         virtualKey = binding.VirtualKey;
         SupportedLanguages = supportedLanguages;
     }
@@ -278,12 +274,12 @@ public sealed class ShortcutBindingEditor : INotifyPropertyChanged
     public event PropertyChangedEventHandler? PropertyChanged;
     public IReadOnlyList<LanguageOption> SupportedLanguages { get; }
 
-    public RecognitionLanguage Language
+    public string LocaleCode
     {
-        get => language;
+        get => localeCode;
         set
         {
-            language = value;
+            localeCode = value;
             Notify();
         }
     }
@@ -299,7 +295,7 @@ public sealed class ShortcutBindingEditor : INotifyPropertyChanged
         }
     }
 
-    public string ShortcutLabel => HotkeyCatalog.FromBindings([new ShortcutBinding(Language, VirtualKey)]).Single().Label;
+    public string ShortcutLabel => HotkeyCatalog.FromBindings([new ShortcutBinding(LocaleCode, VirtualKey)]).Single().Label;
 
     private void Notify([CallerMemberName] string? propertyName = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 }

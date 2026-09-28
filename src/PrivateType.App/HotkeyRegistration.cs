@@ -3,7 +3,7 @@ using PrivateType.Core;
 
 namespace PrivateType.App;
 
-internal sealed record HotkeyDefinition(int Id, RecognitionLanguage Language, int VirtualKey, uint Modifiers, string Label);
+internal sealed record HotkeyDefinition(int Id, string LocaleCode, int VirtualKey, uint Modifiers, string Label);
 
 internal static class HotkeyCatalog
 {
@@ -11,8 +11,8 @@ internal static class HotkeyCatalog
     internal const uint ModifierShift = 0x0004;
     private const uint ModifierNoRepeat = 0x4000;
 
-    internal static readonly HotkeyDefinition Polish = new(1, RecognitionLanguage.Polish, 0x52, ModifierControl | ModifierShift, "Ctrl+Shift+R");
-    internal static readonly HotkeyDefinition English = new(2, RecognitionLanguage.English, 0x45, ModifierControl | ModifierShift, "Ctrl+Shift+E");
+    internal static readonly HotkeyDefinition Polish = new(1, RecognitionLocaleCatalog.Polish, 0x52, ModifierControl | ModifierShift, "Ctrl+Shift+R");
+    internal static readonly HotkeyDefinition English = new(2, RecognitionLocaleCatalog.English, 0x45, ModifierControl | ModifierShift, "Ctrl+Shift+E");
     internal static readonly IReadOnlyList<HotkeyDefinition> All = [Polish, English];
 
     internal static IReadOnlyList<HotkeyDefinition> FromBindings(IReadOnlyList<ShortcutBinding> bindings)
@@ -23,7 +23,7 @@ internal static class HotkeyCatalog
 
         return bindings.Select((binding, index) => new HotkeyDefinition(
             index + 1,
-            binding.Language,
+            binding.LocaleCode,
             binding.VirtualKey,
             ModifierControl | ModifierShift,
             $"Ctrl+Shift+{KeyLabel(binding.VirtualKey)}")).ToArray();
@@ -60,8 +60,8 @@ internal sealed class HotkeyAvailability
     public IReadOnlyList<HotkeyRegistrationAttempt> Attempts { get; }
     public IReadOnlyList<HotkeyDefinition> EnabledHotkeys { get; }
     public IReadOnlyList<HotkeyDefinition> DisabledHotkeys { get; }
-    public IReadOnlyList<RecognitionLanguage> EnabledLanguages => EnabledHotkeys.Select(hotkey => hotkey.Language).ToArray();
-    public IReadOnlyList<RecognitionLanguage> DisabledLanguages => DisabledHotkeys.Select(hotkey => hotkey.Language).ToArray();
+    public IReadOnlyList<string> EnabledLocales => EnabledHotkeys.Select(hotkey => hotkey.LocaleCode).ToArray();
+    public IReadOnlyList<string> DisabledLocales => DisabledHotkeys.Select(hotkey => hotkey.LocaleCode).ToArray();
     public bool CanStart => EnabledHotkeys.Count > 0;
 
     public static HotkeyAvailability FromRegistrationResults(IReadOnlyList<HotkeyRegistrationAttempt> attempts)

@@ -15,13 +15,20 @@ internal sealed class RealtimeRecognizer(Uri endpoint) : IStreamingRecognizer
     private string provisionalText = string.Empty;
     private long completedTranscriptSequence;
 
-    public async Task StartAsync(RecognitionLanguage language, CancellationToken cancellationToken)
+    public async Task StartAsync(string localeCode, CancellationToken cancellationToken)
     {
+        var update = SessionUpdate(localeCode);
         await socket.ConnectAsync(endpoint, cancellationToken);
-        var languageCode = ToEngineLanguage(language);
-        var update = JsonSerializer.Serialize(new { type = "session.update", session = new { sample_rate = 16000, language = languageCode, automatic_punctuation = true } });
         await SendTextAsync(update, cancellationToken);
     }
+
+    // Catalog codes are the engine's language values; unsupported codes never fall back to automatic.
+    internal static string SessionUpdate(string localeCode) =>
+        JsonSerializer.Serialize(new
+        {
+            type = "session.update",
+            session = new { sample_rate = 16000, language = RecognitionLocaleCatalog.Get(localeCode).Code, automatic_punctuation = true }
+        });
 
     public async Task PushPcmAsync(ReadOnlyMemory<byte> pcm16KhzMono, CancellationToken cancellationToken)
     {
@@ -126,16 +133,5 @@ internal sealed class RealtimeRecognizer(Uri endpoint) : IStreamingRecognizer
         await sendGate.WaitAsync(cancellationToken);
         try { await socket.SendAsync(Encoding.UTF8.GetBytes(message), WebSocketMessageType.Text, true, cancellationToken); }
         finally { sendGate.Release(); }
-    }
-
-    internal static string ToEngineLanguage(RecognitionLanguage language)
-    {
-        return language switch
-        {
-            RecognitionLanguage.Polish => "pl-PL",
-            RecognitionLanguage.English => "en-US",
-            RecognitionLanguage.Auto => "auto",
-            _ => throw new ArgumentOutOfRangeException(nameof(language), language, "Unsupported recognition language.")
-        };
     }
 }

@@ -14,8 +14,8 @@ public sealed class HotkeyAvailabilityTests
             new HotkeyRegistrationAttempt(HotkeyCatalog.English, false, 1409)
         ]);
 
-        Assert.Equal([RecognitionLanguage.Polish], availability.EnabledLanguages);
-        Assert.Equal([RecognitionLanguage.English], availability.DisabledLanguages);
+        Assert.Equal(["pl-PL"], availability.EnabledLocales);
+        Assert.Equal(["en-US"], availability.DisabledLocales);
         Assert.True(availability.CanStart);
     }
 
@@ -34,29 +34,29 @@ public sealed class HotkeyAvailabilityTests
     public void Uses_the_accepted_language_shortcuts()
     {
         Assert.Equal("Ctrl+Shift+R", HotkeyCatalog.Polish.Label);
-        Assert.Equal(RecognitionLanguage.Polish, HotkeyCatalog.Polish.Language);
+        Assert.Equal("pl-PL", HotkeyCatalog.Polish.LocaleCode);
         Assert.Equal("Ctrl+Shift+E", HotkeyCatalog.English.Label);
-        Assert.Equal(RecognitionLanguage.English, HotkeyCatalog.English.Language);
+        Assert.Equal("en-US", HotkeyCatalog.English.LocaleCode);
     }
 
     [Fact]
     public void Builds_a_distinct_editable_shortcut_for_each_explicit_language()
     {
         var configured = HotkeyCatalog.FromBindings([
-            new ShortcutBinding(RecognitionLanguage.Polish, 0x31),
-            new ShortcutBinding(RecognitionLanguage.English, 0x72)
+            new ShortcutBinding("pl-PL", 0x31),
+            new ShortcutBinding("en-US", 0x72)
         ]);
 
         Assert.Collection(
             configured,
             polish =>
             {
-                Assert.Equal(RecognitionLanguage.Polish, polish.Language);
+                Assert.Equal("pl-PL", polish.LocaleCode);
                 Assert.Equal("Ctrl+Shift+1", polish.Label);
             },
             english =>
             {
-                Assert.Equal(RecognitionLanguage.English, english.Language);
+                Assert.Equal("en-US", english.LocaleCode);
                 Assert.Equal("Ctrl+Shift+F3", english.Label);
             });
     }
@@ -65,10 +65,10 @@ public sealed class HotkeyAvailabilityTests
     public void Builds_an_automatic_recognition_shortcut()
     {
         var configured = HotkeyCatalog.FromBindings([
-            new ShortcutBinding(RecognitionLanguage.Auto, 0x41)
+            new ShortcutBinding("auto", 0x41)
         ]);
 
-        Assert.Equal(RecognitionLanguage.Auto, configured.Single().Language);
+        Assert.Equal("auto", configured.Single().LocaleCode);
         Assert.Equal("Ctrl+Shift+A", configured.Single().Label);
     }
 }

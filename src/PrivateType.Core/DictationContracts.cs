@@ -1,11 +1,5 @@
 namespace PrivateType.Core;
 
-public enum RecognitionLanguage
-{
-    Polish,
-    English,
-    Auto
-}
 
 public enum DictationState
 {
@@ -36,7 +30,7 @@ public enum TargetEligibility
 
 public interface IStreamingRecognizer : IAsyncDisposable
 {
-    Task StartAsync(RecognitionLanguage language, CancellationToken cancellationToken);
+    Task StartAsync(string localeCode, CancellationToken cancellationToken);
     Task PushPcmAsync(ReadOnlyMemory<byte> pcm16KhzMono, CancellationToken cancellationToken);
     Task CompleteAsync(CancellationToken cancellationToken);
     IAsyncEnumerable<TranscriptUpdate> ReadUpdatesAsync(CancellationToken cancellationToken);

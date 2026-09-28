@@ -13,7 +13,7 @@ internal enum BubblePresentationKind
 
 internal sealed record BubblePresentation(BubblePresentationKind Kind, string Text, double AudioLevel);
 
-internal sealed record BubbleRenderRequest(RecognitionLanguage Language, DictationPresentation Presentation);
+internal sealed record BubbleRenderRequest(string LocaleCode, DictationPresentation Presentation);
 
 internal sealed class LatestPresentationQueue
 {
@@ -21,11 +21,11 @@ internal sealed class LatestPresentationQueue
     private BubbleRenderRequest? latest;
     private bool renderScheduled;
 
-    public bool Enqueue(RecognitionLanguage language, DictationPresentation presentation)
+    public bool Enqueue(string localeCode, DictationPresentation presentation)
     {
         lock (gate)
         {
-            latest = new BubbleRenderRequest(language, presentation);
+            latest = new BubbleRenderRequest(localeCode, presentation);
             if (renderScheduled)
                 return false;
 
