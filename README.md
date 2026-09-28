@@ -122,7 +122,7 @@ PrivateType is a CPU-only `win-x64` app.
 | Free disk space | 1.2 GB for app, runtime, model, and working room | 2 GB or more |
 | Microphone | Any Windows recording device | Headset or close microphone in a quiet room |
 
-The pinned Nemotron Q8_0 model is about 707 MiB. The self-contained app/runtime
+The pinned Nemotron Q8_0 model is about 708 MiB. The self-contained app/runtime
 folder is about 200 MB before the model download. The current native runtime
 requires the [Microsoft Visual C++ x64 Redistributable](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist)
 if it is not already installed.

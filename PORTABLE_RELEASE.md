@@ -40,7 +40,7 @@ downloads its pinned model again when needed.
 
 ## Model and runtime notices
 
-- Model: `nvidia/nemotron-3.5-asr-streaming-0.6b`, Q8_0 GGUF, 741,548,352 bytes; see [MODEL_ARTIFACT.md](MODEL_ARTIFACT.md).
+- Model: `nvidia/nemotron-3.5-asr-streaming-0.6b`, Q8_0 GGUF, 742,090,464 bytes; see [MODEL_ARTIFACT.md](MODEL_ARTIFACT.md).
 - Model license: OpenMDW-1.1. The model is downloaded by the user and is not redistributed in the ZIP.
 - Runtime: NeMo-Speech.cpp, Apache-2.0. See [ENGINE_DECISION.md](ENGINE_DECISION.md) for the pinned engine/model decision and measurements.
 
@@ -64,4 +64,4 @@ Pushing a version tag such as `v1.0.6` requires a matching `.github/release-note
 
 ## Recorded package evidence
 
-On 2026-08-18, the release script produced a 190,030,883-byte application folder and a 75,302,136-byte ZIP. The excluded model is 741,548,352 bytes. Re-record these values whenever the runtime or publish output changes.
+On 2026-09-28, the release script produced a 201,604,659-byte application folder and a 79,031,503-byte ZIP (.NET 10). The excluded model is 742,090,464 bytes. Re-record these values whenever the runtime or publish output changes.

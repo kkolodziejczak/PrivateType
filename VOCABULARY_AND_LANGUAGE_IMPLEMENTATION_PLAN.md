@@ -523,19 +523,19 @@ Create a Unicode-aware word-span tokenizer/selector that returns source offsets 
 
 | ID | Public seam | Planned red test | Expected observation | Final evidence |
 |---|---|---|---|---|
-| R1 | pinned `/v1/realtime` | probe request with a known invalid context shape, then valid shape | invalid is rejected; valid completes and changes target-term outcomes versus baseline | **Failed (2026-09-28).** Invalid shape rejected; valid requests complete but change nothing: the engine logs "RNNT word boosting requested but no phrases could be tokenized (no embedded SentencePiece tokenizer in the GGUF?); boosting disabled." |
-| R2 | candidate mapping | target/control matrix with no mapping selected | chosen levels are ordered by influence, improve target recognition, and Strong inserts boosted terms in no more than 1 of 20 unrelated controls | **Not calibratable.** Boosts 1–5 each matched baseline exactly: en-US 5/24 target terms, pl-PL 3/8, 0/21 control insertions. |
+| R1 | pinned `/v1/realtime` | probe request with a known invalid context shape, then valid shape | invalid is rejected; valid completes and changes target-term outcomes versus baseline | **Passed with model revision `ea30d66` (2026-09-28).** Invalid shape rejected; valid requests complete and raise target-term recognition. Revision `1c8deae` failed: no embedded SentencePiece tokenizer, so the engine disabled boosting. |
+| R2 | candidate mapping | target/control matrix with no mapping selected | chosen levels are ordered by influence, improve target recognition, and Strong inserts boosted terms in no more than 1 of 20 unrelated controls | Boost vs baseline (en-US targets / pl-PL targets / control insertions): none 5/24, 3/8, 0/21; 0.5 11/24, 5/8, 0/21; 1 12/24, 5/8, 0/21; 2 13/24, 7/8, 1/21; 3 14/24, 8/8, 8/21; 4 12/24, 8/8, 15/21; 5 12/24, 2/8, 19/21. |
 | R3 | repo and temp state | pre-run clean status and temp inventory | post-run repository has no audio/transcript artifacts and temp inputs are removed | Synthetic TTS clips and one public FLEURS clip in a temp folder, deleted after the run; probe prints aggregates only. |
-| R4 | pinned `/v1/realtime` | generated boundary payload | request completes or lower accepted count/bytes are recorded before Stage 3 limits are frozen | 200 phrases / 16,200 normalized bytes accepted and completed (~0.8 s); meaningless while boosting is disabled. |
+| R4 | pinned `/v1/realtime` | generated boundary payload | request completes or lower accepted count/bytes are recorded before Stage 3 limits are frozen | 200 phrases / 16,200 normalized bytes accepted and completed in ~0.8 s with no boundary phrase inserted. |
 
 #### Budget and Environment
 
 | ID | File, module, provider, or tool | Current fact | Planned limit or required proof | Final fact |
 |---|---|---|---|---|
-| R1 | NeMo-Speech.cpp `1118951…` + pinned Q8_0 model | API documents `speech_contexts`; PrivateType does not send it | exact local artifact proof | Engine source: RNNT phrases are tokenized only by the SentencePiece model embedded in the GGUF (`asr.tokenizer.spm_model`); `asr.decoder.tokenizer_path` applies to Flashlight CTC only. The pinned GGUF has no embedded tokenizer. Also: one request applies a single alpha, the maximum boost across all contexts, so per-entry influence cannot mix within one request. |
-| R2 | boost numbers | no safe model-specific range documented | three distinct positive values; Strong control false-insertion <= 1/20 | Not established (stop condition). |
+| R1 | NeMo-Speech.cpp `1118951…` + pinned Q8_0 model | API documents `speech_contexts`; PrivateType does not send it | exact local artifact proof | Engine `1118951…` with model revision `ea30d66` (742,090,464 bytes, SHA-256 `3fc991d3…`) loads the embedded tokenizer. One request applies a single alpha, the maximum boost across its contexts, so per-entry influence cannot mix within one request. |
+| R2 | boost numbers | no safe model-specific range documented | three distinct positive values; Strong control false-insertion <= 1/20 | Low 0.5, Normal 1.0, Strong 2.0. Boost 3 and above inserts boosted terms into 8–19 of 21 controls and is excluded. |
 | R3 | evaluation data | repo forbids private audio/transcripts in artifacts | temporary local data only; aggregate counts only | Met. |
-| R4 | phrase-context payload | no model-specific limit established | prove 200 phrases/16 KiB or revise every downstream validator/budget consistently | Transport accepts 200 phrases / 16 KiB. |
+| R4 | phrase-context payload | no model-specific limit established | prove 200 phrases/16 KiB or revise every downstream validator/budget consistently | 200 phrases / 16 KiB proven. |
 
 **Tests/proof:** probe unit tests, successful engine completion for baseline and biased requests, aggregate A/B matrix, `git status --short`, and explicit temp cleanup verification.
 
@@ -545,13 +545,13 @@ Create a Unicode-aware word-span tokenizer/selector that returns source offsets 
 
 Stage 1 acceptance:
 
-**Outcome (2026-09-28): stopped.** The pinned runtime accepts `speech_contexts` but disables RNNT boosting because the pinned GGUF lacks an embedded SentencePiece tokenizer. Stages 3, 4, and 6 are blocked until one of these is chosen and proven: a model artifact that embeds the tokenizer, an engine patch that loads the tokenizer for RNNT boosting, or a different engine/model. Any replacement must also address the single-alpha behavior before per-entry Low/Normal/Strong influence can work. The probe lives in `tests/PrivateType.EngineProbe`.
+**Outcome (2026-09-28): passed after re-pinning the model.** Revision `1c8deae` lacked the embedded SentencePiece tokenizer, so the engine disabled boosting. NVIDIA's revision `ea30d66` embeds it; with it, boosting raises target terms from 5/24 to 11–13/24 (English) and from 3/8 to 5–7/8 (Polish path) at no more than 1/21 control insertions. Calibrated mapping: Low 0.5, Normal 1.0, Strong 2.0. Design constraint for Stage 3: the engine applies one strength per request (the maximum), so mixed per-entry influences collapse to the strongest one.
 
 - [x] The exact pinned runtime/model completes realtime recognition with `speech_contexts`.
-- [ ] Aggregate evidence shows useful target-term improvement over baseline.
-- [ ] Low/Normal/Strong map to three recorded, distinct, positive values satisfying the control threshold.
+- [x] Aggregate evidence shows useful target-term improvement over baseline.
+- [x] Low/Normal/Strong map to three recorded, distinct, positive values satisfying the control threshold.
 - [x] English and Polish-with-English-terms paths are both exercised.
-- [ ] The 200-phrase/16-KiB context budget is proven or every downstream planned limit is revised to the lower proven boundary.
+- [x] The 200-phrase/16-KiB context budget is proven or every downstream planned limit is revised to the lower proven boundary.
 - [x] No audio, transcript, phrase list, or sensitive path is committed or logged.
 - [x] The repository remains working and the probe is excluded from portable release output.
 

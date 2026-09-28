@@ -1,4 +1,4 @@
-# Speech engine decision
+﻿# Speech engine decision
 
 **Status: selected for the Windows portable release.**
 
@@ -10,10 +10,10 @@ The GitHub Actions release workflow checks out NeMo-Speech.cpp at revision `1118
 
 ## Evidence
 
-- The pinned model passed its expected 741,548,352-byte and SHA-256 verification.
+- The pinned model passed its expected 742,090,464-byte and SHA-256 verification.
 - The runtime exposes Polish, English, and automatic language prompts and runs on CPU only.
 - English and Polish fixtures produced provisional and finalized realtime events through the same protocol used by the app.
-- The ready local runtime used about 932 MiB of working set on the recorded test machine.
+- The ready local runtime used about 935 MiB of working set on the recorded test machine (model revision `ea30d66`, 2026-09-28).
 - A manual Polish microphone test was accepted for continuous phrases. Isolated words and pauses remain a known recognition-quality limitation.
 
 ## Scope

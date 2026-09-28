@@ -122,10 +122,10 @@ internal static class PinnedModel
 {
     internal static readonly ModelManifest Manifest = new(
         "nemotron-3.5-asr-streaming-0.6b-q8_0-1c8deae",
-        new Uri("https://huggingface.co/nvidia/nemotron-3.5-asr-streaming-0.6b/resolve/1c8deaecc64b91f034d73e08dd8b64625eb3395d/nemotron-3.5-asr-streaming-0.6b.q8_0.gguf"),
+        new Uri("https://huggingface.co/nvidia/nemotron-3.5-asr-streaming-0.6b/resolve/ea30d66debe3740a08b573244286791d423d6b3e/nemotron-3.5-asr-streaming-0.6b.q8_0.gguf"),
         "nemotron-3.5-asr-streaming-0.6b.q8_0.gguf",
-        741548352L,
-        "a5c435f294eea8f88ce68dd27b8c3bfea7f777cb2fbba04fcd30eaa555f429ae");
+        742090464L,
+        "3fc991d3badad7277c11030a7519832cddaf2057aafed6d4b25147e953a070b1");
 }
 
 internal sealed class HttpModelDownloadClient : IModelDownloadClient, IDisposable
