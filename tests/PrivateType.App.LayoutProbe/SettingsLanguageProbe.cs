@@ -54,11 +54,12 @@ internal static class SettingsLanguageProbe
                 Require(AutomationPeer(box).GetName().Length > 0 && box.Focus(), $"{name} needs an accessible name and keyboard focus.");
             }
             var hint = (TextBlock)window.FindName("InsertionModeHint");
-            var typingHint = hint.Text;
-            ((ComboBox)window.FindName("InsertionModeBox")).SelectedValue = "paste";
+            var pastingHint = hint.Text;
+            Require(pastingHint.Contains("clipboard is restored", StringComparison.Ordinal), "The default paste mode must explain clipboard handling.");
+            ((ComboBox)window.FindName("InsertionModeBox")).SelectedValue = "type";
             Flush(window);
-            Require(hint.Text.Length > 0 && hint.Text != typingHint && hint.Text.Contains("clipboard", StringComparison.Ordinal),
-                "Choosing paste must explain clipboard handling.");
+            Require(hint.Text.Length > 0 && hint.Text != pastingHint && hint.Text.Contains("Ctrl+V", StringComparison.Ordinal),
+                "Choosing typing must explain when to use it.");
             hint.BringIntoView();
             Flush(window);
             Capture(window, outputDirectory, "settings-dictation-modes.png");
@@ -100,7 +101,7 @@ internal static class SettingsLanguageProbe
                 var first = Descendants(window).OfType<ComboBox>().First(box => box.ItemsSource is IEnumerable<LanguageOption>);
                 first.SelectedItem = TextSearch(first, "Spanish (Spain)");
                 ((ComboBox)window.FindName("ShortcutModeBox")).SelectedValue = "toggle";
-                ((ComboBox)window.FindName("InsertionModeBox")).SelectedValue = "paste";
+                ((ComboBox)window.FindName("InsertionModeBox")).SelectedValue = "type";
                 Click(window, "SaveSettingsButton");
             }
             catch (Exception exception)
@@ -114,7 +115,7 @@ internal static class SettingsLanguageProbe
             throw failure;
         Require(window.SavedSettings is { } saved && saved.Shortcuts[0].LocaleCode == "es-ES" && saved.Shortcuts[2].LocaleCode == "auto",
             "Saved shortcuts must carry locale codes.");
-        Require(window.SavedSettings!.ShortcutMode == "toggle" && window.SavedSettings.InsertionMode == "paste",
+        Require(window.SavedSettings!.ShortcutMode == "toggle" && window.SavedSettings.InsertionMode == "type",
             "Saved settings must carry the chosen shortcut behavior and insertion mode.");
     }
 

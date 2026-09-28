@@ -26,7 +26,8 @@ public sealed record PortableSettings(
     public int ReadySoundVolume { get; init; } = 80;
     public string? CustomReadySoundPath { get; init; }
     public string ShortcutMode { get; init; } = DictationShortcutModes.Hold;
-    public string InsertionMode { get; init; } = TextInsertionModes.Type;
+    // Pasting is atomic, so an early Enter cannot send half-typed text.
+    public string InsertionMode { get; init; } = TextInsertionModes.Paste;
     public IReadOnlyList<VocabularyEntry> Vocabulary { get; init; } = [];
     public string VocabularyStrength { get; init; } = VocabularyStrengths.Normal;
 
@@ -77,7 +78,7 @@ public static class PortableSettingsValidator
             settings => settings with { ShortcutMode = DictationShortcutModes.Hold }),
         new("text insertion",
             settings => settings.InsertionMode is not (TextInsertionModes.Type or TextInsertionModes.Paste) ? "Choose how dictated text is inserted." : null,
-            settings => settings with { InsertionMode = TextInsertionModes.Type }),
+            settings => settings with { InsertionMode = PortableSettings.Default.InsertionMode }),
         new("vocabulary",
             settings => settings.Vocabulary is null ? "Vocabulary is missing." : VocabularyRules.Validate(settings.Vocabulary),
             settings => settings with { Vocabulary = VocabularyRules.KeepValid(settings.Vocabulary) }),

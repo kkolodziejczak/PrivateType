@@ -68,15 +68,15 @@ public sealed class SettingsRepairTests : IDisposable
     }
 
     [Fact]
-    public void Defaults_to_hold_and_typing_and_resets_unknown_modes()
+    public void Defaults_to_hold_and_pasting_and_resets_unknown_modes()
     {
         Assert.Equal("hold", PortableSettings.Default.ShortcutMode);
-        Assert.Equal("type", PortableSettings.Default.InsertionMode);
+        Assert.Equal("paste", PortableSettings.Default.InsertionMode);
 
-        var result = Load("""{ "SchemaVersion": 2, "MicrophoneId": "default", "Shortcuts": [{ "LocaleCode": "pl-PL", "VirtualKey": 82 }], "ShortcutMode": "tap", "InsertionMode": "paste" }""");
+        var result = Load("""{ "SchemaVersion": 2, "MicrophoneId": "default", "Shortcuts": [{ "LocaleCode": "pl-PL", "VirtualKey": 82 }], "ShortcutMode": "tap", "InsertionMode": "type" }""");
 
         Assert.Equal("hold", result.Settings.ShortcutMode);
-        Assert.Equal("paste", result.Settings.InsertionMode);
+        Assert.Equal("type", result.Settings.InsertionMode);
         Assert.Equal("Some saved settings were invalid and have been reset: shortcut behavior.", result.Warning);
     }
 

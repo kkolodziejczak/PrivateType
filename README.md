@@ -77,12 +77,13 @@ Prefer not to hold? Set **Settings → Shortcuts → Shortcut behavior** to
 again to insert the text. If the model is still loading, listening starts by
 itself when it is ready.
 
-**Insert text by** chooses how text reaches the target app. **Typing
-characters** (default) never touches the clipboard. **Pasting** is faster for
-long text and works in apps that ignore simulated typing; PrivateType puts your
-previous clipboard back afterwards (unless you copied something new meanwhile)
-and marks the dictated text so Windows clipboard history and cloud clipboard
-skip it.
+**Insert text by** chooses how text reaches the target app. **Pasting**
+(default) inserts the whole text in one step, so pressing Enter right away
+cannot send half of it. PrivateType puts your previous clipboard back
+afterwards (unless you copied something new meanwhile) and marks the dictated
+text so Windows clipboard history and cloud clipboard skip it. Choose **Typing
+characters** for apps where Ctrl+V does not paste, such as Vim or PuTTY; it
+never touches the clipboard.
 
 ### Vocabulary
 

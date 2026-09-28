@@ -121,8 +121,8 @@ public partial class SettingsWindow : Window
     private void InsertionModeChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
     {
         InsertionModeHint.Text = InsertionModeBox.SelectedValue as string == TextInsertionModes.Paste
-            ? "Pasting is faster for long text and works in more apps. Your clipboard is restored afterwards, and dictated text is kept out of clipboard history."
-            : "Typing sends each character, which works in most text fields and never touches the clipboard.";
+            ? "Text arrives in one step, so pressing Enter right away cannot send half of it. Your clipboard is restored afterwards, and dictated text is kept out of clipboard history."
+            : "Typing sends each character and never touches the clipboard. Use it where Ctrl+V does not paste, such as Vim or PuTTY.";
     }
 
     private void ReadySoundChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
@@ -273,7 +273,7 @@ public partial class SettingsWindow : Window
             Shortcuts = bindings.Select(binding => new ShortcutBinding(binding.LocaleCode, binding.VirtualKey)).ToArray(),
             StartWithWindows = StartWithWindowsCheckBox.IsChecked == true,
             ShortcutMode = ShortcutModeBox.SelectedValue as string ?? DictationShortcutModes.Hold,
-            InsertionMode = InsertionModeBox.SelectedValue as string ?? TextInsertionModes.Type,
+            InsertionMode = InsertionModeBox.SelectedValue as string ?? PortableSettings.Default.InsertionMode,
             Vocabulary = vocabulary.Entries,
             VocabularyStrength = vocabulary.Strength,
             ModelIdleTimeoutMinutes = IdleTimeoutBox.SelectedValue is int minutes ? minutes : 10
@@ -329,8 +329,8 @@ public sealed record ChoiceOption(string Id, string Label)
 
     public static IReadOnlyList<ChoiceOption> InsertionModes { get; } =
     [
-        new(TextInsertionModes.Type, "Typing characters"),
-        new(TextInsertionModes.Paste, "Pasting")
+        new(TextInsertionModes.Paste, "Pasting"),
+        new(TextInsertionModes.Type, "Typing characters")
     ];
 }
 
