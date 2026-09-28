@@ -885,14 +885,16 @@ Evidence (2026-09-28): `QuickTeachTests` (buffer lifecycle, word spans, range se
 
 Stage 6 acceptance:
 
-- [ ] All affected Core and App tests pass.
-- [ ] LayoutProbe covers and passes all existing and new states.
-- [ ] `$verify-ui-quality` reports PASS with evidence.
-- [ ] Live aggregate acceptance confirms calibrated vocabulary for explicit English, explicit Polish with English technical terms, and Automatic Shared-only behavior.
-- [ ] README accurately explains 32 locales, defaults, vocabulary persistence, simple manual pack sharing, and ephemeral quick teaching.
-- [ ] Every curated repository share file passes the production validator.
-- [ ] Portable release verification passes and contains no curated packs, test probe, or private artifacts.
-- [ ] No obsolete enum/hard-coded language path, unintended production sample vocabulary, debug UI, stale link, or private evidence remains.
+Evidence (2026-09-28): Core 137, App 118, and probe 10 tests pass; LayoutProbe reports 20 PASS lines covering Stages 2–5 and every state was inspected. Live matrix on engine `1118951…` and model `ea30d66` (synthetic TTS clips plus the public FLEURS Polish clip, deleted afterwards): baseline en-US 5/24, Automatic 5/24, Polish path 3/8; Low 11/24, 11/24, 5/8; Normal 12/24, 12/24, 5/8; Strong 13/24, 13/24, 7/8; control insertions 0/20 except 1/20 at Strong; 200 phrases / 16 KiB accepted. Portable 1.1.0 build: 201,699,891-byte folder, 79,066,624-byte ZIP; `Test-PortableRelease.ps1` passes, including the new repository-only exclusion check. No obsolete enum, sample vocabulary in `src`, debug output, broken relative links, or whitespace errors. There are no curated packs yet, so the pack validator passes over an empty set. Display scaling: WPF lays out in device-independent units, so 125–200% scaling changes only the available height, which the 520-DIP Settings probe covers; Windows' separate text-size setting is not verified. No `$verify-ui-quality` tool exists in this repository.
+
+- [x] All affected Core and App tests pass.
+- [x] LayoutProbe covers and passes all existing and new states.
+- [ ] `$verify-ui-quality` reports PASS with evidence. (Not available in this repository; LayoutProbe and manual inspection used instead.)
+- [x] Live aggregate acceptance confirms calibrated vocabulary for explicit English, explicit Polish with English technical terms, and Automatic Shared-only behavior.
+- [x] README accurately explains 32 locales, defaults, vocabulary persistence, simple manual pack sharing, and ephemeral quick teaching.
+- [x] Every curated repository share file passes the production validator.
+- [x] Portable release verification passes and contains no curated packs, test probe, or private artifacts.
+- [x] No obsolete enum/hard-coded language path, unintended production sample vocabulary, debug UI, stale link, or private evidence remains.
 - [ ] The verified executable is relaunched before user testing.
 
 ## Test strategy

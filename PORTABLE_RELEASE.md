@@ -64,4 +64,4 @@ Pushing a version tag such as `v1.0.6` requires a matching `.github/release-note
 
 ## Recorded package evidence
 
-On 2026-09-28, the release script produced a 201,604,659-byte application folder and a 79,031,503-byte ZIP (.NET 10). The excluded model is 742,090,464 bytes. Re-record these values whenever the runtime or publish output changes.
+On 2026-09-28, the release script produced a 201,699,891-byte application folder and a 79,066,624-byte ZIP for 1.1.0 (.NET 10). The excluded model is 742,090,464 bytes. Re-record these values whenever the runtime or publish output changes.
