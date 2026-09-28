@@ -25,4 +25,5 @@ jobs:
           $PSNativeCommandUseErrorActionPreference = $true
           dotnet test ./tests/PrivateType.Core.Tests/PrivateType.Core.Tests.csproj --configuration Release
           dotnet test ./tests/PrivateType.App.Tests/PrivateType.App.Tests.csproj --configuration Release
+          dotnet test ./tests/PrivateType.EngineProbe.Tests/PrivateType.EngineProbe.Tests.csproj --configuration Release
           dotnet run --project ./tests/PrivateType.App.LayoutProbe/PrivateType.App.LayoutProbe.csproj --configuration Release
