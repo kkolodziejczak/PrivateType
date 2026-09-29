@@ -291,7 +291,7 @@
                       AutomationProperties.Name="Vocabulary language">
               <ComboBox.ItemTemplate>
                 <DataTemplate>
-                  <TextBlock Foreground="{DynamicResource ColorText}" Text="{Binding DisplayName}" TextTrimming="CharacterEllipsis" />
+                  <TextBlock Foreground="{DynamicResource ColorText}" Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
                 </DataTemplate>
               </ComboBox.ItemTemplate>
             </ComboBox>

@@ -345,22 +345,24 @@ This is a separate focused dialog. It uses only the one ephemeral transcript alr
 │ PrivateType — teach vocabulary                                     ×  │
 ├────────────────────────────────────────────────────────────────────────┤
 │ Teach from last dictation                                               │
-│ Select the first and last words of the mistake.                         │
+│ Select the first and last words of a mistake, then add the fix.         │
 │ This sentence is discarded when you close this window.                  │
 │                                                                         │
-│ [The] [app] [uses] [model] [view] [view] [model] [for] [the] [screen.] │
-│                  ╰──────── selected contiguous range ────────╯          │
+│ [The] [a̶p̶p̶] [uses] [model] [view] [view] [model] [for] [the] [screen.] │
+│         ╰ fixed ╯  ╰──────── selected contiguous range ────────╯        │
 │                                                                         │
-│ Desired word or phrase                                                  │
-│ [ MVVM                                                               ] │
+│ Correct spelling                  Save for                               │
+│ [ MVVM                         ] [ English                ▾ ] [Add fix] │
 │                                                                         │
-│ Save for                         Influence                               │
-│ [ English                       ▾ ] [ Normal                          ▾ ] │
+│ Fixes to save                                                           │
+│ App   Replaces "app" · Shared across languages                       ×  │
 │                                                                         │
 │ The already typed sentence will not be changed.                         │
-│                                                    [Cancel] [Save term] │
+│                                                 [Cancel] [Save 2 terms] │
 └────────────────────────────────────────────────────────────────────────┘
 ```
+
+After a successful save the dialog shows "Saved N terms to <languages>." with `Open vocabulary` (opens Settings → Vocabulary on the first saved term's language) and `Done`.
 
 Selection contract:
 
@@ -372,14 +374,15 @@ Selection contract:
 6. The selected heard text may prefill the desired-term field, but the heard text is never saved.
 7. The scope is preselected from the dictation's base language; Automatic preselects Shared. The user can always choose another scope.
 8. Influence defaults to Normal and remains user-selectable.
-9. `Save term` is disabled until a range and valid desired term exist.
-10. Saving affects future dictations only. It does not copy text to the clipboard or modify text already injected into another application.
-11. Saving always adds or updates personal vocabulary in the chosen scope; quick teach never edits an installed pack.
+9. `Add fix` (or `Enter` in the spelling field) moves the selection and spelling into the fix list. Fixed words are struck through and cannot be selected again; a selection over them cannot be added and says why. Each fix keeps its own scope and can be removed.
+10. `Save term` / `Save N terms` is disabled until at least one fix or a valid pending fix exists; a pending fix is added before saving. All fixes are saved in one settings write.
+11. Saving affects future dictations only. It does not copy text to the clipboard or modify text already injected into another application.
+12. Saving always adds personal vocabulary in each fix's scope, skipping phrases already present; quick teach never edits an installed pack.
 
 Privacy and failure behavior:
 
 - Opening the dialog suspends dictation hotkeys, matching the existing Settings behavior.
-- Successful save atomically updates settings, clears the ephemeral transcript, closes the dialog, and restores hotkeys.
+- Successful save atomically updates settings and shows the saved confirmation; closing it clears the ephemeral transcript and restores hotkeys.
 - Cancel, window close, or explicit dismissal clears the ephemeral transcript and restores hotkeys.
 - A persistence failure keeps the dialog and ephemeral transcript available for retry, shows a local error without transcript contents, and does not partially update in-memory settings.
 - Transcript text, selected heard text, and desired terms never enter diagnostics, exception messages, telemetry, screenshots, or committed test fixtures.
@@ -418,5 +421,9 @@ Stage 5:
 4. Teach dialog with one selected word.
 5. Teach dialog with a selected multi-word range and edited desired phrase.
 6. Teach dialog persistence-error state with no sensitive text in the error.
+7. Teach dialog with one and with two added fixes.
+8. Teach dialog with a selection that overlaps an added fix.
+9. Teach saved confirmation.
+10. Settings → Vocabulary opened on a given language, with per-language counts in the picker.
 
 Every state must be checked at the repository-supported DPI/text scales and with keyboard-only navigation, visible focus, readable contrast, no clipped controls, and no debug/sample data left in production.

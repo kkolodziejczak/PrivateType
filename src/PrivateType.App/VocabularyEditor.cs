@@ -69,6 +69,34 @@ public sealed class VocabularyPackItem : INotifyPropertyChanged
     private void Notify([CallerMemberName] string? propertyName = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 }
 
+// A language in the Vocabulary picker, labelled with how many personal phrases it holds, so
+// phrases saved under another language are easy to find.
+public sealed class VocabularyScopeOption(VocabularyScope scope) : INotifyPropertyChanged
+{
+    private int count;
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    public string Code => scope.Code;
+
+    public string DisplayName => scope.DisplayName;
+
+    public string Label => count > 0 ? $"{scope.DisplayName} ({count})" : scope.DisplayName;
+
+    public int Count
+    {
+        get => count;
+        set
+        {
+            if (count == value)
+                return;
+            count = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Count)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Label)));
+        }
+    }
+}
+
 // Edits the whole vocabulary while showing one scope at a time. Changing scope only filters;
 // every scope's rows and every pack are kept until Save or Cancel.
 public sealed class VocabularyEditor : INotifyPropertyChanged
@@ -89,7 +117,7 @@ public sealed class VocabularyEditor : INotifyPropertyChanged
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    public IReadOnlyList<VocabularyScope> Scopes => VocabularyScopes.All;
+    public IReadOnlyList<VocabularyScopeOption> Scopes { get; } = VocabularyScopes.All.Select(scope => new VocabularyScopeOption(scope)).ToArray();
 
     public IReadOnlyList<ChoiceOption> Strengths { get; } =
     [
@@ -283,6 +311,8 @@ public sealed class VocabularyEditor : INotifyPropertyChanged
 
     private void NotifyPhrases()
     {
+        foreach (var option in Scopes)
+            option.Count = all.Count(row => row.Scope == option.Code && !string.IsNullOrWhiteSpace(row.Phrase));
         Notify(nameof(BudgetText));
         Notify(nameof(HasVisiblePhrases));
     }

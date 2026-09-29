@@ -66,6 +66,14 @@ internal static class SettingsVocabularyProbe
             Require(((FrameworkElement)window.FindName("VocabularyPage")).IsVisible, "Opening from the Vocabulary action must select the vocabulary page.");
             var list = (ItemsControl)window.FindName("VocabularyList");
             Require(list.Items.Count == 17, "The shared scope must list only shared phrases.");
+            var scopes = window.Vocabulary.Scopes;
+            Require(scopes.Single(option => option.Code == "shared").Label == "Shared across languages (17)"
+                && scopes.Single(option => option.Code == "pl").Label == "Polish (1)"
+                && scopes.Single(option => option.Code == "en").Label == "English",
+                "The language picker must show how many phrases each language holds.");
+            window.Vocabulary.Add().Phrase = "Nowa fraza";
+            Require(scopes.Single(option => option.Code == "shared").Count == 18, "Counts must follow edits.");
+            window.Vocabulary.Remove(window.Vocabulary.Visible.Last());
             var boxes = Descendants(list).OfType<TextBox>().ToList();
             Require(boxes.All(box => box.ActualWidth > 200 && AutomationPeer(box).GetName() == "Vocabulary phrase"), "Phrase boxes need width and accessible names.");
             var scroll = (ScrollViewer)window.FindName("SettingsScrollViewer");
@@ -93,6 +101,21 @@ internal static class SettingsVocabularyProbe
         finally
         {
             window.Close();
+        }
+
+        // Teach opens Settings on the language it just saved to.
+        var opened = Create(PortableSettings.Default with { Vocabulary = entries }, openVocabulary: true, vocabularyScope: "pl");
+        opened.Show();
+        try
+        {
+            Flush(opened);
+            Require(Equals(((ComboBox)opened.FindName("VocabularyScopeBox")).SelectedValue, "pl") && ((ItemsControl)opened.FindName("VocabularyList")).Items.Count == 1,
+                "Opening on a language must select it and list its phrases.");
+            Capture(opened, outputDirectory, "settings-vocabulary-opened-on-language.png");
+        }
+        finally
+        {
+            opened.Close();
         }
     }
 
@@ -136,8 +159,8 @@ internal static class SettingsVocabularyProbe
             "Saved settings must carry normalized phrases, their scopes, and the strength.");
     }
 
-    private static SettingsWindow Create(PortableSettings settings, bool openVocabulary) =>
-        new(settings, [new MicrophoneOption("default", "System default microphone")], openVocabulary) { ShowInTaskbar = false };
+    private static SettingsWindow Create(PortableSettings settings, bool openVocabulary, string? vocabularyScope = null) =>
+        new(settings, [new MicrophoneOption("default", "System default microphone")], openVocabulary, vocabularyScope) { ShowInTaskbar = false };
 
     private static AutomationPeer AutomationPeer(UIElement element) =>
         UIElementAutomationPeer.CreatePeerForElement(element) ?? throw new InvalidOperationException("Missing automation peer.");

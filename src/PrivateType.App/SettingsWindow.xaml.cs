@@ -18,10 +18,12 @@ public partial class SettingsWindow : Window
     private readonly VocabularyEditor vocabulary;
     private string? customSoundPath;
 
-    public SettingsWindow(PortableSettings settings, IReadOnlyList<MicrophoneOption> microphones, bool openVocabulary = false)
+    public SettingsWindow(PortableSettings settings, IReadOnlyList<MicrophoneOption> microphones, bool openVocabulary = false, string? vocabularyScope = null)
     {
         InitializeComponent();
         vocabulary = new VocabularyEditor(settings.Vocabulary, settings.VocabularyStrength, settings.VocabularyPacks);
+        if (VocabularyScopes.IsSupported(vocabularyScope))
+            vocabulary.Scope = vocabularyScope!;
         VocabularyPage.DataContext = vocabulary;
         ChoosePackFile = PickPackFile;
         ConfirmPackRemoval = AskToRemovePack;

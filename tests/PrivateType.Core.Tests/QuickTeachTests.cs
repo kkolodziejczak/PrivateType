@@ -96,6 +96,50 @@ public sealed class QuickTeachTests
     }
 
     [Fact]
+    public void Fix_list_keeps_non_overlapping_fixes_in_sentence_order()
+    {
+        var fixes = new TeachFixList();
+        var mvvm = new TeachFix(3, 5, new VocabularyEntry("MVVM", "en"));
+        var app = new TeachFix(1, 1, new VocabularyEntry("App", VocabularyScopes.Shared));
+
+        Assert.True(fixes.TryAdd(mvvm));
+        Assert.True(fixes.TryAdd(app));
+        Assert.False(fixes.TryAdd(new TeachFix(5, 6, new VocabularyEntry("other", "en"))));
+        Assert.False(fixes.TryAdd(new TeachFix(0, 7, new VocabularyEntry("other", "en"))));
+
+        Assert.Equal([app, mvvm], fixes.Fixes);
+        Assert.True(fixes.Covers(4));
+        Assert.False(fixes.Covers(2));
+        Assert.True(fixes.Overlaps(2, 3));
+        Assert.False(fixes.Overlaps(6, 8));
+
+        fixes.Remove(mvvm);
+        Assert.False(fixes.Covers(4));
+        Assert.True(fixes.TryAdd(new TeachFix(4, 6, new VocabularyEntry("other", "en"))));
+    }
+
+    [Fact]
+    public void Fix_list_saves_a_repeated_phrase_once()
+    {
+        var fixes = new TeachFixList();
+        fixes.TryAdd(new TeachFix(0, 0, new VocabularyEntry("MVVM", "en")));
+        fixes.TryAdd(new TeachFix(4, 4, new VocabularyEntry("MVVM", "en")));
+        fixes.TryAdd(new TeachFix(6, 6, new VocabularyEntry("MVVM", "pl")));
+
+        Assert.Equal([new VocabularyEntry("MVVM", "en"), new VocabularyEntry("MVVM", "pl")], fixes.Entries);
+    }
+
+    [Fact]
+    public void Merge_appends_only_new_phrases_after_the_existing_ones()
+    {
+        IReadOnlyList<VocabularyEntry> existing = [new("Kubernetes", VocabularyScopes.Shared), new("MVVM", "en")];
+
+        var merged = TaughtVocabulary.Merge(existing, [new("MVVM", "en"), new("WPF", "en"), new("WPF", "en"), new("MVVM", "pl")]);
+
+        Assert.Equal([.. existing, new("WPF", "en"), new("MVVM", "pl")], merged);
+    }
+
+    [Fact]
     public async Task Session_reports_the_recognized_text_even_when_insertion_is_skipped()
     {
         var recognizer = new FakeRecognizer();

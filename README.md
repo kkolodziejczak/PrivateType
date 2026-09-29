@@ -102,9 +102,12 @@ this computer and is only given to the local speech engine.
 
 **Teach from last dictation…** in the bubble menu is the quickest way to add a
 phrase. It shows the sentence you just dictated as words: click the first and
-last words it got wrong, type the correct spelling, and choose **Save term**.
-Only your typed spelling is saved. The sentence itself lives only in memory,
-and is discarded when that window closes, when you start the next dictation, or
+last words it got wrong, type the correct spelling, and choose **Add fix**.
+Repeat for every other mistake in the sentence, each with its own language if
+needed, then save them all at once. **Open vocabulary** then shows the saved
+terms in Settings; the language picker there shows how many phrases each
+language holds. Only your typed spellings are saved. The sentence itself lives
+only in memory, and is discarded when that window closes, when you start the next dictation, or
 when PrivateType exits. The text already typed into the other app is not
 changed.
 

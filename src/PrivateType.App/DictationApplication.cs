@@ -285,7 +285,7 @@ internal sealed class DictationApplication : IDisposable
             : $"Dictation ready — unavailable: {availability.DescribeDisabledHotkeys()}";
     }
 
-    private void ShowSettings(bool openVocabulary = false)
+    private void ShowSettings(bool openVocabulary = false, string? vocabularyScope = null)
     {
         if (settingsStore is null || modelProvisioner is null)
             return;
@@ -307,7 +307,7 @@ internal sealed class DictationApplication : IDisposable
         }
 
         hotkey.Suspend();
-        var window = new SettingsWindow(settings, MicrophoneCatalog.Enumerate(), openVocabulary);
+        var window = new SettingsWindow(settings, MicrophoneCatalog.Enumerate(), openVocabulary, vocabularyScope);
         window.Loaded += (_, _) => BringToForeground(window);
         window.DiagnosticsRequested += () => ShowDiagnostics(window);
         window.LicensesRequested += () => new OpenSourceLicensesWindow { Owner = window }.ShowDialog();
@@ -449,7 +449,7 @@ internal sealed class DictationApplication : IDisposable
             return;
 
         hotkey.Suspend();
-        var window = new TeachWindow(dictation, settings.VocabularyStrength, SaveTaughtPhrase);
+        var window = new TeachWindow(dictation, settings.VocabularyStrength, SaveTaughtPhrases);
         window.Loaded += (_, _) => BringToForeground(window);
         openTeachWindow = window;
         try
@@ -462,17 +462,19 @@ internal sealed class DictationApplication : IDisposable
             lastDictation.Clear();
             RestoreHotkeys(settings.Shortcuts);
         }
+
+        if (window.VocabularyScopeToOpen is { } scope)
+            ShowSettings(openVocabulary: true, vocabularyScope: scope);
     }
 
-    // Adds the phrase to personal vocabulary. In-memory settings change only after the file is saved.
-    private string? SaveTaughtPhrase(VocabularyEntry entry)
+    // Adds the phrases to personal vocabulary in one save, or none of them. In-memory settings
+    // change only after the file is saved.
+    private string? SaveTaughtPhrases(IReadOnlyList<VocabularyEntry> entries)
     {
         if (settingsStore is null)
             return "Settings are not available yet.";
 
-        var candidate = settings.Vocabulary.Contains(entry)
-            ? settings
-            : settings with { Vocabulary = [.. settings.Vocabulary, entry] };
+        var candidate = settings with { Vocabulary = TaughtVocabulary.Merge(settings.Vocabulary, entries) };
         if (PortableSettingsValidator.Validate(candidate) is { } error)
             return error;
 
@@ -483,7 +485,7 @@ internal sealed class DictationApplication : IDisposable
         catch (Exception exception)
         {
             RecordDiagnostic("vocabulary.teach.save.failed", exception);
-            return "The phrase could not be saved. Check that the PrivateType folder is writable, then try again.";
+            return "The phrases could not be saved. Check that the PrivateType folder is writable, then try again.";
         }
 
         settings = candidate;

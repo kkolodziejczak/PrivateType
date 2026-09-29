@@ -99,3 +99,40 @@ public sealed class WordRangeSelection
     public string SelectedText(string text, IReadOnlyList<WordSpan> spans) =>
         Range is { } range ? text[spans[range.First].Start..spans[range.Last].End] : string.Empty;
 }
+
+// One correction in the teach dialog: the word range it replaces and the phrase to save.
+public sealed record TeachFix(int First, int Last, VocabularyEntry Entry);
+
+// The corrections for one sentence, in sentence order. Two fixes never share a word.
+public sealed class TeachFixList
+{
+    private readonly List<TeachFix> fixes = [];
+
+    public IReadOnlyList<TeachFix> Fixes => fixes;
+
+    public bool Covers(int index) => fixes.Any(fix => index >= fix.First && index <= fix.Last);
+
+    public bool Overlaps(int first, int last) => fixes.Any(fix => first <= fix.Last && last >= fix.First);
+
+    public bool TryAdd(TeachFix fix)
+    {
+        if (Overlaps(fix.First, fix.Last))
+            return false;
+
+        fixes.Add(fix);
+        fixes.Sort((left, right) => left.First.CompareTo(right.First));
+        return true;
+    }
+
+    public void Remove(TeachFix fix) => fixes.Remove(fix);
+
+    // The same phrase fixed twice in one sentence is saved once.
+    public IReadOnlyList<VocabularyEntry> Entries => fixes.Select(fix => fix.Entry).Distinct().ToArray();
+}
+
+public static class TaughtVocabulary
+{
+    // Appends taught phrases that are not already in the vocabulary, keeping the existing order.
+    public static IReadOnlyList<VocabularyEntry> Merge(IReadOnlyList<VocabularyEntry> existing, IEnumerable<VocabularyEntry> taught) =>
+        [.. existing, .. taught.Distinct().Where(entry => !existing.Contains(entry))];
+}
