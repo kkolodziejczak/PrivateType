@@ -120,8 +120,26 @@ public sealed class WordRangeSelection
         Range is { } range ? text[spans[range.First].Start..spans[range.Last].End] : string.Empty;
 }
 
-// One correction in the teach dialog: the word range it replaces and the phrase to save.
-public sealed record TeachFix(int First, int Last, VocabularyEntry Entry);
+// One correction in the teach dialog: the word range it replaces, the wording the model
+// produced there, and the phrase to save.
+public sealed record TeachFix(int First, int Last, VocabularyEntry Entry, string Heard = "")
+{
+    // Kept only when it differs from the phrase by more than case or punctuation.
+    public VocabularyCorrection? Correction
+    {
+        get
+        {
+            var heard = VocabularyRules.Normalize(Heard);
+            var key = VocabularyCorrectionRules.Key(heard);
+            return key.Length == 0 || key == VocabularyCorrectionRules.Key(Entry.Phrase) || VocabularyRules.ValidatePhrase(heard) is not null
+                ? null
+                : new VocabularyCorrection(heard, Entry.Phrase, Entry.Scope);
+        }
+    }
+}
+
+// What one Teach save adds: vocabulary phrases and the wordings they replace.
+public sealed record TaughtTerms(IReadOnlyList<VocabularyEntry> Entries, IReadOnlyList<VocabularyCorrection> Corrections);
 
 // The corrections for one sentence, in sentence order. Two fixes never share a word.
 public sealed class TeachFixList
@@ -148,6 +166,12 @@ public sealed class TeachFixList
 
     // The same phrase fixed twice in one sentence is saved once.
     public IReadOnlyList<VocabularyEntry> Entries => fixes.Select(fix => fix.Entry).Distinct().ToArray();
+
+    // One rule per wording and language; a later fix of the same wording wins.
+    public IReadOnlyList<VocabularyCorrection> Corrections =>
+        VocabularyCorrectionRules.Merge([], fixes.Select(fix => fix.Correction).OfType<VocabularyCorrection>());
+
+    public TaughtTerms ToTaughtTerms() => new(Entries, Corrections);
 }
 
 public static class TaughtVocabulary

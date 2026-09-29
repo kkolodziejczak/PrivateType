@@ -147,7 +147,7 @@
         <StackPanel Grid.Row="5" Margin="0,12,0,0">
           <TextBlock x:Name="StrengthText" Foreground="{DynamicResource ColorText}" Opacity="0.55" FontSize="12" TextWrapping="Wrap" />
           <TextBlock Margin="0,2,0,0" Foreground="{DynamicResource ColorText}" Opacity="0.55" FontSize="12" TextWrapping="Wrap"
-                     Text="The text already typed into the other app is not changed." />
+                     Text="Each fix also remembers the words it replaces, so they are corrected after future dictations. The rest of the sentence is not saved, and text already typed into the other app is not changed." />
           <TextBlock x:Name="ErrorText" Margin="0,8,0,0" Foreground="{DynamicResource ColorAccent300}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
           <StackPanel Margin="0,10,0,0" Orientation="Horizontal" HorizontalAlignment="Right">
             <Button Margin="0,0,8,0" Content="Cancel" Click="CloseWindow" />

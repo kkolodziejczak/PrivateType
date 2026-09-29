@@ -467,14 +467,18 @@ internal sealed class DictationApplication : IDisposable
             ShowSettings(openVocabulary: true, vocabularyScope: scope);
     }
 
-    // Adds the phrases to personal vocabulary in one save, or none of them. In-memory settings
-    // change only after the file is saved.
-    private string? SaveTaughtPhrases(IReadOnlyList<VocabularyEntry> entries)
+    // Adds the phrases and the wordings they replace in one save, or none of them. In-memory
+    // settings change only after the file is saved.
+    private string? SaveTaughtPhrases(TaughtTerms taught)
     {
         if (settingsStore is null)
             return "Settings are not available yet.";
 
-        var candidate = settings with { Vocabulary = TaughtVocabulary.Merge(settings.Vocabulary, entries) };
+        var candidate = settings with
+        {
+            Vocabulary = TaughtVocabulary.Merge(settings.Vocabulary, taught.Entries),
+            VocabularyCorrections = VocabularyCorrectionRules.Merge(settings.VocabularyCorrections, taught.Corrections)
+        };
         if (PortableSettingsValidator.Validate(candidate) is { } error)
             return error;
 
@@ -502,7 +506,10 @@ internal sealed class DictationApplication : IDisposable
             new ForegroundTargetGuard(new Win32ForegroundTarget()),
             settings.InsertionMode == TextInsertionModes.Paste ? new ClipboardPasteInjector() : new UnicodeTextInjector(),
             new RecognitionRequest(localeCode, VocabularyComposer.Compose(settings.Vocabulary, settings.VocabularyPacks, localeCode), settings.VocabularyStrength),
-            diagnostics: diagnostics);
+            diagnostics: diagnostics,
+            correctText: settings.CorrectAfterDictation
+                ? TranscriptCorrector.Create(settings.Vocabulary, settings.VocabularyPacks, settings.VocabularyCorrections, localeCode).Correct
+                : null);
         session.PresentationChanged += presentation => Present(localeCode, presentation);
         session.AudioMeterChanged += PresentAudioMeter;
         // Keep the result only if no newer dictation has started since this one.

@@ -25,6 +25,7 @@ The feature must preserve PrivateType's defining behavior: hold-to-dictate, loca
 - [x] Teaching changes future recognition only; it never rewrites or copies over already injected text.
 - [x] The last transcript exists only in memory until the next dictation begins, the teach dialog is saved/dismissed, or the app exits.
 - [x] Personal vocabulary and quick teach persist only the desired entry, its scope, and influence; never persist the misheard wording.
+  - **Superseded 2026-09-29 by owner decision:** quick teach also persists each fix's misheard wording as a local, user-editable `VocabularyCorrection` (heard → phrase, scope), which *Fix phrases after dictation* rewrites in the finished sentence. The rest of the sentence is still never persisted, and corrections never enter diagnostics.
 - [x] Import and export packs manually; PrivateType never downloads, discovers, or synchronizes packs.
 - [x] A share file is a top-level JSON array of `{ "phrase", "weight" }` entries. `weight` is optional and defaults to `normal`.
 - [x] Share files contain no pack ID, version, author, attribution, license, provenance, locale, or update metadata.

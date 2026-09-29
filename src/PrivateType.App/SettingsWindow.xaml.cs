@@ -21,7 +21,7 @@ public partial class SettingsWindow : Window
     public SettingsWindow(PortableSettings settings, IReadOnlyList<MicrophoneOption> microphones, bool openVocabulary = false, string? vocabularyScope = null)
     {
         InitializeComponent();
-        vocabulary = new VocabularyEditor(settings.Vocabulary, settings.VocabularyStrength, settings.VocabularyPacks);
+        vocabulary = new VocabularyEditor(settings.Vocabulary, settings.VocabularyStrength, settings.VocabularyPacks, settings.VocabularyCorrections, settings.CorrectAfterDictation);
         if (VocabularyScopes.IsSupported(vocabularyScope))
             vocabulary.Scope = vocabularyScope!;
         VocabularyPage.DataContext = vocabulary;
@@ -106,6 +106,26 @@ public partial class SettingsWindow : Window
     private void RemoveVocabularyPhrase(object sender, RoutedEventArgs e)
     {
         vocabulary.Remove((VocabularyPhraseEditor)((FrameworkElement)sender).Tag);
+        ValidationText.Text = string.Empty;
+    }
+
+    private void AddCorrection(object sender, RoutedEventArgs e)
+    {
+        var row = vocabulary.AddCorrection();
+        ValidationText.Text = string.Empty;
+        Dispatcher.BeginInvoke(() =>
+        {
+            if (CorrectionList.ItemContainerGenerator.ContainerFromItem(row) is FrameworkElement container)
+            {
+                container.BringIntoView();
+                FindChild<System.Windows.Controls.TextBox>(container)?.Focus();
+            }
+        }, System.Windows.Threading.DispatcherPriority.Loaded);
+    }
+
+    private void RemoveCorrection(object sender, RoutedEventArgs e)
+    {
+        vocabulary.RemoveCorrection((VocabularyCorrectionEditor)((FrameworkElement)sender).Tag);
         ValidationText.Text = string.Empty;
     }
 
@@ -358,13 +378,16 @@ public partial class SettingsWindow : Window
             Vocabulary = vocabulary.Entries,
             VocabularyPacks = vocabulary.Packs,
             VocabularyStrength = vocabulary.Strength,
+            VocabularyCorrections = vocabulary.Corrections,
+            CorrectAfterDictation = vocabulary.CorrectAfterDictation,
             ModelIdleTimeoutMinutes = IdleTimeoutBox.SelectedValue is int minutes ? minutes : 10
         };
         var validationError = PortableSettingsValidator.Validate(settings);
         if (validationError is not null)
         {
             ValidationText.Text = validationError;
-            if (VocabularyRules.Validate(settings.Vocabulary, settings.VocabularyPacks) is not null)
+            if (VocabularyRules.Validate(settings.Vocabulary, settings.VocabularyPacks) is not null
+                || VocabularyCorrectionRules.Validate(settings.VocabularyCorrections) is not null)
                 VocabularyTab.IsChecked = true;
             return;
         }

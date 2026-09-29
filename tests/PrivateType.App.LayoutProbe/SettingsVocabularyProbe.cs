@@ -104,13 +104,32 @@ internal static class SettingsVocabularyProbe
         }
 
         // Teach opens Settings on the language it just saved to.
-        var opened = Create(PortableSettings.Default with { Vocabulary = entries }, openVocabulary: true, vocabularyScope: "pl");
+        var opened = Create(PortableSettings.Default with
+        {
+            Vocabulary = entries,
+            VocabularyCorrections = [new("free the printing", "3D printing", "pl"), new("fusion tree sixty", "Fusion 360", "pl"), new("sea sharp", "C#", "shared")]
+        }, openVocabulary: true, vocabularyScope: "pl");
         opened.Show();
         try
         {
             Flush(opened);
             Require(Equals(((ComboBox)opened.FindName("VocabularyScopeBox")).SelectedValue, "pl") && ((ItemsControl)opened.FindName("VocabularyList")).Items.Count == 1,
                 "Opening on a language must select it and list its phrases.");
+            var corrections = (ItemsControl)opened.FindName("CorrectionList");
+            Require(corrections.Items.Count == 2 && ((CheckBox)opened.FindName("CorrectAfterDictationBox")).IsChecked == true
+                && !((FrameworkElement)opened.FindName("CorrectionsEmptyState")).IsVisible,
+                "The language's taught corrections must be listed with correction on by default.");
+            var correctionBoxes = Descendants(corrections).OfType<TextBox>().ToList();
+            Require(correctionBoxes.Count == 4 && correctionBoxes.All(box => box.ActualWidth > 120 && AutomationPeer(box).GetName() is "Heard as" or "Write as"),
+                "Correction rows need two named, usefully wide boxes.");
+            ((FrameworkElement)opened.FindName("CorrectionList")).BringIntoView();
+            Flush(opened);
+            Capture(opened, outputDirectory, "settings-vocabulary-corrections.png");
+            ((ComboBox)opened.FindName("VocabularyScopeBox")).SelectedValue = "en";
+            Flush(opened);
+            Require(corrections.Items.Count == 0 && ((FrameworkElement)opened.FindName("CorrectionsEmptyState")).IsVisible, "A language without corrections must show the empty state.");
+            ((ComboBox)opened.FindName("VocabularyScopeBox")).SelectedValue = "pl";
+            Flush(opened);
             Capture(opened, outputDirectory, "settings-vocabulary-opened-on-language.png");
         }
         finally
@@ -142,6 +161,16 @@ internal static class SettingsVocabularyProbe
                 editor.Add().Phrase = "WireGuard";
                 editor.Add();
                 editor.Strength = "low";
+
+                var half = editor.AddCorrection();
+                half.Heard = "wire guard";
+                Click(window, "SaveSettingsButton");
+                Require(window.IsVisible && ((TextBlock)window.FindName("ValidationText")).Text.StartsWith("Correction:", StringComparison.Ordinal)
+                    && !((TextBlock)window.FindName("ValidationText")).Text.Contains("wire", StringComparison.Ordinal),
+                    "A half-filled correction must block saving with a content-free error.");
+                half.Phrase = "WireGuard";
+                editor.AddCorrection();
+                editor.CorrectAfterDictation = false;
                 Click(window, "SaveSettingsButton");
             }
             catch (Exception exception)
@@ -155,8 +184,10 @@ internal static class SettingsVocabularyProbe
             throw failure;
         Require(window.SavedSettings is { } saved
             && saved.Vocabulary.SequenceEqual([new VocabularyEntry("Duplicate", "shared"), new VocabularyEntry("WireGuard", "en")])
-            && saved.VocabularyStrength == "low",
-            "Saved settings must carry normalized phrases, their scopes, and the strength.");
+            && saved.VocabularyStrength == "low"
+            && saved.VocabularyCorrections.SequenceEqual([new VocabularyCorrection("wire guard", "WireGuard", "en")])
+            && !saved.CorrectAfterDictation,
+            "Saved settings must carry normalized phrases, their scopes, the strength, corrections, and the correction switch.");
     }
 
     private static SettingsWindow Create(PortableSettings settings, bool openVocabulary, string? vocabularyScope = null) =>

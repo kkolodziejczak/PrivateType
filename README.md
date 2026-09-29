@@ -107,10 +107,21 @@ type the correct spelling, and choose **Add fix**.
 Repeat for every other mistake in the sentence, each with its own language if
 needed, then save them all at once. **Open vocabulary** then shows the saved
 terms in Settings; the language picker there shows how many phrases each
-language holds. Only your typed spellings are saved. The sentence itself lives
-only in memory, and is discarded when that window closes, when you start the next dictation, or
-when PrivateType exits. The text already typed into the other app is not
-changed.
+language holds. Each fix saves your typed spelling and the few words it
+replaced, so those words are corrected in future dictations. The rest of the
+sentence lives only in memory, and is discarded when that window closes, when
+you start the next dictation, or when PrivateType exits. The text already typed
+into the other app is not changed.
+
+**Fix phrases after dictation** (on by default, under **After dictation** in the
+same page) corrects the finished sentence when you release the shortcut, before
+it is inserted. The model tends to write what it hears, such as "three D
+printing" or "fusion three sixty", and vocabulary alone can't turn those into
+"3D printing" or "Fusion 360". This step rewrites them, whether the numbers and
+letters are said in English or Polish. It also rewrites every **Heard as → Write
+as** pair listed there, which Teach adds for you and you can edit or remove.
+Only whole words are replaced, and never across a full stop or comma. With it
+on, Normal strength is usually enough.
 
 **Packs** are named phrase lists you can share. **Import pack…** reads a
 `.privatetype-vocabulary.json` file (a JSON list of phrases), shows every
@@ -170,7 +181,8 @@ if it is not already installed.
   recent sentence is kept in memory only for **Teach from last dictation…**,
   until the next dictation starts, the teach window closes, or the app exits.
 - `app/data/settings.json` stores only the selected microphone, shortcuts and
-  their languages, shortcut behavior, insertion mode, vocabulary, bubble location,
+  their languages, shortcut behavior, insertion mode, vocabulary (including the
+  heard-as wordings you taught or typed), bubble location,
   Windows-startup preference, model idle timeout, and ready-sound choice.
 - The model is downloaded separately from NVIDIA; it is not included in the
   app ZIP. See [MODEL_ARTIFACT.md](MODEL_ARTIFACT.md) for its source and

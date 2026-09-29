@@ -156,10 +156,10 @@ internal static class TeachProbe
 
     private static void VerifyRetryAndSave()
     {
-        var attempts = new List<IReadOnlyList<VocabularyEntry>>();
-        var window = new TeachWindow(new FinalizedDictation(Sentence, "pl-PL"), "strong", entries =>
+        var attempts = new List<TaughtTerms>();
+        var window = new TeachWindow(new FinalizedDictation(Sentence, "pl-PL"), "strong", taught =>
         {
-            attempts.Add(entries);
+            attempts.Add(taught);
             return attempts.Count == 1 ? "The phrases could not be saved. Check that the PrivateType folder is writable, then try again." : null;
         }) { ShowInTaskbar = false };
         Exception? failure = null;
@@ -203,8 +203,11 @@ internal static class TeachProbe
         if (failure is not null)
             throw failure;
         Require(result == true && attempts.Count == 2
-            && attempts.All(entries => entries.SequenceEqual([new VocabularyEntry("App", VocabularyScopes.Shared), new VocabularyEntry("MVVM", "pl")])),
+            && attempts.All(taught => taught.Entries.SequenceEqual([new VocabularyEntry("App", VocabularyScopes.Shared), new VocabularyEntry("MVVM", "pl")])),
             "Retry must save only the typed phrases, each for its own language.");
+        // "app" -> "App" differs only in case, so only the MVVM fix keeps its heard wording.
+        Require(attempts.All(taught => taught.Corrections.SequenceEqual([new VocabularyCorrection("model", "MVVM", "pl")])),
+            "Each fix must remember the words it replaced, unless they differ only in case.");
         Require(window.VocabularyScopeToOpen == VocabularyScopes.Shared, "Open vocabulary must ask for the first saved term's language.");
     }
 

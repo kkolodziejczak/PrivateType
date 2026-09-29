@@ -333,6 +333,45 @@
             </ItemsControl.ItemTemplate>
           </ItemsControl>
           <Button x:Name="AddPhraseButton" Style="{StaticResource GhostButton}" Margin="0,4,0,0" Width="136" HorizontalAlignment="Left" Content="+ Add phrase" Click="AddVocabularyPhrase" />
+          <TextBlock Margin="0,22,0,0" FontSize="12" FontWeight="SemiBold" Opacity="0.7" Text="AFTER DICTATION" />
+          <CheckBox x:Name="CorrectAfterDictationBox" Margin="0,10,0,0" Content="Fix phrases after dictation" IsChecked="{Binding CorrectAfterDictation, Mode=TwoWay}"
+                    AutomationProperties.Name="Fix phrases after dictation" />
+          <TextBlock Margin="0,6,0,0" Foreground="{DynamicResource ColorText}" Opacity="0.55" FontSize="12" TextWrapping="Wrap"
+                     Text="When you release the shortcut, spoken forms of your phrases, such as “three D printing” for 3D printing, and the wordings below are rewritten before the text is inserted. This works in every language; numbers and letters are recognized in English and Polish." />
+          <Grid Margin="0,12,0,0" Visibility="{Binding HasVisibleCorrections, Converter={StaticResource BoolToVisibility}}">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="28" />
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="39" />
+            </Grid.ColumnDefinitions>
+            <TextBlock FontSize="12" Opacity="0.7" Text="Heard as" />
+            <TextBlock Grid.Column="2" FontSize="12" Opacity="0.7" Text="Write as" />
+          </Grid>
+          <Border x:Name="CorrectionsEmptyState" Margin="0,10,0,0" Padding="12" Background="{DynamicResource ColorBg}" BorderBrush="{DynamicResource ColorDivider}" BorderThickness="1" CornerRadius="8"
+                  Visibility="{Binding HasNoVisibleCorrections, Converter={StaticResource BoolToVisibility}}">
+            <TextBlock Foreground="{DynamicResource ColorText}" Opacity="0.8" FontSize="13" TextWrapping="Wrap" Text="{Binding CorrectionsEmptyText}" />
+          </Border>
+          <ItemsControl x:Name="CorrectionList" Margin="0,6,0,0" ItemsSource="{Binding VisibleCorrections}" KeyboardNavigation.TabNavigation="Continue">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Grid Margin="0,0,0,8">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="28" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                  </Grid.ColumnDefinitions>
+                  <TextBox Height="31" Padding="9,0" MaxLength="120" Text="{Binding Heard, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Heard as" />
+                  <TextBlock Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.6" Text="→" />
+                  <TextBox Grid.Column="2" Height="31" Padding="9,0" MaxLength="120" Text="{Binding Phrase, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Write as" />
+                  <Button Grid.Column="3" Margin="8,0,0,0" Content="—" Tag="{Binding}" Click="RemoveCorrection" FontSize="12" Width="31" Height="31" Padding="0"
+                          ToolTip="Remove correction" AutomationProperties.Name="Remove correction" />
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <Button x:Name="AddCorrectionButton" Style="{StaticResource GhostButton}" Margin="0,4,0,0" Width="160" HorizontalAlignment="Left" Content="+ Add correction" Click="AddCorrection" />
           <Grid Margin="0,22,0,0">
             <TextBlock VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold" Opacity="0.7" Text="PACKS" />
             <StackPanel HorizontalAlignment="Right" Orientation="Horizontal">

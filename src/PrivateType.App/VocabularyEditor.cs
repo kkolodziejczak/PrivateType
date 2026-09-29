@@ -25,6 +25,38 @@ public sealed class VocabularyPhraseEditor(string scope, string phrase) : INotif
     }
 }
 
+public sealed class VocabularyCorrectionEditor(string scope, string heard, string phrase) : INotifyPropertyChanged
+{
+    private string heard = heard;
+    private string phrase = phrase;
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    public string Scope { get; } = scope;
+
+    public string Heard
+    {
+        get => heard;
+        set
+        {
+            heard = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Heard)));
+        }
+    }
+
+    public string Phrase
+    {
+        get => phrase;
+        set
+        {
+            phrase = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Phrase)));
+        }
+    }
+
+    public bool IsBlank => string.IsNullOrWhiteSpace(heard) && string.IsNullOrWhiteSpace(phrase);
+}
+
 public sealed class VocabularyPackItem : INotifyPropertyChanged
 {
     private VocabularyPack pack;
@@ -103,16 +135,58 @@ public sealed class VocabularyEditor : INotifyPropertyChanged
 {
     private readonly List<VocabularyPhraseEditor> all;
     private readonly List<VocabularyPackItem> packs;
+    private readonly List<VocabularyCorrectionEditor> corrections;
     private string scope = VocabularyScopes.Shared;
     private string strength;
     private bool showAllPacks;
 
-    public VocabularyEditor(IReadOnlyList<VocabularyEntry> entries, string strength, IReadOnlyList<VocabularyPack>? packs = null)
+    public VocabularyEditor(
+        IReadOnlyList<VocabularyEntry> entries,
+        string strength,
+        IReadOnlyList<VocabularyPack>? packs = null,
+        IReadOnlyList<VocabularyCorrection>? corrections = null,
+        bool correctAfterDictation = true)
     {
         all = entries.Select(entry => Track(new VocabularyPhraseEditor(entry.Scope, entry.Phrase))).ToList();
         this.packs = (packs ?? []).Select(pack => Track(new VocabularyPackItem(pack))).ToList();
+        this.corrections = (corrections ?? []).Select(correction => new VocabularyCorrectionEditor(correction.Scope, correction.Heard, correction.Phrase)).ToList();
         this.strength = strength;
+        CorrectAfterDictation = correctAfterDictation;
         Refresh();
+    }
+
+    public bool CorrectAfterDictation { get; set; }
+
+    public ObservableCollection<VocabularyCorrectionEditor> VisibleCorrections { get; } = [];
+
+    public bool HasNoVisibleCorrections => VisibleCorrections.Count == 0;
+
+    public bool HasVisibleCorrections => VisibleCorrections.Count > 0;
+
+    public string CorrectionsEmptyText => scope == VocabularyScopes.Shared
+        ? "No shared corrections yet. Teach from last dictation adds them, or add one here."
+        : $"No {VocabularyScopes.Get(scope).DisplayName} corrections yet. Teach from last dictation adds them, or add one here.";
+
+    // Rows left completely blank are dropped; half-filled rows are kept so validation can explain them.
+    public IReadOnlyList<VocabularyCorrection> Corrections =>
+        corrections.Where(row => !row.IsBlank)
+            .Select(row => new VocabularyCorrection(VocabularyRules.Normalize(row.Heard ?? string.Empty), VocabularyRules.Normalize(row.Phrase ?? string.Empty), row.Scope))
+            .ToArray();
+
+    public VocabularyCorrectionEditor AddCorrection()
+    {
+        var row = new VocabularyCorrectionEditor(scope, string.Empty, string.Empty);
+        corrections.Add(row);
+        VisibleCorrections.Add(row);
+        NotifyCorrections();
+        return row;
+    }
+
+    public void RemoveCorrection(VocabularyCorrectionEditor row)
+    {
+        corrections.Remove(row);
+        VisibleCorrections.Remove(row);
+        NotifyCorrections();
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -297,9 +371,21 @@ public sealed class VocabularyEditor : INotifyPropertyChanged
         foreach (var pack in packs.Where(pack => showAllPacks || pack.Scope == scope).OrderBy(pack => pack.Name, StringComparer.CurrentCultureIgnoreCase))
             VisiblePacks.Add(pack);
 
+        VisibleCorrections.Clear();
+        foreach (var row in corrections.Where(row => row.Scope == scope))
+            VisibleCorrections.Add(row);
+
         NotifyRows();
         Notify(nameof(HasNoVisiblePacks));
         Notify(nameof(PacksEmptyText));
+        NotifyCorrections();
+        Notify(nameof(CorrectionsEmptyText));
+    }
+
+    private void NotifyCorrections()
+    {
+        Notify(nameof(HasNoVisibleCorrections));
+        Notify(nameof(HasVisibleCorrections));
     }
 
     private void NotifyRows()

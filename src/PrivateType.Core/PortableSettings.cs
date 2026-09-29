@@ -31,6 +31,9 @@ public sealed record PortableSettings(
     public IReadOnlyList<VocabularyEntry> Vocabulary { get; init; } = [];
     public IReadOnlyList<VocabularyPack> VocabularyPacks { get; init; } = [];
     public string VocabularyStrength { get; init; } = VocabularyStrengths.Normal;
+    public IReadOnlyList<VocabularyCorrection> VocabularyCorrections { get; init; } = [];
+    // Rewrites spoken forms and taught wordings in the finished sentence before it is inserted.
+    public bool CorrectAfterDictation { get; init; } = true;
 
     public static PortableSettings Default { get; } = new("default", ShortcutBinding.Defaults);
 }
@@ -89,6 +92,9 @@ public static class PortableSettingsValidator
                 var personal = VocabularyRules.KeepValid(settings.Vocabulary);
                 return settings with { Vocabulary = personal, VocabularyPacks = VocabularyRules.KeepValidPacks(personal, settings.VocabularyPacks) };
             }),
+        new("vocabulary corrections",
+            settings => VocabularyCorrectionRules.Validate(settings.VocabularyCorrections),
+            settings => settings with { VocabularyCorrections = VocabularyCorrectionRules.KeepValid(settings.VocabularyCorrections) }),
         new("vocabulary strength",
             settings => VocabularyStrengths.IsSupported(settings.VocabularyStrength) ? null : "Choose a supported vocabulary strength.",
             settings => settings with { VocabularyStrength = VocabularyStrengths.Normal }),

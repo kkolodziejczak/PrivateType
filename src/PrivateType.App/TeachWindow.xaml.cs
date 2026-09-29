@@ -47,16 +47,16 @@ public sealed class TeachWord(int index, string text) : INotifyPropertyChanged
     public bool IsAvailable => !isFixed;
 }
 
-public sealed class TeachFixRow(TeachFix fix, string heard)
+public sealed class TeachFixRow(TeachFix fix)
 {
     public TeachFix Fix { get; } = fix;
     public string Phrase => Fix.Entry.Phrase;
-    public string Detail => $"Replaces “{heard}” · {VocabularyScopes.Get(Fix.Entry.Scope).DisplayName}";
+    public string Detail => $"Replaces “{Fix.Heard}” · {VocabularyScopes.Get(Fix.Entry.Scope).DisplayName}";
     public string RemoveName => $"Remove fix {Phrase}";
 }
 
-// Shows the one ephemeral sentence as word chips and collects several fixes for it. Only the
-// typed correct spellings are saved; the heard words never leave this window.
+// Shows the one ephemeral sentence as word chips and collects several fixes for it. Each fix
+// saves the typed spelling and the few words it replaces; the rest of the sentence is never saved.
 public partial class TeachWindow : Window
 {
     private readonly string sentence;
@@ -65,11 +65,11 @@ public partial class TeachWindow : Window
     private readonly WordRangeSelection selection = new();
     private readonly TeachFixList fixes = new();
     private readonly ObservableCollection<TeachFixRow> fixRows = [];
-    private readonly Func<IReadOnlyList<VocabularyEntry>, string?> save;
+    private readonly Func<TaughtTerms, string?> save;
     private string lastPrefill = string.Empty;
     private string? savedScope;
 
-    public TeachWindow(FinalizedDictation dictation, string strength, Func<IReadOnlyList<VocabularyEntry>, string?> save)
+    public TeachWindow(FinalizedDictation dictation, string strength, Func<TaughtTerms, string?> save)
     {
         InitializeComponent();
         sentence = dictation.Text;
@@ -225,12 +225,11 @@ public partial class TeachWindow : Window
         if (!CanAddCurrent || selection.Range is not { } range || ScopeBox.SelectedValue is not string scope)
             return;
 
-        var fix = new TeachFix(range.First, range.Last, new VocabularyEntry(VocabularyRules.Normalize(DesiredBox.Text), scope));
+        var fix = new TeachFix(range.First, range.Last, new VocabularyEntry(VocabularyRules.Normalize(DesiredBox.Text), scope), HeardText());
         if (!fixes.TryAdd(fix))
             return;
 
-        var heard = HeardText();
-        fixRows.Insert(fixes.Fixes.ToList().IndexOf(fix), new TeachFixRow(fix, heard));
+        fixRows.Insert(fixes.Fixes.ToList().IndexOf(fix), new TeachFixRow(fix));
         MarkFixedWords();
         selection.Clear();
         lastPrefill = string.Empty;
@@ -263,18 +262,18 @@ public partial class TeachWindow : Window
 
         // A typed correction that was not added yet is saved too.
         AddCurrentFix();
-        var entries = fixes.Entries;
-        if (entries.Count == 0)
+        var taught = fixes.ToTaughtTerms();
+        if (taught.Entries.Count == 0)
             return;
 
-        if (save(entries) is { } error)
+        if (save(taught) is { } error)
         {
             // Keep the dialog, the sentence, and the fixes so the user can retry.
             ErrorText.Text = error;
             return;
         }
 
-        ShowSaved(entries);
+        ShowSaved(taught.Entries);
     }
 
     private void ShowSaved(IReadOnlyList<VocabularyEntry> entries)

@@ -13,6 +13,7 @@ public sealed class DictationSession : IAsyncDisposable
     private readonly RecognitionRequest request;
     private readonly IDictationDiagnostics diagnostics;
     private readonly TimeSpan finalizationTimeout;
+    private readonly Func<string, string>? correctText;
     private readonly string sessionId = Guid.NewGuid().ToString("N");
     private readonly Channel<ReadOnlyMemory<byte>> pcmFrames = Channel.CreateBounded<ReadOnlyMemory<byte>>(new BoundedChannelOptions(32)
     {
@@ -38,8 +39,10 @@ public sealed class DictationSession : IAsyncDisposable
         ITextInjector injector,
         RecognitionRequest request,
         TimeSpan? finalizationTimeout = null,
-        IDictationDiagnostics? diagnostics = null)
+        IDictationDiagnostics? diagnostics = null,
+        Func<string, string>? correctText = null)
     {
+        this.correctText = correctText;
         this.capture = capture;
         this.recognizer = recognizer;
         this.targetGuard = targetGuard;
@@ -146,6 +149,7 @@ public sealed class DictationSession : IAsyncDisposable
             return;
         }
 
+        text = Correct(text);
         Finalized?.Invoke(new FinalizedDictation(text, request.LocaleCode));
 
         var eligibility = targetGuard.GetEligibility();
@@ -159,6 +163,26 @@ public sealed class DictationSession : IAsyncDisposable
         Diagnose("injection.started", ("characters", text.Length));
         injector.Inject(text);
         Diagnose("injection.completed", ("characters", text.Length));
+    }
+
+    // A failed correction must never lose the dictation, so the recognized text is kept.
+    private string Correct(string text)
+    {
+        if (correctText is null)
+            return text;
+
+        try
+        {
+            var corrected = correctText(text);
+            if (!string.Equals(corrected, text, StringComparison.Ordinal))
+                Diagnose("text.corrected");
+            return corrected.Length == 0 ? text : corrected;
+        }
+        catch (Exception exception)
+        {
+            Diagnose("text.correction.failed", exception);
+            return text;
+        }
     }
 
     internal static string TargetCancellationMessage(TargetEligibility eligibility) => eligibility switch
