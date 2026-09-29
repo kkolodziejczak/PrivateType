@@ -367,9 +367,9 @@ After a successful save the dialog shows "Saved N terms to <languages>." with `O
 Selection contract:
 
 1. Each Unicode word span is a keyboard-focusable toggle/chip; punctuation remains visually attached to its word where practical.
-2. The first click sets the selection anchor and selects one word.
-3. Clicking another word selects the complete contiguous range between the anchor and that word.
-4. Clicking a new word after a completed range starts a new one-word selection; `Escape` clears the selection.
+2. The first click selects one word.
+3. Clicking a word outside the selection grows it to that word, so clicking each word of a long phrase in turn, or just its first and last word, selects the whole phrase.
+4. Clicking an end word of the selection removes it (clicking a lone selected word clears it); clicking a word in the middle starts a new one-word selection there; `Escape` clears the selection.
 5. Keyboard users can set the anchor with `Space` and extend the range with `Shift+Left` / `Shift+Right` or an equivalent documented, tested interaction.
 6. The selected heard text may prefill the desired-term field, but the heard text is never saved.
 7. The scope is preselected from the dictation's base language; Automatic preselects Shared. The user can always choose another scope.

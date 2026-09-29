@@ -88,10 +88,21 @@ internal static class TeachProbe
             Require((string)save.Content == "Save term", "One pending fix must offer to save one term.");
             Capture(window, outputDirectory, "teach-range-edited.png");
 
-            Click(chips[1]);
-            Require(window.Words.Count(word => word.IsSelected) == 1 && desired.Text == "MVVM",
-                "A new click must restart the selection without overwriting a typed correction.");
+            Click(chips[4]);
+            Require(window.Words.Where(word => word.IsSelected).Select(word => word.Index).SequenceEqual([4]) && desired.Text == "MVVM",
+                "A click inside the range must restart the selection without overwriting a typed correction.");
+            Click(chips[5]);
+            Click(chips[6]);
+            Click(chips[7]);
+            Require(window.Words.Where(word => word.IsSelected).Select(word => word.Index).SequenceEqual([4, 5, 6, 7]),
+                "Clicking word after word must keep growing the range.");
+            Click(chips[7]);
+            Require(window.Words.Where(word => word.IsSelected).Select(word => word.Index).SequenceEqual([4, 5, 6]),
+                "Clicking an end word must remove it.");
+            Capture(window, outputDirectory, "teach-long-range.png");
 
+            PressEscape(window);
+            Click(chips[1]);
             window.ExtendSelection(2);
             window.ExtendSelection(3);
             Require(window.Words.Where(word => word.IsSelected).Select(word => word.Index).SequenceEqual([1, 2, 3]), "Keyboard extension must grow the range.");

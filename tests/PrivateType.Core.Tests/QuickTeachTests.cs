@@ -68,13 +68,41 @@ public sealed class QuickTeachTests
     }
 
     [Fact]
+    public void Clicking_each_word_of_a_long_phrase_keeps_growing_the_range()
+    {
+        var selection = new WordRangeSelection();
+
+        foreach (var index in new[] { 2, 3, 4, 5 })
+            selection.Activate(index);
+
+        Assert.Equal((2, 5), selection.Range);
+        selection.Activate(1);
+        Assert.Equal((1, 5), selection.Range);
+    }
+
+    [Fact]
+    public void Clicking_an_end_word_shrinks_the_range_and_the_last_word_clears_it()
+    {
+        var selection = new WordRangeSelection();
+        selection.Activate(2);
+        selection.Activate(5);
+
+        selection.Activate(5);
+        Assert.Equal((2, 4), selection.Range);
+        selection.Activate(2);
+        Assert.Equal((3, 4), selection.Range);
+        selection.Activate(4);
+        selection.Activate(3);
+        Assert.Null(selection.Range);
+    }
+
+    [Fact]
     public void Keyboard_extension_grows_the_range_from_the_anchor()
     {
         var selection = new WordRangeSelection();
 
         selection.ExtendTo(2);
         Assert.Equal((2, 2), selection.Range);
-        selection.Activate(2);
         selection.ExtendTo(3);
         selection.ExtendTo(4);
         Assert.Equal((2, 4), selection.Range);

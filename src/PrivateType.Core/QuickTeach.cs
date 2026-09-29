@@ -59,41 +59,61 @@ public static class WordSpans
     }
 }
 
-// First activation anchors one word; the next selects the contiguous range to it; a further
-// activation starts over. Keyboard extension moves the range end while keeping the anchor.
+// Clicking words builds one contiguous range: a word outside the range grows it to that word
+// (so clicking each word of a phrase, or just its first and last, both work), an end word
+// shrinks it, and a word in the middle starts over there. Keyboard extension moves the range
+// end while keeping the anchor.
 public sealed class WordRangeSelection
 {
     private int? anchor;
     private int end;
-    private bool completed;
 
     public (int First, int Last)? Range => anchor is { } start ? (Math.Min(start, end), Math.Max(start, end)) : null;
 
     public void Activate(int index)
     {
-        if (anchor is null || completed)
+        if (Range is not { } range)
         {
-            anchor = index;
-            end = index;
-            completed = false;
-            return;
+            Select(index, index);
         }
-
-        end = index;
-        completed = true;
+        else if (index < range.First)
+        {
+            Select(range.Last, index);
+        }
+        else if (index > range.Last)
+        {
+            Select(range.First, index);
+        }
+        else if (range.First == range.Last)
+        {
+            Clear();
+        }
+        else if (index == range.First)
+        {
+            Select(range.Last, index + 1);
+        }
+        else if (index == range.Last)
+        {
+            Select(range.First, index - 1);
+        }
+        else
+        {
+            Select(index, index);
+        }
     }
 
     public void ExtendTo(int index)
     {
         anchor ??= index;
         end = index;
-        completed = true;
     }
 
-    public void Clear()
+    public void Clear() => anchor = null;
+
+    private void Select(int fixedEnd, int movingEnd)
     {
-        anchor = null;
-        completed = false;
+        anchor = fixedEnd;
+        end = movingEnd;
     }
 
     public string SelectedText(string text, IReadOnlyList<WordSpan> spans) =>

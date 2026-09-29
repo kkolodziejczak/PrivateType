@@ -72,7 +72,7 @@
         <StackPanel>
           <TextBlock FontSize="20" FontWeight="SemiBold" Text="Teach from last dictation" />
           <TextBlock Margin="0,5,0,0" Foreground="{DynamicResource ColorText}" Opacity="0.7" FontSize="13" TextWrapping="Wrap"
-                     Text="Click the first and last words the model got wrong, type how they should be written, then add the fix. Add as many fixes as you need and save them together. This sentence is discarded when you close this window." />
+                     Text="Click the words the model got wrong (each word, or just the first and last), type how they should be written, then add the fix. Click an end word again to remove it. Add as many fixes as you need and save them together. This sentence is discarded when you close this window." />
         </StackPanel>
         <Border Grid.Row="1" Margin="0,14,0,0" Padding="10,10,4,4" Background="{DynamicResource ColorBg}" BorderBrush="{DynamicResource ColorDivider}" BorderThickness="1" CornerRadius="8">
           <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">

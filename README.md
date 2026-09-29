@@ -101,8 +101,9 @@ terms from about 1 in 5 to about half. Vocabulary stays in the settings file on
 this computer and is only given to the local speech engine.
 
 **Teach from last dictation…** in the bubble menu is the quickest way to add a
-phrase. It shows the sentence you just dictated as words: click the first and
-last words it got wrong, type the correct spelling, and choose **Add fix**.
+phrase. It shows the sentence you just dictated as words: click the words it
+got wrong (each one in turn, or just the first and last of a longer phrase),
+type the correct spelling, and choose **Add fix**.
 Repeat for every other mistake in the sentence, each with its own language if
 needed, then save them all at once. **Open vocabulary** then shows the saved
 terms in Settings; the language picker there shows how many phrases each
