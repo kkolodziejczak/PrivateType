@@ -130,11 +130,16 @@ internal sealed class RealtimeRecognizer(Uri endpoint) : IStreamingRecognizer
     {
         if (socket.State == WebSocketState.Open)
         {
+            // A stalled engine must not hold up session cleanup or application exit.
+            using var closeTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(2));
             try
             {
-                await socket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "dictation finished", CancellationToken.None);
+                await socket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "dictation finished", closeTimeout.Token);
             }
             catch (WebSocketException)
+            {
+            }
+            catch (OperationCanceledException)
             {
             }
         }

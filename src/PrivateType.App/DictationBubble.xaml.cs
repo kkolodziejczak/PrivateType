@@ -26,8 +26,9 @@ public partial class DictationBubble : Window
     private const double ReadyWidth = 64;
     private const double ActiveWidth = 330;
     private const double WorkAreaBottomClearance = 8;
+    private const double MinimumVisibleExtent = 24;
     private const nint HtClient = 1;
-    private const nint HtTransparent = 0x20;
+    private const nint HtTransparent = -1;
     private readonly AdaptiveAudioMeter adaptiveAudioMeter = new();
     private readonly List<ScaleTransform> waveformScales = [];
     private readonly double[] smoothedSpectrum = new double[SpectrumBarCount];
@@ -45,10 +46,37 @@ public partial class DictationBubble : Window
     {
         InitializeComponent();
         mouseHookProc = OnMouseHook;
-        BubbleShell.ContextMenu.PlacementTarget = BubbleShell;
-        BubbleShell.ContextMenu.Placement = PlacementMode.Right;
-        BubbleShell.ContextMenu.HorizontalOffset = 8;
+        Menu.PlacementTarget = BubbleShell;
+        Menu.Placement = PlacementMode.Right;
+        Menu.HorizontalOffset = 8;
         CreateWaveformBars();
+    }
+
+    private System.Windows.Controls.ContextMenu Menu => BubbleShell.ContextMenu;
+
+    // The bubble never activates, so WPF never sees the outside click or the app
+    // deactivation that would normally dismiss its menu. Close it explicitly.
+    public void CloseMenu()
+    {
+        if (Menu.IsOpen)
+            Menu.IsOpen = false;
+    }
+
+    // Re-shows, un-minimizes, re-asserts topmost and brings the bubble back onto a
+    // live display after sleep, display or session changes.
+    public void RecoverPlacement(PortableSettings settings)
+    {
+        CloseMenu();
+        if (!IsVisible)
+            Show();
+        if (WindowState != WindowState.Normal)
+            WindowState = WindowState.Normal;
+        Topmost = false;
+        Topmost = true;
+        if (IsOffEveryScreen())
+            ApplyPosition(settings);
+        else
+            ClampToWorkArea(CurrentWorkArea());
     }
 
     public event Action<string, double, double>? PositionChanged;
@@ -68,6 +96,10 @@ public partial class DictationBubble : Window
         if (!IsVisible)
         {
             Show();
+            ApplyPosition(settings);
+        }
+        else if (IsOffEveryScreen())
+        {
             ApplyPosition(settings);
         }
 
@@ -100,6 +132,7 @@ public partial class DictationBubble : Window
         if (recordingVisualsActive)
             return;
 
+        CloseMenu();
         var selectedWorkArea = CurrentWorkArea();
         active = true;
         recordingVisualsActive = true;
@@ -119,6 +152,7 @@ public partial class DictationBubble : Window
 
     public void ShowModelLoading(bool toggleMode = false)
     {
+        CloseMenu();
         active = true;
         recordingVisualsActive = false;
         StopRecordingIndicator();
@@ -168,6 +202,7 @@ public partial class DictationBubble : Window
 
     public void ShowCancellation(string message)
     {
+        CloseMenu();
         active = false;
         recordingVisualsActive = false;
         StopRecordingIndicator();
@@ -185,6 +220,7 @@ public partial class DictationBubble : Window
 
     public void ShowError(string message)
     {
+        CloseMenu();
         active = true;
         recordingVisualsActive = false;
         StopRecordingIndicator();
@@ -410,6 +446,14 @@ public partial class DictationBubble : Window
         if (code < 0)
             return NativeMethods.CallNextHookEx(mouseHook, code, wParam, lParam);
 
+        if (Menu.IsOpen && !dragActive)
+        {
+            if (DismissesMenu(true, wParam, IsCursorOverMenu(lParam)))
+                CloseMenu();
+            // Never start a drag from a click that closes or targets the menu.
+            return NativeMethods.CallNextHookEx(mouseHook, code, wParam, lParam);
+        }
+
         switch (ClassifyDragHookAction(dragActive, wParam))
         {
             case DragHookAction.Start when active || !IsCursorOverIcon(lParam):
@@ -427,6 +471,11 @@ public partial class DictationBubble : Window
                 dragActive = true;
                 return 1;
             }
+            case DragHookAction.Move when !IsLeftButtonDown():
+                // The button-up never reached the hook; stop following the pointer.
+                dragActive = false;
+                ReportPosition();
+                break;
             case DragHookAction.Move:
             {
                 var p = CursorFromHook(lParam);
@@ -449,6 +498,22 @@ public partial class DictationBubble : Window
         }
 
         return NativeMethods.CallNextHookEx(mouseHook, code, wParam, lParam);
+    }
+
+    internal static bool DismissesMenu(bool menuOpen, nint message, bool overMenu) =>
+        menuOpen && !overMenu && (message == NativeMethods.WmLButtonDown || message == NativeMethods.WmRButtonDown);
+
+    private static bool IsLeftButtonDown() => (NativeMethods.GetAsyncKeyState(NativeMethods.VkLButton) & 0x8000) != 0;
+
+    private bool IsCursorOverMenu(nint lParam)
+    {
+        var menu = Menu;
+        if (!menu.IsOpen || PresentationSource.FromVisual(menu) is null || menu.ActualWidth <= 0 || menu.ActualHeight <= 0)
+            return false;
+
+        var cursor = CursorFromHook(lParam);
+        var local = menu.PointFromScreen(new System.Windows.Point(cursor.X, cursor.Y));
+        return local.X >= 0 && local.X < menu.ActualWidth && local.Y >= 0 && local.Y < menu.ActualHeight;
     }
 
     internal static DragHookAction ClassifyDragHookAction(bool dragActive, nint message) =>
@@ -484,7 +549,11 @@ public partial class DictationBubble : Window
 
     private void OpenTeach(object sender, RoutedEventArgs e) => TeachRequested?.Invoke();
 
-    private void Quit(object sender, RoutedEventArgs e) => QuitRequested?.Invoke();
+    private void Quit(object sender, RoutedEventArgs e)
+    {
+        CloseMenu();
+        QuitRequested?.Invoke();
+    }
 
     private void StartRecordingIndicator()
     {
@@ -549,7 +618,9 @@ public partial class DictationBubble : Window
         Left = Math.Clamp(Left, workArea.Left, workArea.Right - Width);
     }
 
-    private void ClampToWorkAreaAfterLayout() => ClampToWorkAreaAfterLayout(CurrentWorkArea());
+    // Re-query the work area when the clamp runs; displays can change in between.
+    private void ClampToWorkAreaAfterLayout() =>
+        Dispatcher.BeginInvoke(DispatcherPriority.Render, new Action(() => ClampToWorkArea(CurrentWorkArea())));
 
     private void ClampToWorkAreaAfterLayout(DisplayWorkArea workArea)
     {
@@ -564,6 +635,29 @@ public partial class DictationBubble : Window
 
     internal static double BoundedTop(double top, double workAreaTop, double workAreaBottom, double height) =>
         Math.Clamp(top, workAreaTop, Math.Max(workAreaTop, workAreaBottom - height));
+
+    private bool IsOffEveryScreen()
+    {
+        var width = ActualWidth > 0 ? ActualWidth : Width;
+        var height = ActualHeight > 0 ? ActualHeight : Height;
+        return !IntersectsAnyWorkArea(Left, Top, width, height, Forms.Screen.AllScreens.Select(WorkAreaFor));
+    }
+
+    internal static bool IntersectsAnyWorkArea(double left, double top, double width, double height, IEnumerable<DisplayWorkArea> workAreas)
+    {
+        if (double.IsNaN(left) || double.IsNaN(top))
+            return false;
+
+        foreach (var area in workAreas)
+        {
+            var visibleWidth = Math.Min(left + width, area.Right) - Math.Max(left, area.Left);
+            var visibleHeight = Math.Min(top + height, area.Bottom) - Math.Max(top, area.Top);
+            if (visibleWidth >= Math.Min(MinimumVisibleExtent, width) && visibleHeight >= Math.Min(MinimumVisibleExtent, height))
+                return true;
+        }
+
+        return false;
+    }
 
     private Forms.Screen CurrentScreen()
     {
@@ -594,7 +688,7 @@ public partial class DictationBubble : Window
         End
     }
 
-    private readonly record struct DisplayWorkArea(double Left, double Top, double Width, double Height)
+    internal readonly record struct DisplayWorkArea(double Left, double Top, double Width, double Height)
     {
         public double Right => Left + Width;
         public double Bottom => Top + Height;

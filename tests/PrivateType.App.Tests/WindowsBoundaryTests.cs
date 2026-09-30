@@ -70,6 +70,34 @@ public sealed class WindowsBoundaryTests
     }
 
     [Fact]
+    public void Dismisses_the_bubble_menu_only_on_a_button_press_outside_it()
+    {
+        Assert.True(DictationBubble.DismissesMenu(menuOpen: true, 0x0201, overMenu: false));
+        Assert.True(DictationBubble.DismissesMenu(menuOpen: true, 0x0204, overMenu: false));
+        Assert.False(DictationBubble.DismissesMenu(menuOpen: true, 0x0200, overMenu: false));
+        Assert.False(DictationBubble.DismissesMenu(menuOpen: true, 0x0201, overMenu: true));
+        Assert.False(DictationBubble.DismissesMenu(menuOpen: false, 0x0201, overMenu: false));
+    }
+
+    [Fact]
+    public void Detects_a_bubble_that_no_longer_overlaps_any_display()
+    {
+        var displays = new[]
+        {
+            new DictationBubble.DisplayWorkArea(0, 0, 1920, 1032),
+            new DictationBubble.DisplayWorkArea(-1920, 0, 1920, 1032)
+        };
+
+        Assert.True(DictationBubble.IntersectsAnyWorkArea(100, 900, 64, 64, displays));
+        Assert.True(DictationBubble.IntersectsAnyWorkArea(-1000, 500, 330, 90, displays));
+        Assert.True(DictationBubble.IntersectsAnyWorkArea(1890, 900, 64, 64, displays));
+        Assert.False(DictationBubble.IntersectsAnyWorkArea(1910, 900, 64, 64, displays));
+        Assert.False(DictationBubble.IntersectsAnyWorkArea(2200, 500, 64, 64, displays));
+        Assert.False(DictationBubble.IntersectsAnyWorkArea(100, 1100, 64, 64, displays));
+        Assert.False(DictationBubble.IntersectsAnyWorkArea(double.NaN, double.NaN, 64, 64, displays));
+    }
+
+    [Fact]
     public void Keeps_the_bubble_aligned_with_the_pointer_at_scaled_display_dpi()
     {
         var offset = DictationBubble.CursorDeltaInDips(300, 450, 450, 525, 1.5, 1.5);

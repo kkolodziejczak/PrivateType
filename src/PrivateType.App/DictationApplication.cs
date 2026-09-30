@@ -1,3 +1,4 @@
+using Microsoft.Win32;
 using PrivateType.Core;
 using System.Diagnostics;
 using System.Windows.Threading;
@@ -59,7 +60,7 @@ internal sealed class DictationApplication : IDisposable
         settingsItem.Enabled = false;
         vocabularyItem = (Forms.ToolStripMenuItem)trayIcon.ContextMenuStrip.Items.Add("Vocabulary…", null, (_, _) => ShowSettings(openVocabulary: true));
         vocabularyItem.Enabled = false;
-        trayIcon.ContextMenuStrip.Items.Add("Quit", null, (_, _) => Wpf.Application.Current.Shutdown());
+        trayIcon.ContextMenuStrip.Items.Add("Quit", null, (_, _) => Quit());
         modelIdleTimer = new DispatcherTimer();
         modelIdleTimer.Tick += UnloadModelWhenIdle;
         heldKeyWatchdog = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
@@ -71,32 +72,110 @@ internal sealed class DictationApplication : IDisposable
         bubble.VocabularyRequested += () => ShowSettings(openVocabulary: true);
         bubble.TeachRequested += ShowTeach;
         lastDictation.Changed += () => bubble.SetTeachAvailable(lastDictation.HasValue);
-        bubble.QuitRequested += () => Wpf.Application.Current.Shutdown();
+        bubble.QuitRequested += Quit;
         bubble.RecordingIndicatorChanged += visible => trayIcon.Icon = visible ? trayIcons.Listening : trayIcons.Ready;
+        SystemEvents.DisplaySettingsChanged += OnDisplaySettingsChanged;
+        SystemEvents.PowerModeChanged += OnPowerModeChanged;
+        SystemEvents.SessionSwitch += OnSessionSwitch;
     }
 
     internal static string TrayVersionText(Version? version) => ApplicationVersion.Label(version);
 
+    internal static readonly TimeSpan SessionShutdownTimeout = TimeSpan.FromSeconds(3);
+
     public void Start() => _ = InitializeAsync();
+
+    private void Quit()
+    {
+        // Close the bubble menu first so its popup window is torn down by a live dispatcher.
+        bubble.CloseMenu();
+        Wpf.Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(Wpf.Application.Current.Shutdown));
+    }
 
     public void Dispose()
     {
         if (disposed)
             return;
         disposed = true;
-        lastDictation.Clear();
-        modelIdleTimer.Stop();
-        heldKeyWatchdog.Stop();
-        provisioningCancellation?.Cancel();
-        hotkey.Dispose();
-        trayIcon.Dispose();
-        trayIcons.Dispose();
-        sessions.DisposeAsync().AsTask().GetAwaiter().GetResult();
-        bubble.Close();
-        engine.Dispose();
-        modelReadySound.Dispose();
-        downloader.Dispose();
-        provisioningCancellation?.Dispose();
+        SystemEvents.DisplaySettingsChanged -= OnDisplaySettingsChanged;
+        SystemEvents.PowerModeChanged -= OnPowerModeChanged;
+        SystemEvents.SessionSwitch -= OnSessionSwitch;
+        // Each step is isolated so one failure cannot skip the rest of the teardown.
+        DisposeStep(lastDictation.Clear);
+        DisposeStep(modelIdleTimer.Stop);
+        DisposeStep(heldKeyWatchdog.Stop);
+        DisposeStep(() => provisioningCancellation?.Cancel());
+        DisposeStep(hotkey.Dispose);
+        DisposeStep(WaitForSessionsToFinish);
+        DisposeStep(bubble.CloseMenu);
+        DisposeStep(bubble.Close);
+        DisposeStep(trayIcon.Dispose);
+        DisposeStep(trayIcons.Dispose);
+        DisposeStep(engine.Dispose);
+        DisposeStep(modelReadySound.Dispose);
+        DisposeStep(downloader.Dispose);
+        DisposeStep(() => provisioningCancellation?.Dispose());
+    }
+
+    // Bounded: the UI thread waits here, so a stuck session must not hang exit forever.
+    private void WaitForSessionsToFinish()
+    {
+        var finish = sessions.DisposeAsync().AsTask();
+        if (!finish.Wait(SessionShutdownTimeout))
+            RecordDiagnostic("shutdown.sessions.timeout");
+    }
+
+    private void DisposeStep(Action step)
+    {
+        try
+        {
+            step();
+        }
+        catch (Exception exception)
+        {
+            RecordDiagnostic("shutdown.step.failed", exception);
+        }
+    }
+
+    private void OnDisplaySettingsChanged(object? sender, EventArgs e) => RecoverBubbleLater("display");
+
+    private void OnPowerModeChanged(object? sender, PowerModeChangedEventArgs e)
+    {
+        if (e.Mode == PowerModes.Resume)
+            RecoverBubbleLater("resume");
+    }
+
+    private void OnSessionSwitch(object? sender, SessionSwitchEventArgs e)
+    {
+        if (e.Reason is SessionSwitchReason.SessionUnlock or SessionSwitchReason.ConsoleConnect or SessionSwitchReason.RemoteConnect)
+            RecoverBubbleLater("session");
+    }
+
+    // System events arrive on their own thread and before displays settle, so
+    // recover on the dispatcher after a short delay.
+    private void RecoverBubbleLater(string reason)
+    {
+        _ = Wpf.Application.Current?.Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(async () =>
+        {
+            await Task.Delay(TimeSpan.FromSeconds(1.5));
+            RecoverBubble(reason);
+        }));
+    }
+
+    private void RecoverBubble(string reason)
+    {
+        if (disposed || settingsStore is null)
+            return;
+
+        try
+        {
+            bubble.RecoverPlacement(settings);
+            RecordDiagnostic("bubble.recovered", details: [("reason", reason)]);
+        }
+        catch (Exception exception)
+        {
+            RecordDiagnostic("bubble.recover.failed", exception);
+        }
     }
 
     private async Task InitializeAsync()

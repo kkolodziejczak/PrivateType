@@ -64,7 +64,8 @@ public sealed class DictationSessionCoordinator : IAsyncDisposable
             finish = EnqueueLocked(FinishActiveSessionAsync);
         }
 
-        await finish;
+        // The UI thread may block on this during shutdown; never resume on its context.
+        await finish.ConfigureAwait(false);
     }
 
     private Task EnqueueLocked(Func<Task> command)
