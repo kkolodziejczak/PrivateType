@@ -67,6 +67,8 @@ public sealed class WindowsBoundaryTests
         Assert.Equal(DictationBubble.DragHookAction.Move, DictationBubble.ClassifyDragHookAction(true, 0x0200));
         Assert.Equal(DictationBubble.DragHookAction.End, DictationBubble.ClassifyDragHookAction(true, 0x0202));
         Assert.Equal(DictationBubble.DragHookAction.None, DictationBubble.ClassifyDragHookAction(true, 0x0203));
+        // A press while a drag is still recorded means the release was missed; recover instead of moving.
+        Assert.Equal(DictationBubble.DragHookAction.Recover, DictationBubble.ClassifyDragHookAction(true, 0x0201));
     }
 
     [Fact]

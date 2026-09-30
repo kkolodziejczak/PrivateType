@@ -164,7 +164,8 @@ internal sealed class DictationApplication : IDisposable
 
     private void RecoverBubble(string reason)
     {
-        if (disposed || settingsStore is null)
+        // Only once dictation is configured; during first-run setup the bubble is intentionally unshown.
+        if (disposed || settingsStore is null || modelPath is null)
             return;
 
         try

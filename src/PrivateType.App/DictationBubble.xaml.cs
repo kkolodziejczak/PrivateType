@@ -471,8 +471,9 @@ public partial class DictationBubble : Window
                 dragActive = true;
                 return 1;
             }
-            case DragHookAction.Move when !IsLeftButtonDown():
-                // The button-up never reached the hook; stop following the pointer.
+            case DragHookAction.Recover:
+                // The button-up never reached the hook; a new press ends the stale drag
+                // and passes through untouched.
                 dragActive = false;
                 ReportPosition();
                 break;
@@ -503,8 +504,6 @@ public partial class DictationBubble : Window
     internal static bool DismissesMenu(bool menuOpen, nint message, bool overMenu) =>
         menuOpen && !overMenu && (message == NativeMethods.WmLButtonDown || message == NativeMethods.WmRButtonDown);
 
-    private static bool IsLeftButtonDown() => (NativeMethods.GetAsyncKeyState(NativeMethods.VkLButton) & 0x8000) != 0;
-
     private bool IsCursorOverMenu(nint lParam)
     {
         var menu = Menu;
@@ -522,6 +521,7 @@ public partial class DictationBubble : Window
             (false, NativeMethods.WmLButtonDown) => DragHookAction.Start,
             (true, NativeMethods.WmMouseMove) => DragHookAction.Move,
             (true, NativeMethods.WmLButtonUp) => DragHookAction.End,
+            (true, NativeMethods.WmLButtonDown) => DragHookAction.Recover,
             _ => DragHookAction.None
         };
 
@@ -636,11 +636,13 @@ public partial class DictationBubble : Window
     internal static double BoundedTop(double top, double workAreaTop, double workAreaBottom, double height) =>
         Math.Clamp(top, workAreaTop, Math.Max(workAreaTop, workAreaBottom - height));
 
+    // Work areas are in device pixels; compare the window in the same space.
     private bool IsOffEveryScreen()
     {
-        var width = ActualWidth > 0 ? ActualWidth : Width;
-        var height = ActualHeight > 0 ? ActualHeight : Height;
-        return !IntersectsAnyWorkArea(Left, Top, width, height, Forms.Screen.AllScreens.Select(WorkAreaFor));
+        var dpi = VisualTreeHelper.GetDpi(this);
+        var width = (ActualWidth > 0 ? ActualWidth : Width) * dpi.DpiScaleX;
+        var height = (ActualHeight > 0 ? ActualHeight : Height) * dpi.DpiScaleY;
+        return !IntersectsAnyWorkArea(Left * dpi.DpiScaleX, Top * dpi.DpiScaleY, width, height, Forms.Screen.AllScreens.Select(WorkAreaFor));
     }
 
     internal static bool IntersectsAnyWorkArea(double left, double top, double width, double height, IEnumerable<DisplayWorkArea> workAreas)
@@ -685,7 +687,8 @@ public partial class DictationBubble : Window
         None,
         Start,
         Move,
-        End
+        End,
+        Recover
     }
 
     internal readonly record struct DisplayWorkArea(double Left, double Top, double Width, double Height)

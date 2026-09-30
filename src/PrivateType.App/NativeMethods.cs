@@ -9,7 +9,6 @@ internal static class NativeMethods
     internal const int WmMouseMove = 0x0200;
     internal const int WmLButtonUp = 0x0202;
     internal const int WmRButtonDown = 0x0204;
-    internal const int VkLButton = 0x01;
 
     internal delegate nint MouseHookProc(int nCode, nint wParam, nint lParam);
 
@@ -27,9 +26,6 @@ internal static class NativeMethods
 
     [DllImport("kernel32.dll", SetLastError = true)]
     internal static extern nint GetModuleHandleW(string? lpModuleName);
-
-    [DllImport("user32.dll")]
-    internal static extern short GetAsyncKeyState(int virtualKey);
 
     [DllImport("user32.dll")]
     internal static extern nint GetForegroundWindow();
