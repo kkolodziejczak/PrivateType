@@ -411,8 +411,12 @@ internal sealed class DictationApplication : IDisposable
     internal static readonly TimeSpan OfflinePreviewInterval = TimeSpan.FromSeconds(1);
 
     // Offline models transcribe the whole hold after release, so long dictations need longer.
-    internal static TimeSpan FinalizationTimeout(SpeechModelDefinition model)
-        => model.Style == RecognitionStyle.Offline ? TimeSpan.FromSeconds(60) : TimeSpan.FromSeconds(15);
+    // With a preview, the engine's single worker may still be finishing the last preview when
+    // the final pass is queued, so allow for both.
+    internal static TimeSpan FinalizationTimeout(SpeechModelDefinition model, bool offlinePreview)
+        => model.Style != RecognitionStyle.Offline
+            ? TimeSpan.FromSeconds(15)
+            : offlinePreview ? TimeSpan.FromSeconds(120) : TimeSpan.FromSeconds(60);
 
     private async Task ConfigureReadyAsync(string modelPath)
     {
@@ -672,7 +676,7 @@ internal sealed class DictationApplication : IDisposable
             new ForegroundTargetGuard(new Win32ForegroundTarget()),
             settings.InsertionMode == TextInsertionModes.Paste ? new ClipboardPasteInjector() : new UnicodeTextInjector(),
             new RecognitionRequest(localeCode, VocabularyComposer.Compose(settings.Vocabulary, settings.VocabularyPacks, localeCode), settings.VocabularyStrength),
-            finalizationTimeout: FinalizationTimeout(activeModel),
+            finalizationTimeout: FinalizationTimeout(activeModel, settings.OfflinePreview),
             diagnostics: diagnostics,
             correctText: settings.CorrectAfterDictation
                 ? TranscriptCorrector.Create(settings.Vocabulary, settings.VocabularyPacks, settings.VocabularyCorrections, localeCode).Correct

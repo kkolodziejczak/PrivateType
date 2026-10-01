@@ -196,12 +196,18 @@ public partial class DictationBubble : Window
     }
 
     // After release the microphone is off but text has not arrived yet; say so, keeping any preview.
+    // It can arrive without a rendered recording state, so set up the expanded bubble itself.
     public void ShowFinalizing()
     {
+        CloseMenu();
+        active = true;
         recordingVisualsActive = false;
         StopRecordingIndicator();
+        BubbleShell.Opacity = 1;
         ApplyExpandedVisuals(FinalizingTitle, "ColorAccent900", "ColorAccent300", "ColorAccent300");
+        SetWidthAroundCenter(ActiveWidth);
         WaveformBars.Visibility = Visibility.Collapsed;
+        TranscriptViewport.Visibility = string.IsNullOrEmpty(Transcript.Text) ? Visibility.Collapsed : Visibility.Visible;
         Hint.Text = FinalizingHint;
         Hint.Visibility = string.IsNullOrEmpty(Transcript.Text) ? Visibility.Visible : Visibility.Collapsed;
         Transcript.Opacity = 0.7;

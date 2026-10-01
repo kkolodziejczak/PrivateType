@@ -125,6 +125,12 @@ static void RenderWindows(bool pointerPlacementOnly)
     finalizingPanel.ShowRecording("en-US");
     finalizingPanel.ShowFinalizing();
     Render(finalizingPanel, Path.Combine(outputDirectory, "status-panel-finalizing.png"));
+    var directFinalizingPanel = new DictationBubble();
+    directFinalizingPanel.ShowReady(PortableSettings.Default, modelLoaded: true);
+    directFinalizingPanel.ShowFinalizing();
+    Render(directFinalizingPanel, Path.Combine(outputDirectory, "status-panel-finalizing-direct.png"));
+    if (directFinalizingPanel.ActualWidth < 200)
+        throw new InvalidOperationException($"A finalizing bubble shown straight from ready stayed {directFinalizingPanel.ActualWidth:F0} px wide.");
 
     var cancelledPanel = new DictationBubble();
     cancelledPanel.ShowReady(PortableSettings.Default, modelLoaded: true);

@@ -40,8 +40,10 @@ public sealed class OfflineRecognizerTests
     [Fact]
     public void Gives_offline_models_longer_to_finish_after_release()
     {
-        Assert.Equal(TimeSpan.FromSeconds(15), DictationApplication.FinalizationTimeout(SpeechModelCatalog.Nemotron));
-        Assert.Equal(TimeSpan.FromSeconds(60), DictationApplication.FinalizationTimeout(SpeechModelCatalog.Parakeet));
+        Assert.Equal(TimeSpan.FromSeconds(15), DictationApplication.FinalizationTimeout(SpeechModelCatalog.Nemotron, offlinePreview: true));
+        Assert.Equal(TimeSpan.FromSeconds(60), DictationApplication.FinalizationTimeout(SpeechModelCatalog.Parakeet, offlinePreview: false));
+        // A preview still running on the engine's single worker delays the final pass.
+        Assert.Equal(TimeSpan.FromSeconds(120), DictationApplication.FinalizationTimeout(SpeechModelCatalog.Parakeet, offlinePreview: true));
     }
 
     [Fact]
@@ -96,15 +98,27 @@ public sealed class OfflineRecognizerTests
         using var server = new CountingServer();
         await using var recognizer = new OfflineRecognizer(server.Endpoint, TimeSpan.FromMilliseconds(20));
         await recognizer.StartAsync(RecognitionRequest.WithoutVocabulary("pl-PL"), CancellationToken.None);
-        var updates = CollectAsync(recognizer);
+        var received = new List<TranscriptUpdate>();
+        var twoPreviews = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var reader = Task.Run(async () =>
+        {
+            await foreach (var update in recognizer.ReadUpdatesAsync(CancellationToken.None))
+            {
+                lock (received)
+                {
+                    received.Add(update);
+                    if (received.Count(item => !item.IsCommitted) >= 2)
+                        twoPreviews.TrySetResult();
+                }
+            }
+        });
 
         await recognizer.PushPcmAsync(new byte[16000], CancellationToken.None);
         await server.WaitForRequestsAsync(1);
         await recognizer.PushPcmAsync(new byte[16000], CancellationToken.None);
-        await server.WaitForRequestsAsync(2);
+        await twoPreviews.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await recognizer.CompleteAsync(CancellationToken.None);
-
-        var received = await updates;
+        await reader;
         Assert.True(received.Count >= 3, $"Expected previews before the final update; got {received.Count}.");
         Assert.All(received[..^1], update => Assert.False(update.IsCommitted));
         Assert.True(received[^1].IsCommitted);
