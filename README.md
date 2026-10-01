@@ -96,13 +96,17 @@ you no longer need. The model in use cannot be deleted; switch first.
 
 | | Nemotron 3.5 ASR Streaming 0.6B (default) | Parakeet TDT 0.6B v3 |
 | --- | --- | --- |
-| While you speak | Words appear live | Listening only; text appears when you release |
+| While you speak | Words appear live | A preview refreshes about once a second (optional) |
 | Language | Uses each shortcut's language | Detects the language itself (25 European languages) |
 | Vocabulary boosting | Yes | No; **Fix phrases after dictation** still applies |
 | Download | About 708 MiB, OpenMDW-1.1 | About 681 MiB, CC-BY-4.0 |
 
-With Parakeet, a minute of speech takes a few seconds to appear after release
-on the recorded test machine. The shortcut's language still chooses which
+Parakeet writes the final text in one pass after you release the shortcut; the
+bubble shows **Transcribing…** until it is inserted. A minute of speech takes a
+few seconds on the recorded test machine. **Show a live preview with Parakeet**
+(on by default, in **Settings → Model**) re-transcribes what you have said so far
+about once a second, so you can stop and correct yourself early; it uses more
+CPU while you speak. The shortcut's language still chooses which
 vocabulary corrections apply.
 
 ### Vocabulary

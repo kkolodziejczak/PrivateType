@@ -24,6 +24,7 @@ public partial class SettingsWindow : Window
         InitializeComponent();
         models = new ModelLibraryEditor(modelStore, settings.SpeechModel);
         ModelPage.DataContext = models;
+        OfflinePreviewCheckBox.IsChecked = settings.OfflinePreview;
         ConfirmModelDeletion = AskToDeleteModel;
         vocabulary = new VocabularyEditor(settings.Vocabulary, settings.VocabularyStrength, settings.VocabularyPacks, settings.VocabularyCorrections, settings.CorrectAfterDictation);
         if (VocabularyScopes.IsSupported(vocabularyScope))
@@ -441,7 +442,8 @@ public partial class SettingsWindow : Window
             VocabularyCorrections = vocabulary.Corrections,
             CorrectAfterDictation = vocabulary.CorrectAfterDictation,
             ModelIdleTimeoutMinutes = IdleTimeoutBox.SelectedValue is int minutes ? minutes : 10,
-            SpeechModel = models.SelectedId
+            SpeechModel = models.SelectedId,
+            OfflinePreview = OfflinePreviewCheckBox.IsChecked == true
         };
         var validationError = PortableSettingsValidator.Validate(settings);
         if (validationError is not null)

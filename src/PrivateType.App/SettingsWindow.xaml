@@ -435,7 +435,14 @@
               </DataTemplate>
             </ItemsControl.ItemTemplate>
           </ItemsControl>
-          <TextBlock Margin="0,6,0,0" Foreground="{DynamicResource ColorText}" Opacity="0.55" FontSize="12" TextWrapping="Wrap" Text="{Binding StorageText}" />
+          <CheckBox x:Name="OfflinePreviewCheckBox" Margin="0,6,0,0" AutomationProperties.Name="Show a live preview with Parakeet">
+            <StackPanel Width="500">
+              <TextBlock FontWeight="SemiBold" FontSize="14" Text="Show a live preview with Parakeet" />
+              <TextBlock Margin="0,3,0,0" FontSize="12" Opacity="0.6" TextWrapping="Wrap"
+                         Text="Re-transcribes about once a second while you hold the shortcut, so you can spot mistakes early. Uses more CPU while you speak; the inserted text still comes from one pass on release." />
+            </StackPanel>
+          </CheckBox>
+          <TextBlock Margin="0,16,0,0" Foreground="{DynamicResource ColorText}" Opacity="0.55" FontSize="12" TextWrapping="Wrap" Text="{Binding StorageText}" />
           <TextBlock Margin="0,4,0,0" Foreground="{DynamicResource ColorText}" Opacity="0.55" FontSize="12" TextWrapping="Wrap"
                      Text="Models run on this computer. Your voice is processed locally." />
         </StackPanel>

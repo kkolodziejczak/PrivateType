@@ -90,6 +90,45 @@ public sealed class OfflineRecognizerTests
         await Assert.ThrowsAsync<InvalidOperationException>(() => updates);
     }
 
+    [Fact]
+    public async Task Previews_the_audio_so_far_while_held_then_commits_one_final_pass()
+    {
+        using var server = new CountingServer();
+        await using var recognizer = new OfflineRecognizer(server.Endpoint, TimeSpan.FromMilliseconds(20));
+        await recognizer.StartAsync(RecognitionRequest.WithoutVocabulary("pl-PL"), CancellationToken.None);
+        var updates = CollectAsync(recognizer);
+
+        await recognizer.PushPcmAsync(new byte[16000], CancellationToken.None);
+        await server.WaitForRequestsAsync(1);
+        await recognizer.PushPcmAsync(new byte[16000], CancellationToken.None);
+        await server.WaitForRequestsAsync(2);
+        await recognizer.CompleteAsync(CancellationToken.None);
+
+        var received = await updates;
+        Assert.True(received.Count >= 3, $"Expected previews before the final update; got {received.Count}.");
+        Assert.All(received[..^1], update => Assert.False(update.IsCommitted));
+        Assert.True(received[^1].IsCommitted);
+        Assert.Equal(32000 + 44, server.LastWavBytes);
+        Assert.Equal($"request {server.Count}", received[^1].Text);
+    }
+
+    [Fact]
+    public async Task Skips_previews_until_half_a_second_of_new_audio_arrives()
+    {
+        using var server = new CountingServer();
+        await using var recognizer = new OfflineRecognizer(server.Endpoint, TimeSpan.FromMilliseconds(10));
+        await recognizer.StartAsync(RecognitionRequest.WithoutVocabulary("pl-PL"), CancellationToken.None);
+        var updates = CollectAsync(recognizer);
+
+        await recognizer.PushPcmAsync(new byte[15998], CancellationToken.None);
+        await Task.Delay(150);
+        Assert.Equal(0, server.Count);
+        await recognizer.CompleteAsync(CancellationToken.None);
+
+        Assert.True(Assert.Single(await updates).IsCommitted);
+        Assert.Equal(1, server.Count);
+    }
+
     private static async Task<List<TranscriptUpdate>> CollectAsync(OfflineRecognizer recognizer)
     {
         var updates = new List<TranscriptUpdate>();
@@ -138,6 +177,68 @@ public sealed class OfflineRecognizerTests
         private static int IndexOf(byte[] haystack, byte[] needle) => haystack.AsSpan().IndexOf(needle);
 
         public void Dispose() => listener.Stop();
+    }
+}
+
+// Answers every request with "request N" and records the size of the uploaded WAV.
+internal sealed class CountingServer : IDisposable
+{
+    private readonly TcpListener listener = new(IPAddress.Loopback, 0);
+    private readonly CancellationTokenSource stop = new();
+    private int count;
+
+    public CountingServer()
+    {
+        listener.Start();
+        Endpoint = new Uri($"http://127.0.0.1:{((IPEndPoint)listener.LocalEndpoint).Port}/v1/audio/transcriptions");
+        _ = ServeAsync();
+    }
+
+    public Uri Endpoint { get; }
+    public int Count => Volatile.Read(ref count);
+    public int LastWavBytes { get; private set; }
+
+    public async Task WaitForRequestsAsync(int expected)
+    {
+        var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(5);
+        while (Count < expected && DateTime.UtcNow < deadline)
+            await Task.Delay(5);
+        Assert.True(Count >= expected, $"Expected {expected} requests; got {Count}.");
+    }
+
+    private async Task ServeAsync()
+    {
+        while (!stop.IsCancellationRequested)
+        {
+            TcpClient client;
+            try { client = await listener.AcceptTcpClientAsync(stop.Token); }
+            catch (Exception) { return; }
+            using (client)
+            {
+                var stream = client.GetStream();
+                var received = new MemoryStream();
+                var buffer = new byte[65536];
+                int headEnd;
+                while ((headEnd = received.ToArray().AsSpan().IndexOf("\r\n\r\n"u8)) < 0)
+                    received.Write(buffer, 0, await stream.ReadAsync(buffer));
+                var head = Encoding.ASCII.GetString(received.ToArray(), 0, headEnd);
+                var length = int.Parse(head.Split("\r\n").First(line => line.StartsWith("Content-Length:", StringComparison.OrdinalIgnoreCase)).Split(':')[1].Trim());
+                while (received.Length < headEnd + 4 + length)
+                    received.Write(buffer, 0, await stream.ReadAsync(buffer));
+                var body = received.ToArray()[(headEnd + 4)..];
+                var riff = body.AsSpan().IndexOf("RIFF"u8);
+                LastWavBytes = 8 + BitConverter.ToInt32(body, riff + 4);
+                var payload = Encoding.UTF8.GetBytes($"{{\"text\":\"request {Interlocked.Increment(ref count)}\"}}");
+                await stream.WriteAsync(Encoding.ASCII.GetBytes($"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {payload.Length}\r\nConnection: close\r\n\r\n"));
+                await stream.WriteAsync(payload);
+            }
+        }
+    }
+
+    public void Dispose()
+    {
+        stop.Cancel();
+        listener.Stop();
     }
 }
 

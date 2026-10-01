@@ -35,6 +35,8 @@ public sealed record PortableSettings(
     // Rewrites spoken forms and taught wordings in the finished sentence before it is inserted.
     public bool CorrectAfterDictation { get; init; } = true;
     public string SpeechModel { get; init; } = SpeechModelCatalog.DefaultId;
+    // For models that transcribe on release: re-transcribe while held to show a preview.
+    public bool OfflinePreview { get; init; } = true;
 
     public static PortableSettings Default { get; } = new("default", ShortcutBinding.Defaults);
 }

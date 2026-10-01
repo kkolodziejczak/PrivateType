@@ -62,6 +62,7 @@ public sealed class SpeechModelTests : IDisposable
 
         Assert.Null(loaded.Warning);
         Assert.Equal(SpeechModelCatalog.DefaultId, loaded.Settings.SpeechModel);
+        Assert.True(loaded.Settings.OfflinePreview);
     }
 
     [Fact]

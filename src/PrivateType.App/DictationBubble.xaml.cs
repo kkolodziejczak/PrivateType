@@ -17,6 +17,8 @@ public partial class DictationBubble : Window
     internal const int SpectrumBarCount = 44;
     internal const string ModelLoadingTitle = "Loading local model…";
     internal const string ModelLoadingHint = "This may take a few seconds. Keep holding to dictate.";
+    internal const string FinalizingTitle = "Transcribing…";
+    internal const string FinalizingHint = "Your text will be inserted in a moment.";
     internal const string ModelLoadingToggleHint = "This may take a few seconds. Listening starts when it's ready.";
 
     private const int GwlExStyle = -20;
@@ -193,11 +195,17 @@ public partial class DictationBubble : Window
         RecordingPulseScale.ScaleY = scale;
     }
 
+    // After release the microphone is off but text has not arrived yet; say so, keeping any preview.
     public void ShowFinalizing()
     {
         recordingVisualsActive = false;
         StopRecordingIndicator();
-        StopRecordingPulse();
+        ApplyExpandedVisuals(FinalizingTitle, "ColorAccent900", "ColorAccent300", "ColorAccent300");
+        WaveformBars.Visibility = Visibility.Collapsed;
+        Hint.Text = FinalizingHint;
+        Hint.Visibility = string.IsNullOrEmpty(Transcript.Text) ? Visibility.Visible : Visibility.Collapsed;
+        Transcript.Opacity = 0.7;
+        ClampToWorkAreaAfterLayout();
     }
 
     public void ShowCancellation(string message)

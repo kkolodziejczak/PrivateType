@@ -125,6 +125,9 @@ internal static class SettingsModelProbe
                 window.ShowModelPage();
                 Flush(window);
                 Click(window, VisibleButton(window, "Use Parakeet TDT 0.6B v3"));
+                var preview = (CheckBox)window.FindName("OfflinePreviewCheckBox");
+                Require(preview.IsChecked == true && preview.IsVisible, "The live preview option must be visible and on by default.");
+                preview.IsChecked = false;
                 Click(window, (Button)window.FindName("SaveSettingsButton"));
             }
             catch (Exception exception)
@@ -137,6 +140,7 @@ internal static class SettingsModelProbe
         if (failure is not null)
             throw failure;
         Require(window.SavedSettings?.SpeechModel == SpeechModelCatalog.ParakeetId, "Saved settings must carry the chosen speech model.");
+        Require(window.SavedSettings?.OfflinePreview == false, "Saved settings must carry the live preview choice.");
     }
 
     private static void VerifySetupChoice(string outputDirectory)

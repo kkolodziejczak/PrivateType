@@ -408,6 +408,8 @@ internal sealed class DictationApplication : IDisposable
         }
     }
 
+    internal static readonly TimeSpan OfflinePreviewInterval = TimeSpan.FromSeconds(1);
+
     // Offline models transcribe the whole hold after release, so long dictations need longer.
     internal static TimeSpan FinalizationTimeout(SpeechModelDefinition model)
         => model.Style == RecognitionStyle.Offline ? TimeSpan.FromSeconds(60) : TimeSpan.FromSeconds(15);
@@ -665,7 +667,7 @@ internal sealed class DictationApplication : IDisposable
         var session = new DictationSession(
             new DefaultMicrophoneCapture(settings.MicrophoneId),
             activeModel.Style == RecognitionStyle.Offline
-                ? new OfflineRecognizer(engine.TranscriptionEndpoint)
+                ? new OfflineRecognizer(engine.TranscriptionEndpoint, settings.OfflinePreview ? OfflinePreviewInterval : null)
                 : new RealtimeRecognizer(engine.RealtimeEndpoint),
             new ForegroundTargetGuard(new Win32ForegroundTarget()),
             settings.InsertionMode == TextInsertionModes.Paste ? new ClipboardPasteInjector() : new UnicodeTextInjector(),

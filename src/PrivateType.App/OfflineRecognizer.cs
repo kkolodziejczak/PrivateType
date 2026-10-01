@@ -2,29 +2,45 @@ using System.Buffers.Binary;
 using System.IO;
 using System.Net.Http;
 using System.Text.Json;
+using System.Threading.Channels;
 using PrivateType.Core;
 
 namespace PrivateType.App;
 
 // For models that cannot stream (Parakeet TDT): the held audio stays in memory and is
 // transcribed in one request when the shortcut is released. Nothing is written to disk.
-internal sealed class OfflineRecognizer(Uri endpoint) : IStreamingRecognizer
+// With a preview interval, the audio so far is also re-transcribed while the shortcut is
+// held and shown as provisional text, one request at a time, so mistakes show up early.
+internal sealed class OfflineRecognizer(Uri endpoint, TimeSpan? previewInterval = null) : IStreamingRecognizer
 {
     private const int SampleRate = 16000;
+    // Preview only once there is at least half a second of new speech to add.
+    private const long MinimumNewPreviewBytes = SampleRate;
     private readonly HttpClient client = new() { Timeout = Timeout.InfiniteTimeSpan };
+    private readonly object gate = new();
     // Chunks rather than a growing stream, so no unreachable copy of the audio is left behind.
     private readonly List<byte[]> chunks = [];
+    private readonly Channel<TranscriptUpdate> updates = Channel.CreateUnbounded<TranscriptUpdate>(new UnboundedChannelOptions { SingleReader = true });
+    private readonly CancellationTokenSource previewStop = new();
+    private Task previewLoop = Task.CompletedTask;
     private long pcmBytes;
-    private readonly TaskCompletionSource<string> transcript = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     // The model detects the language itself and has no vocabulary boosting, so the request
     // carries neither; phrase fixes still run on the finished text inside the session.
-    public Task StartAsync(RecognitionRequest request, CancellationToken cancellationToken) => Task.CompletedTask;
+    public Task StartAsync(RecognitionRequest request, CancellationToken cancellationToken)
+    {
+        if (previewInterval is { } interval)
+            previewLoop = Task.Run(() => PreviewAsync(interval, previewStop.Token), CancellationToken.None);
+        return Task.CompletedTask;
+    }
 
     public Task PushPcmAsync(ReadOnlyMemory<byte> pcm16KhzMono, CancellationToken cancellationToken)
     {
-        chunks.Add(pcm16KhzMono.ToArray());
-        pcmBytes += pcm16KhzMono.Length;
+        lock (gate)
+        {
+            chunks.Add(pcm16KhzMono.ToArray());
+            pcmBytes += pcm16KhzMono.Length;
+        }
         return Task.CompletedTask;
     }
 
@@ -32,24 +48,76 @@ internal sealed class OfflineRecognizer(Uri endpoint) : IStreamingRecognizer
     {
         try
         {
-            transcript.TrySetResult(pcmBytes == 0 ? string.Empty : await TranscribeAsync(cancellationToken));
+            await StopPreviewAsync();
+            var text = BufferedBytes == 0 ? string.Empty : await TranscribeAsync(cancellationToken);
+            updates.Writer.TryWrite(new TranscriptUpdate(text, true, "completed-0"));
+            updates.Writer.TryComplete();
         }
         catch (Exception exception)
         {
-            transcript.TrySetException(exception);
+            updates.Writer.TryComplete(exception);
             throw;
         }
     }
 
     public async IAsyncEnumerable<TranscriptUpdate> ReadUpdatesAsync([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        var text = await transcript.Task.WaitAsync(cancellationToken);
-        yield return new TranscriptUpdate(text, true, "completed-0");
+        await foreach (var update in updates.Reader.ReadAllAsync(cancellationToken))
+        {
+            yield return update;
+            if (update.IsCommitted)
+                yield break;
+        }
+    }
+
+    private long BufferedBytes
+    {
+        get
+        {
+            lock (gate)
+                return pcmBytes;
+        }
+    }
+
+    // A failed or slow preview never affects the final text; the next tick simply tries again.
+    private async Task PreviewAsync(TimeSpan interval, CancellationToken cancellationToken)
+    {
+        long previewedBytes = 0;
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            try
+            {
+                await Task.Delay(interval, cancellationToken);
+                var bytes = BufferedBytes;
+                if (bytes - previewedBytes < MinimumNewPreviewBytes)
+                    continue;
+
+                var text = await TranscribeAsync(cancellationToken);
+                previewedBytes = bytes;
+                if (!cancellationToken.IsCancellationRequested)
+                    updates.Writer.TryWrite(new TranscriptUpdate(text, false));
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                return;
+            }
+            catch (Exception exception) when (exception is HttpRequestException or InvalidOperationException or InvalidDataException or JsonException)
+            {
+            }
+        }
+    }
+
+    private async Task StopPreviewAsync()
+    {
+        previewStop.Cancel();
+        await previewLoop;
     }
 
     private async Task<string> TranscribeAsync(CancellationToken cancellationToken)
     {
-        var wav = Wav(chunks, pcmBytes);
+        byte[] wav;
+        lock (gate)
+            wav = Wav(chunks, pcmBytes);
         try
         {
             using var content = new MultipartFormDataContent();
@@ -112,14 +180,19 @@ internal sealed class OfflineRecognizer(Uri endpoint) : IStreamingRecognizer
         return wav;
     }
 
-    public ValueTask DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
+        await StopPreviewAsync();
         // Clear the held audio before releasing it; it is private.
-        foreach (var chunk in chunks)
-            Array.Clear(chunk);
-        chunks.Clear();
-        pcmBytes = 0;
+        lock (gate)
+        {
+            foreach (var chunk in chunks)
+                Array.Clear(chunk);
+            chunks.Clear();
+            pcmBytes = 0;
+        }
+        updates.Writer.TryComplete();
+        previewStop.Dispose();
         client.Dispose();
-        return ValueTask.CompletedTask;
     }
 }

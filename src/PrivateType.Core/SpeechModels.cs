@@ -44,7 +44,7 @@ public static class SpeechModelCatalog
     public static SpeechModelDefinition Parakeet { get; } = new(
         ParakeetId,
         "Parakeet TDT 0.6B v3",
-        "Transcribes when you release the shortcut. Detects the language itself (25 European languages); vocabulary boosting is not available, but phrase fixes still apply.",
+        "Finishes the text when you release the shortcut, with an optional preview while you speak. Detects the language itself (25 European languages); vocabulary boosting is not available, but phrase fixes still apply.",
         new ModelManifest(
             "parakeet-tdt-0.6b-v3-q8_0-541d1f9",
             new Uri("https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3/resolve/541d1f99c6b0c3cd0b11a95167540bb8edefd82b/parakeet-tdt-0.6b-v3.q8_0.gguf"),
