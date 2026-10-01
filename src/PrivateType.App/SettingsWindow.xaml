@@ -70,8 +70,6 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="22" />
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="22" />
-            <RowDefinition Height="Auto" />
           </Grid.RowDefinitions>
 
 
@@ -242,35 +240,6 @@
               <TextBlock x:Name="SoundStatusText" Margin="0,6,0,0" FontSize="12" Foreground="{DynamicResource ColorAccent300}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
             </StackPanel>
           </Grid>
-
-          <StackPanel Grid.Row="10">
-            <Border Padding="12" Background="{DynamicResource ColorBg}" BorderBrush="{DynamicResource ColorDivider}" BorderThickness="1" CornerRadius="8">
-              <Grid>
-                <Grid.ColumnDefinitions>
-                  <ColumnDefinition Width="*" />
-                  <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-                <StackPanel Orientation="Horizontal">
-                  <Border Width="44" Height="44" VerticalAlignment="Center" Background="{DynamicResource ColorAccent900}" CornerRadius="8">
-                    <Viewbox Width="28" Height="28" Margin="8">
-                      <Grid Width="32" Height="32">
-                        <Rectangle Width="2.5" Height="8" RadiusX="1.25" RadiusY="1.25" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="9.6,12,0,0" Fill="{DynamicResource ColorAccent300}" />
-                        <Rectangle Width="2.5" Height="13" RadiusX="1.25" RadiusY="1.25" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="14.6,9.5,0,0" Fill="{DynamicResource ColorAccent300}" />
-                        <Rectangle Width="2.5" Height="8" RadiusX="1.25" RadiusY="1.25" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="19.6,12,0,0" Fill="{DynamicResource ColorAccent300}" />
-                      </Grid>
-                    </Viewbox>
-                  </Border>
-                  <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
-                    <TextBlock FontWeight="SemiBold" FontSize="14" Text="Local speech model" />
-                    <TextBlock x:Name="ActiveModelText" Margin="0,3,0,0" Foreground="{DynamicResource ColorText}" Opacity="0.55" FontSize="12" />
-                  </StackPanel>
-                </StackPanel>
-                <Border Grid.Column="1" Padding="10,5" VerticalAlignment="Center" Background="{DynamicResource ColorAccent800}" CornerRadius="8">
-                  <TextBlock Foreground="{DynamicResource ColorAccent100}" FontSize="12" FontWeight="SemiBold" Text="Installed" />
-                </Border>
-              </Grid>
-            </Border>
-          </StackPanel>
         </Grid>
         <StackPanel x:Name="VocabularyPage" Visibility="Collapsed">
           <TextBlock FontWeight="SemiBold" FontSize="16" Text="Vocabulary" />

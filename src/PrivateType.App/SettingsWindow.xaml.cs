@@ -24,7 +24,6 @@ public partial class SettingsWindow : Window
         InitializeComponent();
         models = new ModelLibraryEditor(modelStore, settings.SpeechModel);
         ModelPage.DataContext = models;
-        ActiveModelText.Text = $"{SpeechModelCatalog.Get(settings.SpeechModel).DisplayName} (Q8_0)";
         ConfirmModelDeletion = AskToDeleteModel;
         vocabulary = new VocabularyEditor(settings.Vocabulary, settings.VocabularyStrength, settings.VocabularyPacks, settings.VocabularyCorrections, settings.CorrectAfterDictation);
         if (VocabularyScopes.IsSupported(vocabularyScope))
