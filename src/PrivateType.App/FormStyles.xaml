@@ -213,6 +213,9 @@
     </Setter>
   </Style>
   <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+  <Style TargetType="ProgressBar">
+    <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ProgressBar"><Border x:Name="PART_Track" Background="{DynamicResource ColorNeutral800}" CornerRadius="3"><Border x:Name="PART_Indicator" HorizontalAlignment="Left" Background="{DynamicResource ColorAccent}" CornerRadius="3"/></Border></ControlTemplate></Setter.Value></Setter>
+  </Style>
   <Style x:Key="PageTab" TargetType="RadioButton">
     <Setter Property="Foreground" Value="{DynamicResource ColorText}" />
     <Setter Property="FontSize" Value="13" />

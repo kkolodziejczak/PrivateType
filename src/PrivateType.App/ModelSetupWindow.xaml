@@ -24,16 +24,34 @@
           <TextBlock x:Name="HeadingText" FontSize="22" FontWeight="SemiBold" Text="Download local dictation"/>
           <TextBlock x:Name="StatusText" Margin="0,6,0,12" Opacity=".75" FontSize="14" TextWrapping="Wrap" Text="Download the local speech model before using dictation."/>
           <StackPanel x:Name="ConsentPanel">
-            <Border Padding="12" Background="{DynamicResource ColorBg}" BorderBrush="{DynamicResource ColorDivider}" BorderThickness="1" CornerRadius="8">
-              <StackPanel>
-                <TextBlock FontWeight="SemiBold" Text="Nemotron 3.5 ASR Streaming 0.6B (Q8_0)"/>
-                <TextBlock Margin="0,4,0,0" FontSize="12" Opacity=".6" Text="About 708 MiB. Downloaded from NVIDIA on Hugging Face and kept on this computer." TextWrapping="Wrap"/>
-                <TextBlock Margin="0,6,0,0" FontSize="12" Foreground="{DynamicResource ColorAccent300}">
-                  <Run Text="OpenMDW-1.1 model terms: "/><Hyperlink x:Name="ModelTermsLink" RequestNavigate="OpenModelTerms" ToolTip="Open the OpenMDW-1.1 license in your default browser">openmdw.ai/license/1-1</Hyperlink>
-                </TextBlock>
-              </StackPanel>
-            </Border>
-            <CheckBox x:Name="TermsCheckBox" Margin="0,12,0,0" Checked="TermsChanged" Unchecked="TermsChanged"><TextBlock Width="350" TextWrapping="Wrap" Text="I understand that this downloads a separate local model under OpenMDW-1.1 terms."/></CheckBox>
+            <ItemsControl x:Name="ModelChoices" KeyboardNavigation.TabNavigation="Continue">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <RadioButton Margin="0,0,0,8" Foreground="{DynamicResource ColorText}" GroupName="SetupModel" IsChecked="{Binding IsChosen, Mode=TwoWay}" Cursor="Hand" AutomationProperties.Name="{Binding Name}">
+                    <RadioButton.Template>
+                      <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="Card" Padding="12" Background="{DynamicResource ColorBg}" BorderBrush="{DynamicResource ColorDivider}" BorderThickness="1" CornerRadius="8">
+                          <StackPanel>
+                            <TextBlock FontWeight="SemiBold" Text="{Binding Name}"/>
+                            <TextBlock Margin="0,4,0,0" FontSize="12" Opacity=".75" Text="{Binding Summary}" TextWrapping="Wrap"/>
+                            <TextBlock Margin="0,4,0,0" FontSize="12" Opacity=".6" Text="{Binding Details}" TextWrapping="Wrap"/>
+                          </StackPanel>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                          <Trigger Property="IsChecked" Value="True"><Setter TargetName="Card" Property="BorderBrush" Value="{DynamicResource ColorAccent}"/><Setter TargetName="Card" Property="BorderThickness" Value="2"/></Trigger>
+                          <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Card" Property="BorderBrush" Value="{DynamicResource ColorAccent300}"/></Trigger>
+                        </ControlTemplate.Triggers>
+                      </ControlTemplate>
+                    </RadioButton.Template>
+                  </RadioButton>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <TextBlock Margin="0,2,0,0" FontSize="12" Foreground="{DynamicResource ColorAccent300}">
+              <Run x:Name="ModelTermsName" Text="Model terms: "/><Hyperlink x:Name="ModelTermsLink" RequestNavigate="OpenModelTerms" ToolTip="Open the model terms in your default browser"><Run x:Name="ModelTermsLinkText"/></Hyperlink>
+            </TextBlock>
+            <CheckBox x:Name="TermsCheckBox" Margin="0,12,0,0" Checked="TermsChanged" Unchecked="TermsChanged"><TextBlock x:Name="TermsText" Width="350" TextWrapping="Wrap"/></CheckBox>
+            <TextBlock Margin="0,10,0,0" FontSize="12" Opacity=".55" TextWrapping="Wrap" Text="You can download the other model, switch, or delete models later in Settings → Model."/>
           </StackPanel>
           <ProgressBar x:Name="ProgressBar" Margin="0,12,0,0" Height="8" Minimum="0" Maximum="100" Visibility="Collapsed"/>
           <TextBlock x:Name="ProgressCaption" Margin="0,8,0,0" FontSize="12" Opacity=".55"/>

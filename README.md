@@ -18,8 +18,9 @@ recognition fallback, or retained transcript history.
    it from `Program Files`, a read-only archive, or a protected network path.
 3. Open the extracted versioned folder and start the clearly visible
    `PrivateType.exe`. Technical runtime files are kept inside `app`.
-4. On the first launch, approve the separate local-model download and wait for
-   its verification to finish.
+4. On the first launch, choose a speech model (see
+   [Speech models](#speech-models)), approve its separate download, and wait
+   for its verification to finish.
 5. Open **Settings** from the tray icon or ready bubble, choose a microphone,
    and confirm your shortcuts.
 
@@ -29,9 +30,10 @@ cache-aware PrivateType versions. To keep a release self-contained, create an
 empty `app\models` directory in the extracted folder before its first launch;
 that deliberate directory selects portable-local mode. Existing v1.0.2 or other
 release-folder models are never scanned, moved, linked, overwritten, or deleted.
-After closing every PrivateType version, model directories under that shared
-cache can be deleted to reclaim space; a cache-aware version will download its
-pinned model again the next time it needs it.
+To reclaim space, delete a model you no longer use in **Settings → Model**, or,
+after closing every PrivateType version, delete model directories under that
+shared cache; a cache-aware version will download its pinned model again the
+next time it needs it.
 
 The first public releases use a direct, unsigned ZIP with manual updates. Use
 the SHA-256 file published beside each release and download only from this
@@ -84,6 +86,24 @@ afterwards (unless you copied something new meanwhile) and marks the dictated
 text so Windows clipboard history and cloud clipboard skip it. Choose **Typing
 characters** for apps where Ctrl+V does not paste, such as Vim or PuTTY; it
 never touches the clipboard.
+
+### Speech models
+
+PrivateType can use either of two local NVIDIA models. Pick one during the
+first launch; later, open **Settings → Model** to download the other one,
+switch between them with **Use** and **Save changes**, or **Delete…** a model
+you no longer need. The model in use cannot be deleted; switch first.
+
+| | Nemotron 3.5 ASR Streaming 0.6B (default) | Parakeet TDT 0.6B v3 |
+| --- | --- | --- |
+| While you speak | Words appear live | Listening only; text appears when you release |
+| Language | Uses each shortcut's language | Detects the language itself (25 European languages) |
+| Vocabulary boosting | Yes | No; **Fix phrases after dictation** still applies |
+| Download | About 708 MiB, OpenMDW-1.1 | About 681 MiB, CC-BY-4.0 |
+
+With Parakeet, a minute of speech takes a few seconds to appear after release
+on the recorded test machine. The shortcut's language still chooses which
+vocabulary corrections apply.
 
 ### Vocabulary
 
@@ -170,8 +190,12 @@ PrivateType is a CPU-only `win-x64` app.
 | Free disk space | 1.2 GB for app, runtime, model, and working room | 2 GB or more |
 | Microphone | Any Windows recording device | Headset or close microphone in a quiet room |
 
-The pinned Nemotron Q8_0 model is about 708 MiB. The self-contained app/runtime
-folder is about 200 MB before the model download. The current native runtime
+The pinned Nemotron Q8_0 model is about 708 MiB and the Parakeet Q8_0 model
+about 681 MiB; add 0.7 GB of disk space if you keep both. While loaded, the
+local runtime used about 935 MiB of memory with Nemotron and 790 MiB with
+Parakeet (rising to about 1.1 GiB while transcribing a one-minute dictation).
+The self-contained app/runtime folder is about 200 MB before the model
+download. The current native runtime
 requires the [Microsoft Visual C++ x64 Redistributable](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist)
 if it is not already installed.
 
@@ -183,10 +207,13 @@ if it is not already installed.
 - `app/data/settings.json` stores only the selected microphone, shortcuts and
   their languages, shortcut behavior, insertion mode, vocabulary (including the
   heard-as wordings you taught or typed), bubble location,
-  Windows-startup preference, model idle timeout, and ready-sound choice.
-- The model is downloaded separately from NVIDIA; it is not included in the
-  app ZIP. See [MODEL_ARTIFACT.md](MODEL_ARTIFACT.md) for its source and
-  checksum.
+  Windows-startup preference, chosen speech model, model idle timeout, and
+  ready-sound choice.
+- Models are downloaded separately from NVIDIA; they are not included in the
+  app ZIP. See [MODEL_ARTIFACT.md](MODEL_ARTIFACT.md) for their sources and
+  checksums.
+- With Parakeet, the audio of one held dictation stays in memory until it is
+  transcribed on release, then it is cleared; it is never written to disk.
 - The shared cache contains only the verified public model and its coordination
   files. Settings remain in the release's `app/data`; audio, transcripts, and
   diagnostics are never copied into the shared cache.

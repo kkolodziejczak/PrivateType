@@ -15,6 +15,11 @@ internal sealed class EngineHost : IDisposable
 
     public Uri RealtimeEndpoint => new($"ws://127.0.0.1:{port}/v1/realtime");
 
+    public Uri TranscriptionEndpoint => new($"http://127.0.0.1:{port}/v1/audio/transcriptions");
+
+    // The model the running process was started with, so a switch can tell it must restart.
+    public string? LoadedModelPath { get; private set; }
+
     public bool IsRunning => process is { HasExited: false };
 
     public bool IsReady => IsRunning && ready;
@@ -52,6 +57,9 @@ internal sealed class EngineHost : IDisposable
 
     public async Task StartAsync(string modelPath, CancellationToken cancellationToken)
     {
+        if (IsRunning && !string.Equals(LoadedModelPath, modelPath, StringComparison.OrdinalIgnoreCase))
+            Stop();
+
         if (IsReady)
             return;
 
@@ -78,6 +86,7 @@ internal sealed class EngineHost : IDisposable
                 WorkingDirectory = runtime.WorkingDirectory
             }) ?? throw new InvalidOperationException("Could not start the local speech runtime.");
             engineJob.Assign(process);
+            LoadedModelPath = modelPath;
 
             var deadline = DateTimeOffset.UtcNow + TimeSpan.FromSeconds(20);
             while (DateTimeOffset.UtcNow < deadline)
@@ -103,6 +112,7 @@ internal sealed class EngineHost : IDisposable
     public void Stop()
     {
         ready = false;
+        LoadedModelPath = null;
         if (process is null)
             return;
 

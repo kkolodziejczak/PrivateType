@@ -63,6 +63,27 @@ public sealed class ModelProvisioner
 
     public bool IsAvailable() => ModelArtifactVerifier.IsVerified(ModelPath, manifest.ExpectedBytes, manifest.Sha256);
 
+    // A cheap listing check: the file is there at the pinned size. Use IsAvailable before loading it.
+    public bool IsPresent()
+    {
+        var file = new FileInfo(ModelPath);
+        return file.Exists && file.Length == manifest.ExpectedBytes;
+    }
+
+    // Removes this model's file and abandoned partials under the cache lock, so a concurrent
+    // download by another PrivateType copy is never cut in half. Throws IOException while the
+    // file is open, for example when another copy has the model loaded.
+    public async Task DeleteAsync(CancellationToken cancellationToken)
+    {
+        if (!Directory.Exists(ModelsDirectory))
+            return;
+
+        await using var lease = await coordinator.AcquireAsync(cancellationToken);
+        if (File.Exists(ModelPath))
+            File.Delete(ModelPath);
+        CleanMatchingPartialFiles();
+    }
+
     private void CleanMatchingPartialFiles()
     {
         var pattern = $"{manifest.FileName}.{normalizedSha256}.*.partial";

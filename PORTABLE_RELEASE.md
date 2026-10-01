@@ -40,8 +40,8 @@ downloads its pinned model again when needed.
 
 ## Model and runtime notices
 
-- Model: `nvidia/nemotron-3.5-asr-streaming-0.6b`, Q8_0 GGUF, 742,090,464 bytes; see [MODEL_ARTIFACT.md](MODEL_ARTIFACT.md).
-- Model license: OpenMDW-1.1. The model is downloaded by the user and is not redistributed in the ZIP.
+- Models: `nvidia/nemotron-3.5-asr-streaming-0.6b` (default), Q8_0 GGUF, 742,090,464 bytes, and `nvidia/parakeet-tdt-0.6b-v3`, Q8_0 GGUF, 713,975,456 bytes; see [MODEL_ARTIFACT.md](MODEL_ARTIFACT.md).
+- Model licenses: OpenMDW-1.1 (Nemotron) and CC-BY-4.0 (Parakeet). Models are downloaded by the user and are not redistributed in the ZIP.
 - Runtime: NeMo-Speech.cpp, Apache-2.0. See [ENGINE_DECISION.md](ENGINE_DECISION.md) for the pinned engine/model decision and measurements.
 
 ## Release verification

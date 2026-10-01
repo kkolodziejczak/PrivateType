@@ -191,7 +191,7 @@ internal static class SettingsVocabularyProbe
     }
 
     private static SettingsWindow Create(PortableSettings settings, bool openVocabulary, string? vocabularyScope = null) =>
-        new(settings, [new MicrophoneOption("default", "System default microphone")], openVocabulary, vocabularyScope) { ShowInTaskbar = false };
+        new(settings, [new MicrophoneOption("default", "System default microphone")], ProbeModelStore.Empty, openVocabulary, vocabularyScope) { ShowInTaskbar = false };
 
     private static AutomationPeer AutomationPeer(UIElement element) =>
         UIElementAutomationPeer.CreatePeerForElement(element) ?? throw new InvalidOperationException("Missing automation peer.");

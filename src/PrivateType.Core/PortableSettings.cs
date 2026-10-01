@@ -34,6 +34,7 @@ public sealed record PortableSettings(
     public IReadOnlyList<VocabularyCorrection> VocabularyCorrections { get; init; } = [];
     // Rewrites spoken forms and taught wordings in the finished sentence before it is inserted.
     public bool CorrectAfterDictation { get; init; } = true;
+    public string SpeechModel { get; init; } = SpeechModelCatalog.DefaultId;
 
     public static PortableSettings Default { get; } = new("default", ShortcutBinding.Defaults);
 }
@@ -100,7 +101,10 @@ public static class PortableSettingsValidator
             settings => settings with { VocabularyStrength = VocabularyStrengths.Normal }),
         new("ready sound volume",
             settings => settings.ReadySoundVolume is < 0 or > 100 ? "Choose a ready sound volume between 0 and 100%." : null,
-            settings => settings with { ReadySoundVolume = PortableSettings.Default.ReadySoundVolume })
+            settings => settings with { ReadySoundVolume = PortableSettings.Default.ReadySoundVolume }),
+        new("speech model",
+            settings => SpeechModelCatalog.IsSupported(settings.SpeechModel) ? null : "Choose a supported speech model.",
+            settings => settings with { SpeechModel = SpeechModelCatalog.DefaultId })
     ];
 
     public static string? Validate(PortableSettings settings)

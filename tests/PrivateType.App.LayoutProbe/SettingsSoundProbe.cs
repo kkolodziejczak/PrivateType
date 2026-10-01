@@ -119,7 +119,7 @@ internal static class SettingsSoundProbe
     }
 
     private static SettingsWindow CreateWindow(PortableSettings settings) => new(settings,
-        [new MicrophoneOption("default", "System default microphone — USB conference microphone with a deliberately long device name")])
+        [new MicrophoneOption("default", "System default microphone — USB conference microphone with a deliberately long device name")], ProbeModelStore.Empty)
     {
         ShowInTaskbar = false
     };

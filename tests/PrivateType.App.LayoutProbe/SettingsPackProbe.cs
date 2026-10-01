@@ -41,7 +41,7 @@ internal static class SettingsPackProbe
             Vocabulary = [new("MVVM", "en")],
             VocabularyPacks = [Development, Products]
         };
-        var window = new SettingsWindow(settings, [new MicrophoneOption("default", "System default microphone")], openVocabulary: true) { ShowInTaskbar = false };
+        var window = new SettingsWindow(settings, [new MicrophoneOption("default", "System default microphone")], ProbeModelStore.Empty, openVocabulary: true) { ShowInTaskbar = false };
         window.Show();
         try
         {

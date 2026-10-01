@@ -16,6 +16,10 @@ The GitHub Actions release workflow checks out NeMo-Speech.cpp at revision `1118
 - The ready local runtime used about 935 MiB of working set on the recorded test machine (model revision `ea30d66`, 2026-09-28).
 - A manual Polish microphone test was accepted for continuous phrases. Isolated words and pauses remain a known recognition-quality limitation.
 
+## Second model: Parakeet TDT 0.6B v3
+
+The same runtime and `serve` command also load `nvidia/parakeet-tdt-0.6b-v3` Q8_0 (see [MODEL_ARTIFACT.md](MODEL_ARTIFACT.md)). It is offline-only, so the app records the whole hold and transcribes it once through `/v1/audio/transcriptions`. Measured on the recorded test machine (2026-10-01): a 13 s FLEURS Polish clip was transcribed exactly, with punctuation, in about 0.9 s after release; a 61 s clip took 5.1 s; the ready runtime used about 790 MiB of working set, peaking near 1.14 GiB on the 61 s clip.
+
 ## Scope
 
 This is the selected v1 engine. It is not a general engine benchmark or a cross-platform commitment. Future decoder or engine experiments are listed in [TODO.md](TODO.md).

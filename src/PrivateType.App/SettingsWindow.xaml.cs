@@ -16,11 +16,16 @@ public partial class SettingsWindow : Window
     private readonly PortableSettings originalSettings;
     private readonly ModelReadySound soundPreview = new();
     private readonly VocabularyEditor vocabulary;
+    private readonly ModelLibraryEditor models;
     private string? customSoundPath;
 
-    public SettingsWindow(PortableSettings settings, IReadOnlyList<MicrophoneOption> microphones, bool openVocabulary = false, string? vocabularyScope = null)
+    internal SettingsWindow(PortableSettings settings, IReadOnlyList<MicrophoneOption> microphones, IModelStore modelStore, bool openVocabulary = false, string? vocabularyScope = null)
     {
         InitializeComponent();
+        models = new ModelLibraryEditor(modelStore, settings.SpeechModel);
+        ModelPage.DataContext = models;
+        ActiveModelText.Text = $"{SpeechModelCatalog.Get(settings.SpeechModel).DisplayName} (Q8_0)";
+        ConfirmModelDeletion = AskToDeleteModel;
         vocabulary = new VocabularyEditor(settings.Vocabulary, settings.VocabularyStrength, settings.VocabularyPacks, settings.VocabularyCorrections, settings.CorrectAfterDictation);
         if (VocabularyScopes.IsSupported(vocabularyScope))
             vocabulary.Scope = vocabularyScope!;
@@ -53,7 +58,11 @@ public partial class SettingsWindow : Window
         ReadySoundBox.SelectedValue = settings.ReadySound;
         ReadyVolumeSlider.Value = settings.ReadySoundVolume;
         UpdateSoundControls();
-        Closed += (_, _) => soundPreview.Dispose();
+        Closed += (_, _) =>
+        {
+            models.CancelAll();
+            soundPreview.Dispose();
+        };
     }
 
     internal static string HeaderText(Version? version) => $"{ApplicationVersion.Label(version)} — settings";
@@ -63,29 +72,74 @@ public partial class SettingsWindow : Window
     public event Action? LicensesRequested;
 
     internal VocabularyEditor Vocabulary => vocabulary;
+    internal ModelLibraryEditor Models => models;
 
     internal void ShowVocabularyPage() => VocabularyTab.IsChecked = true;
+    internal void ShowModelPage() => ModelTab.IsChecked = true;
 
     private void PageChanged(object sender, RoutedEventArgs e)
     {
-        if (GeneralPage is null || VocabularyPage is null)
+        if (GeneralPage is null || VocabularyPage is null || ModelPage is null)
             return;
 
-        var showVocabulary = VocabularyTab.IsChecked == true;
-        GeneralPage.Visibility = showVocabulary ? Visibility.Collapsed : Visibility.Visible;
-        VocabularyPage.Visibility = showVocabulary ? Visibility.Visible : Visibility.Collapsed;
+        GeneralPage.Visibility = GeneralTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        VocabularyPage.Visibility = VocabularyTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        ModelPage.Visibility = ModelTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         SettingsScrollViewer.ScrollToTop();
     }
 
-    // Ctrl+Tab and Ctrl+Shift+Tab switch between the two pages.
+    // Ctrl+Tab and Ctrl+Shift+Tab cycle through the pages.
     private void SwitchPageWithKeyboard(object sender, Input.KeyEventArgs e)
     {
         if (e.Key != Input.Key.Tab || (Input.Keyboard.Modifiers & Input.ModifierKeys.Control) == 0)
             return;
 
-        var target = VocabularyTab.IsChecked == true ? GeneralTab : VocabularyTab;
+        System.Windows.Controls.RadioButton[] tabs = [GeneralTab, VocabularyTab, ModelTab];
+        var current = Array.FindIndex(tabs, tab => tab.IsChecked == true);
+        var step = (Input.Keyboard.Modifiers & Input.ModifierKeys.Shift) != 0 ? tabs.Length - 1 : 1;
+        var target = tabs[(current + step) % tabs.Length];
         target.IsChecked = true;
         target.Focus();
+        e.Handled = true;
+    }
+
+    // Test seam: the layout probe replaces the confirmation.
+    internal Func<SpeechModelDefinition, bool> ConfirmModelDeletion { get; set; }
+
+    private bool AskToDeleteModel(SpeechModelDefinition model)
+        => System.Windows.MessageBox.Show(
+            this,
+            $"Delete {model.DisplayName} from this computer? You can download it again later.",
+            "Delete speech model",
+            MessageBoxButton.OKCancel,
+            MessageBoxImage.Question) == MessageBoxResult.OK;
+
+    private void DownloadModel(object sender, RoutedEventArgs e)
+    {
+        ValidationText.Text = string.Empty;
+        _ = models.DownloadAsync(ModelRow(sender));
+    }
+
+    private void CancelModelDownload(object sender, RoutedEventArgs e) => models.CancelDownload(ModelRow(sender));
+
+    private void UseModel(object sender, RoutedEventArgs e)
+    {
+        ValidationText.Text = string.Empty;
+        models.Use(ModelRow(sender));
+    }
+
+    private async void DeleteModel(object sender, RoutedEventArgs e)
+    {
+        var row = ModelRow(sender);
+        if (ConfirmModelDeletion(row.Model))
+            await models.DeleteAsync(row);
+    }
+
+    private static ModelLibraryEditor.SpeechModelRow ModelRow(object sender) => (ModelLibraryEditor.SpeechModelRow)((FrameworkElement)sender).Tag;
+
+    private void OpenModelTerms(object sender, System.Windows.Navigation.RequestNavigateEventArgs e)
+    {
+        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
         e.Handled = true;
     }
 
@@ -368,6 +422,13 @@ public partial class SettingsWindow : Window
 
     private void Save(object sender, RoutedEventArgs e)
     {
+        if (models.IsBusy)
+        {
+            ValidationText.Text = "Wait for the model download or deletion to finish before saving.";
+            ModelTab.IsChecked = true;
+            return;
+        }
+
         var settings = PendingSoundSettings() with
         {
             MicrophoneId = MicrophoneBox.SelectedValue as string ?? "default",
@@ -380,7 +441,8 @@ public partial class SettingsWindow : Window
             VocabularyStrength = vocabulary.Strength,
             VocabularyCorrections = vocabulary.Corrections,
             CorrectAfterDictation = vocabulary.CorrectAfterDictation,
-            ModelIdleTimeoutMinutes = IdleTimeoutBox.SelectedValue is int minutes ? minutes : 10
+            ModelIdleTimeoutMinutes = IdleTimeoutBox.SelectedValue is int minutes ? minutes : 10,
+            SpeechModel = models.SelectedId
         };
         var validationError = PortableSettingsValidator.Validate(settings);
         if (validationError is not null)

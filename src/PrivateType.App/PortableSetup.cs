@@ -118,14 +118,25 @@ internal static class PortablePaths
         => Path.Combine(Path.GetFullPath(baseDirectory), "data");
 }
 
-internal static class PinnedModel
+// Resolves where each catalog model lives and hands out one provisioner per model.
+internal sealed class SpeechModelLibrary(IModelDownloadClient downloader)
 {
-    internal static readonly ModelManifest Manifest = new(
-        "nemotron-3.5-asr-streaming-0.6b-q8_0-1c8deae",
-        new Uri("https://huggingface.co/nvidia/nemotron-3.5-asr-streaming-0.6b/resolve/ea30d66debe3740a08b573244286791d423d6b3e/nemotron-3.5-asr-streaming-0.6b.q8_0.gguf"),
-        "nemotron-3.5-asr-streaming-0.6b.q8_0.gguf",
-        742090464L,
-        "3fc991d3badad7277c11030a7519832cddaf2057aafed6d4b25147e953a070b1");
+    private readonly Dictionary<string, (ModelStorageLocation Storage, ModelProvisioner Provisioner)> models = new(StringComparer.Ordinal);
+
+    public ModelStorageLocation Storage(SpeechModelDefinition model) => Resolve(model).Storage;
+
+    public ModelProvisioner Provisioner(SpeechModelDefinition model) => Resolve(model).Provisioner;
+
+    private (ModelStorageLocation Storage, ModelProvisioner Provisioner) Resolve(SpeechModelDefinition model)
+    {
+        if (!models.TryGetValue(model.Id, out var entry))
+        {
+            var storage = ModelStoragePolicy.Resolve(model.Manifest);
+            entry = (storage, new ModelProvisioner(storage.Directory, model.Manifest, downloader));
+            models[model.Id] = entry;
+        }
+        return entry;
+    }
 }
 
 internal sealed class HttpModelDownloadClient : IModelDownloadClient, IDisposable

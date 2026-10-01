@@ -58,13 +58,14 @@ static void RenderWindows(bool pointerPlacementOnly)
     Render(
         new SettingsWindow(
             new PortableSettings("default", ShortcutBinding.Defaults),
-            [new MicrophoneOption("default", "System default microphone")]),
+            [new MicrophoneOption("default", "System default microphone")], ProbeModelStore.Empty),
         Path.Combine(outputDirectory, "settings.png"),
         VerifySettingsVersion);
     SettingsSoundProbe.Run(outputDirectory);
     SettingsLanguageProbe.Run(outputDirectory);
     SettingsVocabularyProbe.Run(outputDirectory);
     SettingsPackProbe.Run(outputDirectory);
+    SettingsModelProbe.Run(outputDirectory);
     TeachProbe.Run(outputDirectory);
     Render(new DiagnosticsWindow(new InMemoryDiagnostics()), Path.Combine(outputDirectory, "diagnostics-empty.png"));
     Render(new OpenSourceLicensesWindow(), Path.Combine(outputDirectory, "open-source-licenses.png"));

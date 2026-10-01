@@ -23,7 +23,7 @@ internal static class SettingsLanguageProbe
                 new ShortcutBinding("auto", 0x41)
             ]
         };
-        var window = new SettingsWindow(settings, [new MicrophoneOption("default", "System default microphone")]) { ShowInTaskbar = false };
+        var window = new SettingsWindow(settings, [new MicrophoneOption("default", "System default microphone")], ProbeModelStore.Empty) { ShowInTaskbar = false };
         window.Show();
         try
         {
@@ -92,7 +92,7 @@ internal static class SettingsLanguageProbe
 
     private static void VerifySavedLocaleCodes(PortableSettings settings)
     {
-        var window = new SettingsWindow(settings, [new MicrophoneOption("default", "System default microphone")]) { ShowInTaskbar = false };
+        var window = new SettingsWindow(settings, [new MicrophoneOption("default", "System default microphone")], ProbeModelStore.Empty) { ShowInTaskbar = false };
         Exception? failure = null;
         window.ContentRendered += (_, _) => window.Dispatcher.InvokeAsync(() =>
         {

@@ -1,6 +1,7 @@
 using Microsoft.Win32;
 using PrivateType.Core;
 using System.Diagnostics;
+using System.IO;
 using System.Windows.Threading;
 using Forms = System.Windows.Forms;
 using Wpf = System.Windows;
@@ -32,7 +33,8 @@ internal sealed class DictationApplication : IDisposable
     private readonly EphemeralTranscriptBuffer lastDictation = new();
     private long dictationSequence;
     private PortableSettingsStore? settingsStore;
-    private ModelProvisioner? modelProvisioner;
+    private readonly SpeechModelLibrary models;
+    private SpeechModelDefinition activeModel = SpeechModelCatalog.Get(SpeechModelCatalog.DefaultId);
     private PortableSettings settings = PortableSettings.Default;
     private CancellationTokenSource? provisioningCancellation;
     private string? modelPath;
@@ -43,7 +45,8 @@ internal sealed class DictationApplication : IDisposable
 
     public DictationApplication()
     {
-        engineLoads = new EngineLoadCoordinator(LoadEngineAsync, () => engine.IsReady);
+        models = new SpeechModelLibrary(downloader);
+        engineLoads = new EngineLoadCoordinator(LoadEngineAsync, () => engine.IsReady && engine.LoadedModelPath == modelPath);
         sessions = new DictationSessionCoordinator(CreateSession);
         trayIcon = new Forms.NotifyIcon
         {
@@ -183,13 +186,14 @@ internal sealed class DictationApplication : IDisposable
     {
         try
         {
-            var modelStorage = ModelStoragePolicy.Resolve(PinnedModel.Manifest);
             PortablePaths.EnsureWritable();
             LegacyDiagnosticsCleanup.DeleteKnownLogs(PortablePaths.DataDirectory, diagnostics);
             settingsStore = new PortableSettingsStore(PortablePaths.DataDirectory);
             var loaded = settingsStore.Load();
             settings = ReconcileStartupPreference(loaded.Settings);
-            modelProvisioner = new ModelProvisioner(modelStorage.Directory, PinnedModel.Manifest, downloader);
+            activeModel = SpeechModelCatalog.Get(settings.SpeechModel);
+            var modelStorage = models.Storage(activeModel);
+            var modelProvisioner = models.Provisioner(activeModel);
             if (loaded.Warning is not null)
                 trayIcon.ShowBalloonTip(5000, "PrivateType", loaded.Warning, Forms.ToolTipIcon.Warning);
             var microphones = MicrophoneCatalog.Enumerate();
@@ -265,9 +269,9 @@ internal sealed class DictationApplication : IDisposable
     private void ShowModelSetup(ModelStorageLocation modelStorage)
     {
         statusItem.Text = "Model setup required";
-        var window = new ModelSetupWindow();
+        var window = new ModelSetupWindow(activeModel.Id);
         window.RetryRequested += () => ShowModelDownloadOrRuntimeRequirement(window, modelStorage.Mode);
-        window.DownloadRequested += () => _ = ProvisionModelAsync(window, modelStorage.Mode);
+        window.DownloadRequested += model => _ = ProvisionModelAsync(window, model);
         window.CancelRequested += () => Wpf.Application.Current.Shutdown();
         window.SetStorageMode(modelStorage.Mode);
         window.Show();
@@ -292,16 +296,24 @@ internal sealed class DictationApplication : IDisposable
         }
     }
 
-    private async Task ProvisionModelAsync(ModelSetupWindow window, ModelStorageMode storageMode)
+    private async Task ProvisionModelAsync(ModelSetupWindow window, SpeechModelDefinition model)
     {
-        if (modelProvisioner is null || provisioningCancellation is not null)
+        if (settingsStore is null || provisioningCancellation is not null)
             return;
 
         provisioningCancellation = new CancellationTokenSource();
         try
         {
-            var progress = new Progress<long>(downloaded => window.ShowProgress(downloaded, PinnedModel.Manifest.ExpectedBytes, storageMode));
-            var modelPath = await modelProvisioner.EnsureAvailableAsync(progress, provisioningCancellation.Token);
+            var storageMode = models.Storage(model).Mode;
+            var progress = new Progress<long>(downloaded => window.ShowProgress(downloaded, model.Manifest.ExpectedBytes, storageMode));
+            var modelPath = await models.Provisioner(model).EnsureAvailableAsync(progress, provisioningCancellation.Token);
+            if (settings.SpeechModel != model.Id)
+            {
+                var chosen = settings with { SpeechModel = model.Id };
+                settingsStore.Save(chosen);
+                settings = chosen;
+            }
+            activeModel = model;
             window.CloseAfterSuccess();
             await StartEngineAfterProvisioningAsync(modelPath);
         }
@@ -332,6 +344,73 @@ internal sealed class DictationApplication : IDisposable
             ShowStartupFailure($"The local model is verified, but PrivateType could not become ready: {exception.Message}");
         }
     }
+
+    private void SaveSettingsQuietly()
+    {
+        try
+        {
+            settingsStore?.Save(settings);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            RecordDiagnostic("model.choice.save.failed", exception);
+        }
+    }
+
+    // Verifies the newly chosen model off the UI thread, then reloads the engine with it.
+    // A damaged file keeps the previous model and says how to recover.
+    private async Task SwitchModelAsync(SpeechModelDefinition model)
+    {
+        RecordDiagnostic("model.switch", details: [("model", model.Id)]);
+        var provisioner = models.Provisioner(model);
+        bool verified;
+        try
+        {
+            verified = await Task.Run(provisioner.IsAvailable);
+        }
+        catch (Exception exception)
+        {
+            RecordDiagnostic("model.switch.failed", exception);
+            verified = false;
+        }
+
+        // A later save chose another model while this one was being verified.
+        if (settings.SpeechModel != model.Id)
+            return;
+
+        if (!verified)
+        {
+            settings = settings with { SpeechModel = activeModel.Id };
+            SaveSettingsQuietly();
+            trayIcon.ShowBalloonTip(5000, "PrivateType", $"{model.DisplayName} could not be verified, so {activeModel.DisplayName} stays in use. Delete and download it again in Settings → Model.", Forms.ToolTipIcon.Warning);
+            return;
+        }
+
+        activeModel = model;
+        modelPath = provisioner.ModelPath;
+        modelIdleTimer.Stop();
+        // A dictation in progress keeps the old engine; the next shortcut loads the new model.
+        if (shortcutHeld)
+            return;
+
+        ShowReadyPanel();
+        try
+        {
+            await EnsureEngineLoadedAsync();
+            ShowReadyPanel();
+            ScheduleModelUnload();
+        }
+        catch (Exception exception)
+        {
+            RecordDiagnostic("model.load.failed", exception);
+            statusItem.Text = "Model could not load";
+            trayIcon.ShowBalloonTip(5000, "PrivateType", $"The local model could not load: {exception.Message}", Forms.ToolTipIcon.Error);
+        }
+    }
+
+    // Offline models transcribe the whole hold after release, so long dictations need longer.
+    internal static TimeSpan FinalizationTimeout(SpeechModelDefinition model)
+        => model.Style == RecognitionStyle.Offline ? TimeSpan.FromSeconds(60) : TimeSpan.FromSeconds(15);
 
     private async Task ConfigureReadyAsync(string modelPath)
     {
@@ -367,7 +446,7 @@ internal sealed class DictationApplication : IDisposable
 
     private void ShowSettings(bool openVocabulary = false, string? vocabularyScope = null)
     {
-        if (settingsStore is null || modelProvisioner is null)
+        if (settingsStore is null || modelPath is null)
             return;
 
         // The tray menu stays clickable while a modal window is open. A second window would
@@ -387,7 +466,7 @@ internal sealed class DictationApplication : IDisposable
         }
 
         hotkey.Suspend();
-        var window = new SettingsWindow(settings, MicrophoneCatalog.Enumerate(), openVocabulary, vocabularyScope);
+        var window = new SettingsWindow(settings, MicrophoneCatalog.Enumerate(), new LibraryModelStore(models), openVocabulary, vocabularyScope);
         window.Loaded += (_, _) => BringToForeground(window);
         window.DiagnosticsRequested += () => ShowDiagnostics(window);
         window.LicensesRequested += () => new OpenSourceLicensesWindow { Owner = window }.ShowDialog();
@@ -446,7 +525,10 @@ internal sealed class DictationApplication : IDisposable
                     }
                     settingsStore.Save(newSettings);
                 });
+            var previousModelId = settings.SpeechModel;
             settings = newSettings;
+            if (settings.SpeechModel != previousModelId)
+                _ = SwitchModelAsync(SpeechModelCatalog.Get(settings.SpeechModel));
             hotkey.ToggleMode = settings.ShortcutMode == DictationShortcutModes.Toggle;
             statusItem.Text = DescribeReady(availability);
             trayIcon.Text = $"PrivateType — {statusItem.Text}";
@@ -582,10 +664,13 @@ internal sealed class DictationApplication : IDisposable
         var sequence = Interlocked.Read(ref dictationSequence);
         var session = new DictationSession(
             new DefaultMicrophoneCapture(settings.MicrophoneId),
-            new RealtimeRecognizer(engine.RealtimeEndpoint),
+            activeModel.Style == RecognitionStyle.Offline
+                ? new OfflineRecognizer(engine.TranscriptionEndpoint)
+                : new RealtimeRecognizer(engine.RealtimeEndpoint),
             new ForegroundTargetGuard(new Win32ForegroundTarget()),
             settings.InsertionMode == TextInsertionModes.Paste ? new ClipboardPasteInjector() : new UnicodeTextInjector(),
             new RecognitionRequest(localeCode, VocabularyComposer.Compose(settings.Vocabulary, settings.VocabularyPacks, localeCode), settings.VocabularyStrength),
+            finalizationTimeout: FinalizationTimeout(activeModel),
             diagnostics: diagnostics,
             correctText: settings.CorrectAfterDictation
                 ? TranscriptCorrector.Create(settings.Vocabulary, settings.VocabularyPacks, settings.VocabularyCorrections, localeCode).Correct
@@ -657,11 +742,18 @@ internal sealed class DictationApplication : IDisposable
         if (modelPath is null)
             throw new InvalidOperationException("The local speech model is not available.");
 
-        await engineLoads.EnsureLoadedAsync();
+        // A load already pending may be for the previous model; after a switch, load again.
+        for (var attempt = 0; attempt < 3 && !engineLoads.IsLoaded; attempt++)
+            await engineLoads.EnsureLoadedAsync();
+        if (!engineLoads.IsLoaded)
+            throw new InvalidOperationException("The local speech model changed while it was loading.");
     }
 
     private async Task LoadEngineAsync()
     {
+        // Restarting the engine for another model must not cut off a dictation that is still finalizing.
+        if (engine.IsRunning)
+            await sessions.WhenIdleAsync();
         var path = modelPath ?? throw new InvalidOperationException("The local speech model is not available.");
         RecordDiagnostic("model.loading");
         statusItem.Text = "Loading local model";

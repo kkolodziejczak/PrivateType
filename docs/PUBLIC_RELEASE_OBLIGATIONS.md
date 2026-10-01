@@ -26,6 +26,16 @@ pinned model revision and checksum, and make the model name, source, and
 OpenMDW-1.1 terms available in the first-run/download documentation. Reassess
 this requirement before ever bundling a model file or hosting a mirror.
 
+## Model: NVIDIA Parakeet TDT 0.6B v3
+
+The optional second model is licensed CC-BY-4.0 according to NVIDIA's
+[model card](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3). As with
+Nemotron, the user downloads it from NVIDIA's repository after accepting its
+terms, so the ZIP does not redistribute it. The setup window and
+**Settings → Model** name the model, its source (NVIDIA on Hugging Face), and
+link the CC-BY-4.0 terms. Bundling or mirroring it would require CC-BY-4.0
+attribution and a link to the license alongside the copy.
+
 ## Native runtime notices
 
 NVIDIA's official [NeMo-Speech.cpp license section](https://github.com/NVIDIA/NeMo-Speech.cpp#license)

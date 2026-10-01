@@ -34,10 +34,11 @@
           </Grid.RowDefinitions>
           <StackPanel Grid.Row="0" Margin="0,0,0,18">
             <TextBlock FontSize="22" FontWeight="SemiBold" Text="Settings" />
-            <TextBlock Margin="0,5,0,0" Foreground="{DynamicResource ColorText}" Opacity="0.7" FontSize="14" TextWrapping="Wrap" Text="Choose your input, shortcuts, vocabulary, and ready sound." />
+            <TextBlock Margin="0,5,0,0" Foreground="{DynamicResource ColorText}" Opacity="0.7" FontSize="14" TextWrapping="Wrap" Text="Choose your input, shortcuts, vocabulary, speech model, and ready sound." />
             <StackPanel Margin="0,14,0,0" Orientation="Horizontal">
               <RadioButton x:Name="GeneralTab" Style="{StaticResource PageTab}" GroupName="SettingsPage" Content="General" IsChecked="True" Checked="PageChanged" AutomationProperties.Name="General settings" />
               <RadioButton x:Name="VocabularyTab" Style="{StaticResource PageTab}" GroupName="SettingsPage" Margin="8,0,0,0" Content="Vocabulary" Checked="PageChanged" AutomationProperties.Name="Vocabulary settings" />
+              <RadioButton x:Name="ModelTab" Style="{StaticResource PageTab}" GroupName="SettingsPage" Margin="8,0,0,0" Content="Model" Checked="PageChanged" AutomationProperties.Name="Speech model settings" />
             </StackPanel>
           </StackPanel>
           <ScrollViewer x:Name="SettingsScrollViewer" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="0,0,0,16" Padding="0,0,12,0" Focusable="False">
@@ -261,7 +262,7 @@
                   </Border>
                   <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
                     <TextBlock FontWeight="SemiBold" FontSize="14" Text="Local speech model" />
-                    <TextBlock Margin="0,3,0,0" Foreground="{DynamicResource ColorText}" Opacity="0.55" FontSize="12" Text="Nemotron 3.5 ASR Streaming 0.6B (Q8_0)" />
+                    <TextBlock x:Name="ActiveModelText" Margin="0,3,0,0" Foreground="{DynamicResource ColorText}" Opacity="0.55" FontSize="12" />
                   </StackPanel>
                 </StackPanel>
                 <Border Grid.Column="1" Padding="10,5" VerticalAlignment="Center" Background="{DynamicResource ColorAccent800}" CornerRadius="8">
@@ -412,6 +413,62 @@
           <TextBlock x:Name="VocabularyBudgetText" Margin="0,14,0,0" Foreground="{DynamicResource ColorText}" Opacity="0.55" FontSize="12" TextWrapping="Wrap" Text="{Binding BudgetText}" />
           <TextBlock Margin="0,4,0,0" Foreground="{DynamicResource ColorText}" Opacity="0.55" FontSize="12" TextWrapping="Wrap"
                      Text="Phrases stay on this computer unless you export them, and are only given to the local speech engine." />
+        </StackPanel>
+        <StackPanel x:Name="ModelPage" Visibility="Collapsed">
+          <TextBlock FontWeight="SemiBold" FontSize="16" Text="Speech model" />
+          <TextBlock Margin="0,4,0,0" Foreground="{DynamicResource ColorText}" Opacity="0.7" FontSize="13" TextWrapping="Wrap"
+                     Text="Download the models you want to try, choose which one PrivateType uses, and delete the ones you no longer need. Downloading a model accepts its terms." />
+          <ItemsControl x:Name="ModelList" Margin="0,14,0,0" ItemsSource="{Binding Rows}" KeyboardNavigation.TabNavigation="Continue">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Border Margin="0,0,0,10" Padding="14,12" Background="{DynamicResource ColorBg}" BorderThickness="1" CornerRadius="8">
+                  <Border.Style>
+                    <Style TargetType="Border">
+                      <Setter Property="BorderBrush" Value="{DynamicResource ColorDivider}" />
+                      <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                          <Setter Property="BorderBrush" Value="{DynamicResource ColorAccent}" />
+                        </DataTrigger>
+                      </Style.Triggers>
+                    </Style>
+                  </Border.Style>
+                  <StackPanel>
+                    <Grid>
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                      </Grid.ColumnDefinitions>
+                      <StackPanel VerticalAlignment="Center">
+                        <TextBlock FontWeight="SemiBold" FontSize="14" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Margin="0,3,0,0" FontSize="12" Foreground="{DynamicResource ColorAccent300}" Text="{Binding StatusText}" AutomationProperties.LiveSetting="Polite" />
+                      </StackPanel>
+                      <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center" Orientation="Horizontal">
+                        <Button Margin="6,0,0,0" FontSize="12" Padding="10,5" Content="Download" Tag="{Binding}" Click="DownloadModel"
+                                Visibility="{Binding CanDownload, Converter={StaticResource BoolToVisibility}}" AutomationProperties.Name="{Binding DownloadName}" />
+                        <Button Margin="6,0,0,0" FontSize="12" Padding="10,5" Content="Cancel" Tag="{Binding}" Click="CancelModelDownload"
+                                Visibility="{Binding IsDownloading, Converter={StaticResource BoolToVisibility}}" AutomationProperties.Name="{Binding CancelName}" />
+                        <Button Margin="6,0,0,0" FontSize="12" Padding="10,5" Style="{StaticResource PrimaryButton}" Content="Use" Tag="{Binding}" Click="UseModel"
+                                Visibility="{Binding CanUse, Converter={StaticResource BoolToVisibility}}" AutomationProperties.Name="{Binding UseName}" />
+                        <Button Margin="6,0,0,0" FontSize="12" Padding="10,5" Content="Delete…" Tag="{Binding}" Click="DeleteModel"
+                                Visibility="{Binding CanDelete, Converter={StaticResource BoolToVisibility}}" AutomationProperties.Name="{Binding DeleteName}" />
+                      </StackPanel>
+                    </Grid>
+                    <ProgressBar Margin="0,10,0,0" Height="6" Minimum="0" Maximum="100" Value="{Binding ProgressPercent, Mode=OneWay}"
+                                 Visibility="{Binding IsDownloading, Converter={StaticResource BoolToVisibility}}" />
+                    <TextBlock Margin="0,8,0,0" FontSize="12" Opacity="0.75" TextWrapping="Wrap" Text="{Binding Summary}" />
+                    <TextBlock Margin="0,6,0,0" FontSize="12" Opacity="0.55" TextWrapping="Wrap">
+                      <Run Text="{Binding Details, Mode=OneWay}" /><Run Text=" · " /><Hyperlink NavigateUri="{Binding LicenseUri}" RequestNavigate="OpenModelTerms" Foreground="{DynamicResource ColorAccent300}">Terms</Hyperlink>
+                    </TextBlock>
+                    <TextBlock Margin="0,6,0,0" FontSize="12" Foreground="{DynamicResource ColorAccent300}" TextWrapping="Wrap" Text="{Binding Error}"
+                               Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}" />
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <TextBlock Margin="0,6,0,0" Foreground="{DynamicResource ColorText}" Opacity="0.55" FontSize="12" TextWrapping="Wrap" Text="{Binding StorageText}" />
+          <TextBlock Margin="0,4,0,0" Foreground="{DynamicResource ColorText}" Opacity="0.55" FontSize="12" TextWrapping="Wrap"
+                     Text="Models run on this computer. Your voice is processed locally." />
         </StackPanel>
         </Grid>
           </ScrollViewer>

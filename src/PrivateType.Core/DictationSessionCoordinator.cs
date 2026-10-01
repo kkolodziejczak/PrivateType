@@ -51,6 +51,13 @@ public sealed class DictationSessionCoordinator : IAsyncDisposable
         }
     }
 
+    // Completes once every queued hold and release, including finalization, has finished.
+    public Task WhenIdleAsync()
+    {
+        lock (commandLock)
+            return EnqueueLocked(() => Task.CompletedTask);
+    }
+
     public async ValueTask DisposeAsync()
     {
         Task finish;
