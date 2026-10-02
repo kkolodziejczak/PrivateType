@@ -128,14 +128,17 @@ internal sealed class HoldHotkeyHook : IDisposable
         if (code < 0)
             return CallNextHookEx(hook, code, wParam, lParam);
         var key = Marshal.ReadInt32(lParam);
+        if (history.TakeWindowsRelease(wParam, key))
+        {
+            ReplayMaskedWindowsRelease((ushort)key);
+            return 1;
+        }
+
         // Suspended along with the dictation shortcuts while Settings or Teach is open.
         if (HistoryShortcutEnabled && reservation is not null && history.Handle(wParam, key, IsPressed, out var opened))
         {
             if (opened)
-            {
-                MaskWindowsKeyRelease();
                 HistoryRequested?.Invoke();
-            }
             return 1;
         }
 
@@ -184,14 +187,16 @@ internal sealed class HoldHotkeyHook : IDisposable
         return CallNextHookEx(hook, code, wParam, lParam);
     }
 
-    // The shell opens Start when Win is released without another key in between. The swallowed V
-    // does not count, so send an unassigned key to mark Win as used in a combination.
-    private static void MaskWindowsKeyRelease()
+    // The shell opens Start when Win is released without another key in between, and the swallowed
+    // V does not count. An unassigned key followed by the held-back Win key-up, sent as one batch,
+    // keeps that order however fast the keys were released.
+    private static void ReplayMaskedWindowsRelease(ushort windowsKey)
     {
         NativeMethods.Input[] inputs =
         [
             new() { Type = NativeMethods.InputKeyboard, Data = new NativeMethods.InputUnion { Keyboard = new NativeMethods.KeybdInput { Vk = VkUnassigned } } },
-            new() { Type = NativeMethods.InputKeyboard, Data = new NativeMethods.InputUnion { Keyboard = new NativeMethods.KeybdInput { Vk = VkUnassigned, Flags = NativeMethods.KeyEventKeyUp } } }
+            new() { Type = NativeMethods.InputKeyboard, Data = new NativeMethods.InputUnion { Keyboard = new NativeMethods.KeybdInput { Vk = VkUnassigned, Flags = NativeMethods.KeyEventKeyUp } } },
+            new() { Type = NativeMethods.InputKeyboard, Data = new NativeMethods.InputUnion { Keyboard = new NativeMethods.KeybdInput { Vk = windowsKey, Flags = NativeMethods.KeyEventKeyUp } } }
         ];
         NativeMethods.SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<NativeMethods.Input>());
     }

@@ -33,6 +33,7 @@ internal sealed class HistoryShortcut
                 return false;
 
             keyDown = true;
+            windowsReleasePending = true;
             opened = true;
             return true;
         }
@@ -46,5 +47,29 @@ internal sealed class HistoryShortcut
         return false;
     }
 
-    public void Clear() => keyDown = false;
+    // True once for the first Win key-up after the shortcut opened. The hook must then swallow that
+    // key-up and replay it after an unassigned key, or the shell opens Start because the swallowed V
+    // does not count as a combination.
+    public bool TakeWindowsRelease(nint message, int key)
+    {
+        if (!windowsReleasePending || key is not (VkLeftWindows or VkRightWindows))
+            return false;
+        // A fresh Win press means the earlier release was missed; never mask a later lone Win tap.
+        if (!HotkeyMessage.IsKeyUp(message))
+        {
+            windowsReleasePending = false;
+            return false;
+        }
+
+        windowsReleasePending = false;
+        return true;
+    }
+
+    private bool windowsReleasePending;
+
+    public void Clear()
+    {
+        keyDown = false;
+        windowsReleasePending = false;
+    }
 }

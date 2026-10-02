@@ -59,6 +59,31 @@ public sealed class DictationHistoryTests
         Assert.False(shortcut.Handle(HotkeyMessage.KeyUp, VkV, Pressed(), out _));
     }
 
+    [Theory]
+    [InlineData(VkLeftWindows)]
+    [InlineData(VkRightWindows)]
+    public void Holds_back_only_the_first_win_release_after_opening(int windowsKey)
+    {
+        var shortcut = new HistoryShortcut();
+        Assert.False(shortcut.TakeWindowsRelease(HotkeyMessage.KeyUp, windowsKey));
+
+        shortcut.Handle(HotkeyMessage.KeyDown, VkV, Pressed(windowsKey, VkShift), out _);
+
+        Assert.False(shortcut.TakeWindowsRelease(HotkeyMessage.KeyUp, VkShift));
+        Assert.True(shortcut.TakeWindowsRelease(HotkeyMessage.KeyUp, windowsKey));
+        Assert.False(shortcut.TakeWindowsRelease(HotkeyMessage.KeyUp, windowsKey));
+    }
+
+    [Fact]
+    public void A_new_win_press_cancels_a_held_back_release_that_was_missed()
+    {
+        var shortcut = new HistoryShortcut();
+        shortcut.Handle(HotkeyMessage.KeyDown, VkV, Pressed(VkLeftWindows, VkShift), out _);
+
+        Assert.False(shortcut.TakeWindowsRelease(HotkeyMessage.KeyDown, VkLeftWindows));
+        Assert.False(shortcut.TakeWindowsRelease(HotkeyMessage.KeyUp, VkLeftWindows));
+    }
+
     [Fact]
     public void A_missed_key_up_does_not_swallow_later_ordinary_v_presses()
     {
