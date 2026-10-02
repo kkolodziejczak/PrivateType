@@ -83,6 +83,7 @@ public partial class DictationBubble : Window
     public event Action? SettingsRequested;
     public event Action? VocabularyRequested;
     public event Action? TeachRequested;
+    public event Action? HistoryRequested;
 
     // The menu shows only whether a result exists, never its text.
     public void SetTeachAvailable(bool available) => TeachMenuItem.IsEnabled = available;
@@ -548,6 +549,8 @@ public partial class DictationBubble : Window
     private void OpenVocabulary(object sender, RoutedEventArgs e) => VocabularyRequested?.Invoke();
 
     private void OpenTeach(object sender, RoutedEventArgs e) => TeachRequested?.Invoke();
+
+    private void OpenHistory(object sender, RoutedEventArgs e) => HistoryRequested?.Invoke();
 
     private void Quit(object sender, RoutedEventArgs e)
     {

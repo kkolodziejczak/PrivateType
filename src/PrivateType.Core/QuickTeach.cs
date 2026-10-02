@@ -1,6 +1,10 @@
 namespace PrivateType.Core;
 
-public sealed record FinalizedDictation(string Text, string LocaleCode);
+public sealed record FinalizedDictation(string Text, string LocaleCode)
+{
+    // False when the text could not be put into the original window.
+    public bool Inserted { get; init; } = true;
+}
 
 // Holds only the most recent dictation, in memory, for "Teach from last dictation".
 // It has no history, timestamps, files, or diagnostics; the owner clears it before the next

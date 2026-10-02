@@ -94,6 +94,32 @@ public sealed class SettingsRepairTests : IDisposable
     }
 
     [Fact]
+    public void Keeps_history_until_exit_and_clipboard_history_off_by_default_and_resets_unknown_retention()
+    {
+        Assert.Equal(DictationHistoryRetentions.UntilExit, PortableSettings.Default.DictationHistory);
+        Assert.False(PortableSettings.Default.IncludeInClipboardHistory);
+
+        var result = Load("""{ "SchemaVersion": 2, "MicrophoneId": "default", "Shortcuts": [{ "LocaleCode": "pl-PL", "VirtualKey": 82 }], "DictationHistory": "forever", "IncludeInClipboardHistory": true }""");
+
+        Assert.Equal(DictationHistoryRetentions.UntilExit, result.Settings.DictationHistory);
+        Assert.True(result.Settings.IncludeInClipboardHistory);
+        Assert.Equal("Some saved settings were invalid and have been reset: dictation history.", result.Warning);
+    }
+
+    [Fact]
+    public void Round_trips_history_choices()
+    {
+        var store = new PortableSettingsStore(directory);
+        store.Save(PortableSettings.Default with { DictationHistory = DictationHistoryRetentions.OneHour, IncludeInClipboardHistory = true });
+
+        var result = store.Load();
+
+        Assert.Null(result.Warning);
+        Assert.Equal(DictationHistoryRetentions.OneHour, result.Settings.DictationHistory);
+        Assert.True(result.Settings.IncludeInClipboardHistory);
+    }
+
+    [Fact]
     public void Leaves_valid_settings_unchanged_without_a_warning()
     {
         var store = new PortableSettingsStore(directory);

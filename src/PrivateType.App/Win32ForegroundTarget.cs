@@ -12,11 +12,7 @@ internal sealed class Win32ForegroundTarget : IForegroundTarget
 
     public TargetEligibility GetEligibility(DictationTarget target)
     {
-        if (!long.TryParse(target.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var value))
-            return TargetEligibility.Invalid;
-
-        var handle = (nint)value;
-        if (handle == nint.Zero || !NativeMethods.IsWindow(handle))
+        if (!TryGetHandle(target, out var handle) || !NativeMethods.IsWindow(handle))
             return TargetEligibility.Invalid;
 
         if (NativeMethods.GetWindowThreadProcessId(handle, out var processId) == 0)
@@ -28,6 +24,12 @@ internal sealed class Win32ForegroundTarget : IForegroundTarget
         return WindowsProcessIntegrity.CanReceiveInputFromCurrentProcess(processId)
             ? TargetEligibility.Eligible
             : TargetEligibility.Ineligible;
+    }
+
+    internal static bool TryGetHandle(DictationTarget target, out nint handle)
+    {
+        handle = long.TryParse(target.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var value) ? (nint)value : nint.Zero;
+        return handle != nint.Zero;
     }
 
     private static DictationTarget ToTarget(nint handle)

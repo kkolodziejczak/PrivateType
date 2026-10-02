@@ -71,6 +71,8 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="22" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="22" />
+            <RowDefinition Height="Auto" />
           </Grid.RowDefinitions>
 
 
@@ -174,6 +176,50 @@
               <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
             <StackPanel Grid.Column="0" VerticalAlignment="Top">
+              <TextBlock FontWeight="SemiBold" FontSize="14" Text="Recent dictations" />
+              <TextBlock Margin="0,3,0,0" FontSize="12" Foreground="{DynamicResource ColorText}" Opacity="0.55" Text="Paste a dictation again after switching windows" TextWrapping="Wrap" />
+            </StackPanel>
+            <StackPanel Grid.Column="2">
+              <Grid>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="220" />
+                </Grid.ColumnDefinitions>
+                <TextBlock VerticalAlignment="Center" FontSize="13" Foreground="{DynamicResource ColorText}" Opacity="0.8" Text="Keep dictations" />
+                <ComboBox x:Name="HistoryRetentionBox" Grid.Column="1" Height="36" Padding="8,0" SelectedValuePath="Id" AutomationProperties.Name="Keep recent dictations"
+                          SelectionChanged="HistoryOptionChanged">
+                  <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                      <TextBlock Foreground="{DynamicResource ColorText}" Text="{Binding Label}" />
+                    </DataTemplate>
+                  </ComboBox.ItemTemplate>
+                </ComboBox>
+              </Grid>
+              <TextBlock x:Name="HistoryHint" Margin="0,8,0,0" Foreground="{DynamicResource ColorText}" Opacity="0.55" FontSize="12" TextWrapping="Wrap" />
+              <CheckBox x:Name="ClipboardHistoryCheckBox" Margin="0,14,0,0"
+                        Content="Show pasted dictations in Win+V clipboard history"
+                        AutomationProperties.Name="Show pasted dictations in Windows clipboard history" Checked="HistoryOptionChanged" Unchecked="HistoryOptionChanged">
+                <CheckBox.Style>
+                  <Style TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
+                    <Style.Triggers>
+                      <Trigger Property="IsEnabled" Value="False">
+                        <Setter Property="Opacity" Value="0.45" />
+                      </Trigger>
+                    </Style.Triggers>
+                  </Style>
+                </CheckBox.Style>
+              </CheckBox>
+              <TextBlock x:Name="ClipboardHistoryHint" Margin="24,6,0,0" Foreground="{DynamicResource ColorText}" Opacity="0.55" FontSize="12" TextWrapping="Wrap" />
+            </StackPanel>
+          </Grid>
+
+          <Grid Grid.Row="8">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="140" />
+              <ColumnDefinition Width="16" />
+              <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0" VerticalAlignment="Top">
               <TextBlock FontWeight="SemiBold" FontSize="14" Text="Startup &amp; resources" />
               <TextBlock Margin="0,3,0,0" FontSize="12" Foreground="{DynamicResource ColorText}" Opacity="0.55" Text="Launch quietly, free model memory when idle" TextWrapping="Wrap" />
             </StackPanel>
@@ -196,7 +242,7 @@
             </StackPanel>
           </Grid>
 
-          <Grid Grid.Row="8">
+          <Grid Grid.Row="10">
             <Grid.ColumnDefinitions>
               <ColumnDefinition Width="140" />
               <ColumnDefinition Width="16" />
@@ -242,7 +288,7 @@
             </StackPanel>
           </Grid>
 
-          <StackPanel Grid.Row="10">
+          <StackPanel Grid.Row="12">
             <Border Padding="12" Background="{DynamicResource ColorBg}" BorderBrush="{DynamicResource ColorDivider}" BorderThickness="1" CornerRadius="8">
               <Grid>
                 <Grid.ColumnDefinitions>

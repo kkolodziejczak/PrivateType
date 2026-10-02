@@ -14,6 +14,7 @@ public sealed class DictationSession : IAsyncDisposable
     private readonly IDictationDiagnostics diagnostics;
     private readonly TimeSpan finalizationTimeout;
     private readonly Func<string, string>? correctText;
+    private readonly string? keptTextHint;
     private readonly string sessionId = Guid.NewGuid().ToString("N");
     private readonly Channel<ReadOnlyMemory<byte>> pcmFrames = Channel.CreateBounded<ReadOnlyMemory<byte>>(new BoundedChannelOptions(32)
     {
@@ -40,9 +41,11 @@ public sealed class DictationSession : IAsyncDisposable
         RecognitionRequest request,
         TimeSpan? finalizationTimeout = null,
         IDictationDiagnostics? diagnostics = null,
-        Func<string, string>? correctText = null)
+        Func<string, string>? correctText = null,
+        string? keptTextHint = null)
     {
         this.correctText = correctText;
+        this.keptTextHint = keptTextHint;
         this.capture = capture;
         this.recognizer = recognizer;
         this.targetGuard = targetGuard;
@@ -58,8 +61,8 @@ public sealed class DictationSession : IAsyncDisposable
     public event Action<AudioMeter>? AudioMeterChanged;
     public event Action<Exception>? Faulted;
 
-    // Raised once with the recognized text, whether or not insertion succeeds. Only the
-    // quick-teach buffer consumes it; the session itself keeps no transcript.
+    // Raised once with the recognized text, whether or not insertion succeeds. The quick-teach
+    // buffer and the in-memory dictation history consume it; the session itself keeps no transcript.
     public event Action<FinalizedDictation>? Finalized;
 
     public Task StartAsync(CancellationToken cancellationToken = default)
@@ -150,19 +153,26 @@ public sealed class DictationSession : IAsyncDisposable
         }
 
         text = Correct(text);
-        Finalized?.Invoke(new FinalizedDictation(text, request.LocaleCode));
-
-        var eligibility = targetGuard.GetEligibility();
-        if (eligibility != TargetEligibility.Eligible)
+        var inserted = false;
+        try
         {
-            Diagnose("injection.skipped", ("reason", "target-ineligible"), ("targetEligibility", eligibility), ("characters", text.Length));
-            Publish(DictationState.Finalizing, message: TargetCancellationMessage(eligibility));
-            return;
-        }
+            var eligibility = targetGuard.GetEligibility();
+            if (eligibility != TargetEligibility.Eligible)
+            {
+                Diagnose("injection.skipped", ("reason", "target-ineligible"), ("targetEligibility", eligibility), ("characters", text.Length));
+                Publish(DictationState.Finalizing, message: TargetCancellationMessage(eligibility, keptTextHint));
+                return;
+            }
 
-        Diagnose("injection.started", ("characters", text.Length));
-        injector.Inject(text);
-        Diagnose("injection.completed", ("characters", text.Length));
+            Diagnose("injection.started", ("characters", text.Length));
+            injector.Inject(text);
+            inserted = true;
+            Diagnose("injection.completed", ("characters", text.Length));
+        }
+        finally
+        {
+            Finalized?.Invoke(new FinalizedDictation(text, request.LocaleCode) { Inserted = inserted });
+        }
     }
 
     // A failed correction must never lose the dictation, so the recognized text is kept.
@@ -185,12 +195,16 @@ public sealed class DictationSession : IAsyncDisposable
         }
     }
 
-    internal static string TargetCancellationMessage(TargetEligibility eligibility) => eligibility switch
+    internal static string TargetCancellationMessage(TargetEligibility eligibility, string? keptTextHint = null)
     {
-        TargetEligibility.Changed => "Text not inserted: the active window changed.",
-        TargetEligibility.Ineligible => "Text not inserted: the window does not accept input from PrivateType.",
-        _ => "Text not inserted: the original window is no longer available."
-    };
+        var message = eligibility switch
+        {
+            TargetEligibility.Changed => "Text not inserted: the active window changed.",
+            TargetEligibility.Ineligible => "Text not inserted: the window does not accept input from PrivateType.",
+            _ => "Text not inserted: the original window is no longer available."
+        };
+        return keptTextHint is null ? message : $"{message} {keptTextHint}";
+    }
 
     public async ValueTask DisposeAsync()
     {
