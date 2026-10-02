@@ -71,6 +71,37 @@ public sealed class DictationSessionTests
     }
 
     [Fact]
+    public async Task Adds_the_kept_text_hint_to_the_cancellation_message()
+    {
+        var recognizer = new FakeRecognizer();
+        recognizer.CompletionUpdates.Add(new TranscriptUpdate("bezpieczny tekst", true, "commit-1"));
+        var presentations = new List<DictationPresentation>();
+        await using var session = new DictationSession(new FakeCapture(), recognizer, new ForegroundTargetGuard(new FakeForegroundTarget(TargetEligibility.Changed)),
+            new FakeInjector(), RecognitionRequest.WithoutVocabulary("pl-PL"), TimeSpan.FromSeconds(1), keptTextHint: "Press Win+Shift+V to paste it.");
+        session.PresentationChanged += presentations.Add;
+
+        await session.StartAsync();
+        await session.StopAsync();
+
+        Assert.Contains(presentations, presentation => presentation.Message == "Text not inserted: the active window changed. Press Win+Shift+V to paste it.");
+    }
+
+    [Fact]
+    public async Task Reports_inserted_text_as_inserted()
+    {
+        var recognizer = new FakeRecognizer();
+        recognizer.CompletionUpdates.Add(new TranscriptUpdate("wstawiony tekst", true, "commit-1"));
+        var results = new List<FinalizedDictation>();
+        await using var session = CreateSession(new FakeCapture(), recognizer, new FakeForegroundTarget(), new FakeInjector());
+        session.Finalized += results.Add;
+
+        await session.StartAsync();
+        await session.StopAsync();
+
+        Assert.True(Assert.Single(results).Inserted);
+    }
+
+    [Fact]
     public async Task Serializes_pcm_delivery_and_finishes_every_accepted_frame_before_cleanup()
     {
         var capture = new FakeCapture();

@@ -109,6 +109,26 @@ about once a second, so you can stop and correct yourself early; it uses more
 CPU while you speak. The shortcut's language still chooses which
 vocabulary corrections apply.
 
+### Recent dictations
+
+Long dictations take a moment to finish after you release the shortcut,
+especially with Parakeet while the bubble shows **Transcribing…**. If you
+switch windows in the meantime, the text is not inserted, and the bubble says
+so. Nothing is lost: press **Win+Shift+V** (or choose **Recent dictations…** in
+the bubble menu) to see your recent dictations, newest first. Dictations that
+could not be inserted are marked **Not inserted**. Press Enter or click one to
+paste it into the window you were in. **Delete** or **×** removes one entry, and
+**Clear all** removes everything. If that window can't take the text, it is
+copied instead, so you can paste it with Ctrl+V.
+
+In **Settings → Recent dictations**, choose to keep dictations until
+PrivateType exits (default), for 1 hour, for 15 minutes, or not at all. They are
+kept in memory only and never saved to disk. With **Don't keep**, Win+Shift+V
+goes back to Windows. Tick **Show pasted dictations in Win+V clipboard history**
+if you also want them in Windows clipboard history. It is off by default because
+Windows keeps those entries until you clear them or restart, and clipboard tools
+can read them. Cloud clipboard skips dictated text either way.
+
 ### Vocabulary
 
 If the model keeps misspelling a name, acronym, or technical term, add it in
@@ -205,11 +225,14 @@ if it is not already installed.
 
 ## Privacy, limits, and troubleshooting
 
-- PrivateType does not retain raw audio or a transcript history. The most
-  recent sentence is kept in memory only for **Teach from last dictation…**,
-  until the next dictation starts, the teach window closes, or the app exits.
+- PrivateType does not retain raw audio. Recent dictations stay in memory only,
+  for **Recent dictations** (until the app exits, or for the time you choose in
+  Settings, up to 50 entries) and for **Teach from last dictation…**. They are
+  never written to disk or diagnostics. Choose **Don't keep** in Settings to
+  turn the list off.
 - `app/data/settings.json` stores only the selected microphone, shortcuts and
-  their languages, shortcut behavior, insertion mode, vocabulary (including the
+  their languages, shortcut behavior, insertion mode, how long recent
+  dictations are kept, the Win+V clipboard history choice, vocabulary (including the
   heard-as wordings you taught or typed), bubble location,
   Windows-startup preference, chosen speech model, model idle timeout, and
   ready-sound choice.
@@ -226,7 +249,8 @@ if it is not already installed.
   older v1.0.2 installation can continue to roll back independently.
 - Normal desktop text fields are supported. Password/secure fields, elevated
   apps, remote desktops, games, and apps that reject synthetic input are not.
-  If the foreground app changes while dictating, insertion is cancelled.
+  If the foreground app changes while dictating, insertion is cancelled; paste
+  the text from **Recent dictations** (Win+Shift+V) instead.
 
 | Symptom | What to do |
 | --- | --- |

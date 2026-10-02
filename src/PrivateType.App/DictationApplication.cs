@@ -26,11 +26,15 @@ internal sealed class DictationApplication : IDisposable
     private readonly LatestAudioMeterQueue pendingAudioMeters = new();
     private readonly WindowsStartupRegistration windowsStartup = new();
     private readonly DispatcherTimer modelIdleTimer;
+    private readonly DispatcherTimer historyPruneTimer;
     private readonly DispatcherTimer heldKeyWatchdog;
     private readonly InMemoryDiagnostics diagnostics = new();
     private SettingsWindow? openSettingsWindow;
     private TeachWindow? openTeachWindow;
     private readonly EphemeralTranscriptBuffer lastDictation = new();
+    private readonly DictationHistory history = new(TimeProvider.System);
+    private DictationHistoryWindow? openHistoryWindow;
+    private DateTimeOffset cancellationVisibleUntil;
     private long dictationSequence;
     private PortableSettingsStore? settingsStore;
     private readonly SpeechModelLibrary models;
@@ -64,16 +68,21 @@ internal sealed class DictationApplication : IDisposable
         vocabularyItem = (Forms.ToolStripMenuItem)trayIcon.ContextMenuStrip.Items.Add("Vocabulary…", null, (_, _) => ShowSettings(openVocabulary: true));
         vocabularyItem.Enabled = false;
         trayIcon.ContextMenuStrip.Items.Add("Quit", null, (_, _) => Quit());
+        historyPruneTimer = new DispatcherTimer { Interval = TimeSpan.FromMinutes(1) };
+        historyPruneTimer.Tick += (_, _) => history.Prune();
+        historyPruneTimer.Start();
         modelIdleTimer = new DispatcherTimer();
         modelIdleTimer.Tick += UnloadModelWhenIdle;
         heldKeyWatchdog = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
         heldKeyWatchdog.Tick += ReleaseShortcutIfKeyIsUp;
         hotkey.Held += localeCode => Wpf.Application.Current.Dispatcher.BeginInvoke(new Action(() => _ = BeginDictationAsync(localeCode)));
         hotkey.Released += () => Wpf.Application.Current.Dispatcher.BeginInvoke(new Action(() => _ = EndDictationAsync()));
+        hotkey.HistoryRequested += () => Wpf.Application.Current.Dispatcher.BeginInvoke(new Action(ShowHistory));
         bubble.PositionChanged += SavePanelPosition;
         bubble.SettingsRequested += () => ShowSettings();
         bubble.VocabularyRequested += () => ShowSettings(openVocabulary: true);
         bubble.TeachRequested += ShowTeach;
+        bubble.HistoryRequested += ShowHistory;
         lastDictation.Changed += () => bubble.SetTeachAvailable(lastDictation.HasValue);
         bubble.QuitRequested += Quit;
         bubble.RecordingIndicatorChanged += visible => trayIcon.Icon = visible ? trayIcons.Listening : trayIcons.Ready;
@@ -105,6 +114,9 @@ internal sealed class DictationApplication : IDisposable
         SystemEvents.SessionSwitch -= OnSessionSwitch;
         // Each step is isolated so one failure cannot skip the rest of the teardown.
         DisposeStep(lastDictation.Clear);
+        DisposeStep(historyPruneTimer.Stop);
+        DisposeStep(history.Clear);
+        DisposeStep(() => openHistoryWindow?.Close());
         DisposeStep(modelIdleTimer.Stop);
         DisposeStep(heldKeyWatchdog.Stop);
         DisposeStep(() => provisioningCancellation?.Cancel());
@@ -422,6 +434,7 @@ internal sealed class DictationApplication : IDisposable
     {
         this.modelPath = modelPath;
         hotkey.ToggleMode = settings.ShortcutMode == DictationShortcutModes.Toggle;
+        ApplyHistorySettings();
         var availability = hotkey.Start(HotkeyCatalog.FromBindings(settings.Shortcuts));
         settingsItem.Enabled = true;
         vocabularyItem.Enabled = true;
@@ -471,6 +484,7 @@ internal sealed class DictationApplication : IDisposable
             return;
         }
 
+        openHistoryWindow?.Close();
         hotkey.Suspend();
         var window = new SettingsWindow(settings, MicrophoneCatalog.Enumerate(), new LibraryModelStore(models), openVocabulary, vocabularyScope);
         window.Loaded += (_, _) => BringToForeground(window);
@@ -536,6 +550,7 @@ internal sealed class DictationApplication : IDisposable
             if (settings.SpeechModel != previousModelId)
                 _ = SwitchModelAsync(SpeechModelCatalog.Get(settings.SpeechModel));
             hotkey.ToggleMode = settings.ShortcutMode == DictationShortcutModes.Toggle;
+            ApplyHistorySettings();
             statusItem.Text = DescribeReady(availability);
             trayIcon.Text = $"PrivateType — {statusItem.Text}";
             ShowReadyPanel();
@@ -616,6 +631,7 @@ internal sealed class DictationApplication : IDisposable
         if (openSettingsWindow is not null || openTeachWindow is not null || lastDictation.Current is not { } dictation)
             return;
 
+        openHistoryWindow?.Close();
         hotkey.Suspend();
         var window = new TeachWindow(dictation, settings.VocabularyStrength, SaveTaughtPhrases);
         window.Loaded += (_, _) => BringToForeground(window);
@@ -674,22 +690,133 @@ internal sealed class DictationApplication : IDisposable
                 ? new OfflineRecognizer(engine.TranscriptionEndpoint, settings.OfflinePreview ? OfflinePreviewInterval : null)
                 : new RealtimeRecognizer(engine.RealtimeEndpoint),
             new ForegroundTargetGuard(new Win32ForegroundTarget()),
-            settings.InsertionMode == TextInsertionModes.Paste ? new ClipboardPasteInjector() : new UnicodeTextInjector(),
+            CreateInjector(),
             new RecognitionRequest(localeCode, VocabularyComposer.Compose(settings.Vocabulary, settings.VocabularyPacks, localeCode), settings.VocabularyStrength),
             finalizationTimeout: FinalizationTimeout(activeModel, settings.OfflinePreview),
             diagnostics: diagnostics,
             correctText: settings.CorrectAfterDictation
                 ? TranscriptCorrector.Create(settings.Vocabulary, settings.VocabularyPacks, settings.VocabularyCorrections, localeCode).Correct
-                : null);
+                : null,
+            keptTextHint: history.IsEnabled ? KeptTextHint : null);
         session.PresentationChanged += presentation => Present(localeCode, presentation);
         session.AudioMeterChanged += PresentAudioMeter;
         // Keep the result only if no newer dictation has started since this one.
         session.Finalized += result => Wpf.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
         {
-            if (!disposed && sequence == Interlocked.Read(ref dictationSequence))
+            if (disposed)
+                return;
+            history.Add(result);
+            if (sequence == Interlocked.Read(ref dictationSequence))
                 lastDictation.Replace(result);
         }));
         return session;
+    }
+
+    internal const string KeptTextHint = $"Press {HistoryShortcut.Label} to paste it.";
+
+    private ITextInjector CreateInjector() => settings.InsertionMode == TextInsertionModes.Paste
+        ? new ClipboardPasteInjector(settings.IncludeInClipboardHistory)
+        : new UnicodeTextInjector();
+
+    private void ApplyHistorySettings()
+    {
+        history.Retention = settings.DictationHistory;
+        hotkey.HistoryShortcutEnabled = history.IsEnabled;
+    }
+
+    // Remembers the active window before the list takes focus, so the chosen dictation goes back there.
+    private void ShowHistory()
+    {
+        if (disposed || settingsStore is null || openSettingsWindow is not null || openTeachWindow is not null)
+            return;
+        if (openHistoryWindow is not null)
+        {
+            openHistoryWindow.TakeForeground();
+            return;
+        }
+
+        var foreground = new Win32ForegroundTarget();
+        var target = foreground.Capture();
+        var window = new DictationHistoryWindow(history, TimeProvider.System);
+        window.Chosen += entry => _ = PasteFromHistoryAsync(entry.Text, foreground, target);
+        window.Closed += (_, _) => openHistoryWindow = null;
+        openHistoryWindow = window;
+        window.Show();
+        window.TakeForeground();
+        RecordDiagnostic("history.opened");
+    }
+
+    // Pastes into the window that was active when the list opened. When that window cannot take
+    // input (it closed, it is elevated, or the list was opened from the bubble menu), the text is
+    // copied instead so the user can paste it with Ctrl+V.
+    private async Task PasteFromHistoryAsync(string text, Win32ForegroundTarget foreground, DictationTarget target)
+    {
+        try
+        {
+            await WaitForModifierReleaseAsync();
+            if (await RestoreForegroundAsync(foreground, target))
+            {
+                try
+                {
+                    CreateInjector().Inject(text);
+                    RecordDiagnostic("history.pasted");
+                    return;
+                }
+                catch (Exception exception)
+                {
+                    RecordDiagnostic("history.inject.failed", exception);
+                }
+            }
+
+            ClipboardPasteInjector.Copy(text, settings.IncludeInClipboardHistory);
+            RecordDiagnostic("history.copied");
+            ShowTransientNotice("Copied. Press Ctrl+V to paste it.");
+        }
+        catch (Exception exception)
+        {
+            RecordDiagnostic("history.paste.failed", exception);
+            ShowTransientNotice("The dictation could not be pasted or copied.");
+        }
+    }
+
+    // Win, Shift or V still held from Win+Shift+V would turn the synthetic Ctrl+V into another
+    // shortcut, so wait (briefly) until they are up.
+    private static async Task WaitForModifierReleaseAsync()
+    {
+        int[] keys = [0x5B, 0x5C, 0x10, 0x11, 0x12, HistoryShortcut.VirtualKey];
+        for (var attempt = 0; attempt < 40 && keys.Any(key => (GetAsyncKeyState(key) & 0x8000) != 0); attempt++)
+            await Task.Delay(25);
+    }
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern short GetAsyncKeyState(int virtualKey);
+
+    private static async Task<bool> RestoreForegroundAsync(Win32ForegroundTarget foreground, DictationTarget target)
+    {
+        if (!Win32ForegroundTarget.TryGetHandle(target, out var handle) || !NativeMethods.IsWindow(handle) || IsOwnWindow(handle))
+            return false;
+
+        NativeMethods.SetForegroundWindow(handle);
+        // The target restores focus to its own text field asynchronously after activation.
+        for (var attempt = 0; attempt < 20 && NativeMethods.GetForegroundWindow() != handle; attempt++)
+            await Task.Delay(25);
+        await Task.Delay(60);
+        return foreground.GetEligibility(target) == TargetEligibility.Eligible;
+    }
+
+    private static bool IsOwnWindow(nint handle) =>
+        NativeMethods.GetWindowThreadProcessId(handle, out var processId) != 0 && processId == Environment.ProcessId;
+
+    private void ShowTransientNotice(string message)
+    {
+        // Never cover a dictation that started meanwhile.
+        if (shortcutHeld)
+            return;
+
+        var version = ++presentationVersion;
+        bubble.ShowCancellation(message);
+        cancellationVisibleUntil = DateTimeOffset.UtcNow + CancellationHoldTime;
+        _ = ReturnToReadyWhenCurrentAsync(version, CancellationHoldTime);
     }
 
     private async Task BeginDictationAsync(string localeCode)
@@ -834,6 +961,7 @@ internal sealed class DictationApplication : IDisposable
         switch (bubblePresentation.Kind)
         {
             case BubblePresentationKind.Recording:
+                cancellationVisibleUntil = default;
                 bubble.ShowRecording(localeCode);
                 bubble.ShowTranscript(bubblePresentation.Text);
                 break;
@@ -843,6 +971,7 @@ internal sealed class DictationApplication : IDisposable
             case BubblePresentationKind.Cancellation:
                 trayIcon.Icon = trayIcons.Ready;
                 bubble.ShowCancellation(bubblePresentation.Text);
+                cancellationVisibleUntil = DateTimeOffset.UtcNow + CancellationHoldTime;
                 break;
             case BubblePresentationKind.Error:
                 trayIcon.Icon = trayIcons.Ready;
@@ -850,10 +979,15 @@ internal sealed class DictationApplication : IDisposable
                 _ = ReturnToReadyWhenCurrentAsync(version, TimeSpan.FromSeconds(2));
                 break;
             case BubblePresentationKind.Hide:
-                _ = ReturnToReadyWhenCurrentAsync(version, TimeSpan.FromMilliseconds(700));
+                // A "Text not inserted" message stays readable even though Ready follows it at once.
+                var cancellationRemaining = cancellationVisibleUntil - DateTimeOffset.UtcNow;
+                _ = ReturnToReadyWhenCurrentAsync(version, cancellationRemaining > HideDelay ? cancellationRemaining : HideDelay);
                 break;
         }
     }
+
+    private static readonly TimeSpan HideDelay = TimeSpan.FromMilliseconds(700);
+    private static readonly TimeSpan CancellationHoldTime = TimeSpan.FromSeconds(5);
 
     private async Task ReturnToReadyWhenCurrentAsync(int version, TimeSpan delay)
     {

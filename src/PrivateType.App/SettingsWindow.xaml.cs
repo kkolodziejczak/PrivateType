@@ -51,6 +51,10 @@ public partial class SettingsWindow : Window
         ShortcutModeBox.SelectedValue = settings.ShortcutMode;
         InsertionModeBox.ItemsSource = ChoiceOption.InsertionModes;
         InsertionModeBox.SelectedValue = settings.InsertionMode;
+        HistoryRetentionBox.ItemsSource = ChoiceOption.HistoryRetentions;
+        HistoryRetentionBox.SelectedValue = settings.DictationHistory;
+        ClipboardHistoryCheckBox.IsChecked = settings.IncludeInClipboardHistory;
+        UpdateHistoryHints();
         IdleTimeoutBox.ItemsSource = IdleTimeoutOption.Supported;
         IdleTimeoutBox.SelectedValue = settings.ModelIdleTimeoutMinutes;
         customSoundPath = settings.CustomReadySoundPath;
@@ -276,8 +280,30 @@ public partial class SettingsWindow : Window
     private void InsertionModeChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
     {
         InsertionModeHint.Text = InsertionModeBox.SelectedValue as string == TextInsertionModes.Paste
-            ? "Text arrives in one step, so pressing Enter right away cannot send half of it. Your clipboard is restored afterwards, and dictated text is kept out of clipboard history."
+            ? "Text arrives in one step, so pressing Enter right away cannot send half of it. Your clipboard is restored afterwards."
             : "Typing sends each character and never touches the clipboard. Use it where Ctrl+V does not paste, such as Vim or PuTTY.";
+        UpdateHistoryHints();
+    }
+
+    private void HistoryOptionChanged(object sender, RoutedEventArgs e) => UpdateHistoryHints();
+
+    private void UpdateHistoryHints()
+    {
+        // Called while InitializeComponent is still wiring events.
+        if (HistoryRetentionBox is null || HistoryHint is null || ClipboardHistoryHint is null || ClipboardHistoryCheckBox is null || InsertionModeBox is null)
+            return;
+
+        HistoryHint.Text = HistoryRetentionBox.SelectedValue as string == DictationHistoryRetentions.Off
+            ? $"No dictations are kept, and {HistoryShortcut.Label} stays with Windows."
+            : $"Press {HistoryShortcut.Label} to pick a recent dictation and paste it into the active window. Kept in memory only, never saved to disk.";
+
+        var pasting = InsertionModeBox.SelectedValue as string == TextInsertionModes.Paste;
+        ClipboardHistoryCheckBox.IsEnabled = pasting;
+        ClipboardHistoryHint.Text = !pasting
+            ? "Applies only when text is inserted by pasting."
+            : ClipboardHistoryCheckBox.IsChecked == true
+                ? "Windows keeps them in clipboard history until you clear it or restart, and clipboard tools can read them. Cloud clipboard still skips them."
+                : "Off keeps dictated text out of clipboard history, cloud clipboard, and clipboard tools.";
     }
 
     private void ReadySoundChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
@@ -436,6 +462,8 @@ public partial class SettingsWindow : Window
             StartWithWindows = StartWithWindowsCheckBox.IsChecked == true,
             ShortcutMode = ShortcutModeBox.SelectedValue as string ?? DictationShortcutModes.Hold,
             InsertionMode = InsertionModeBox.SelectedValue as string ?? PortableSettings.Default.InsertionMode,
+            DictationHistory = HistoryRetentionBox.SelectedValue as string ?? PortableSettings.Default.DictationHistory,
+            IncludeInClipboardHistory = ClipboardHistoryCheckBox.IsChecked == true,
             Vocabulary = vocabulary.Entries,
             VocabularyPacks = vocabulary.Packs,
             VocabularyStrength = vocabulary.Strength,
@@ -499,6 +527,14 @@ public sealed record ChoiceOption(string Id, string Label)
     [
         new(TextInsertionModes.Paste, "Pasting"),
         new(TextInsertionModes.Type, "Typing characters")
+    ];
+
+    public static IReadOnlyList<ChoiceOption> HistoryRetentions { get; } =
+    [
+        new(DictationHistoryRetentions.UntilExit, "Until PrivateType exits"),
+        new(DictationHistoryRetentions.OneHour, "For 1 hour"),
+        new(DictationHistoryRetentions.FifteenMinutes, "For 15 minutes"),
+        new(DictationHistoryRetentions.Off, "Don't keep")
     ];
 }
 

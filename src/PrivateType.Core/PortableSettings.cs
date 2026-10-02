@@ -37,6 +37,10 @@ public sealed record PortableSettings(
     public string SpeechModel { get; init; } = SpeechModelCatalog.DefaultId;
     // For models that transcribe on release: re-transcribe while held to show a preview.
     public bool OfflinePreview { get; init; } = true;
+    // How long recent dictations stay in memory for the history shortcut. The text itself is never saved.
+    public string DictationHistory { get; init; } = DictationHistoryRetentions.UntilExit;
+    // Opt-in: lets pasted dictations appear in Windows clipboard history (Win+V).
+    public bool IncludeInClipboardHistory { get; init; }
 
     public static PortableSettings Default { get; } = new("default", ShortcutBinding.Defaults);
 }
@@ -101,6 +105,9 @@ public static class PortableSettingsValidator
         new("vocabulary strength",
             settings => VocabularyStrengths.IsSupported(settings.VocabularyStrength) ? null : "Choose a supported vocabulary strength.",
             settings => settings with { VocabularyStrength = VocabularyStrengths.Normal }),
+        new("dictation history",
+            settings => DictationHistoryRetentions.IsSupported(settings.DictationHistory) ? null : "Choose how long recent dictations are kept.",
+            settings => settings with { DictationHistory = PortableSettings.Default.DictationHistory }),
         new("ready sound volume",
             settings => settings.ReadySoundVolume is < 0 or > 100 ? "Choose a ready sound volume between 0 and 100%." : null,
             settings => settings with { ReadySoundVolume = PortableSettings.Default.ReadySoundVolume }),

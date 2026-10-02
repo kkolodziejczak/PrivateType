@@ -12,9 +12,11 @@ internal sealed class HoldHotkeyHook : IDisposable
     private const int WhKeyboardLl = 13;
     private const int VkControl = 0x11;
     private const int VkShift = 0x10;
+    private const ushort VkUnassigned = 0xE8;
     private readonly HookProcedure callback;
     private nint hook;
     private readonly HeldShortcutTracker held = new();
+    private readonly HistoryShortcut history = new();
     private HotkeyReservation? reservation;
     private IReadOnlyList<HotkeyDefinition> configuredHotkeys = [];
 
@@ -22,6 +24,21 @@ internal sealed class HoldHotkeyHook : IDisposable
 
     public event Action<string>? Held;
     public event Action? Released;
+    public event Action? HistoryRequested;
+
+    // Win+Shift+V is claimed only while dictation history is on; otherwise Windows keeps it.
+    public bool HistoryShortcutEnabled
+    {
+        get => historyShortcutEnabled;
+        set
+        {
+            historyShortcutEnabled = value;
+            if (!value)
+                history.Clear();
+        }
+    }
+
+    private bool historyShortcutEnabled;
 
     // Hold: dictate while the shortcut is down. Toggle: press to start, press again to stop.
     public bool ToggleMode
@@ -64,6 +81,7 @@ internal sealed class HoldHotkeyHook : IDisposable
         reservation?.Dispose();
         reservation = null;
         held.Clear();
+        history.Clear();
     }
 
     public bool ReleaseIfKeyIsUp()
@@ -110,6 +128,17 @@ internal sealed class HoldHotkeyHook : IDisposable
         if (code < 0)
             return CallNextHookEx(hook, code, wParam, lParam);
         var key = Marshal.ReadInt32(lParam);
+        // Suspended along with the dictation shortcuts while Settings or Teach is open.
+        if (HistoryShortcutEnabled && reservation is not null && history.Handle(wParam, key, IsPressed, out var opened))
+        {
+            if (opened)
+            {
+                MaskWindowsKeyRelease();
+                HistoryRequested?.Invoke();
+            }
+            return 1;
+        }
+
         var hotkey = reservation?.Availability.EnabledHotkeys.SingleOrDefault(candidate => candidate.VirtualKey == key);
 
         if (ToggleMode)
@@ -153,6 +182,18 @@ internal sealed class HoldHotkeyHook : IDisposable
         if (HotkeyMessage.IsKeyUp(wParam) && held.ToggleKeyUp(key))
             return 1;
         return CallNextHookEx(hook, code, wParam, lParam);
+    }
+
+    // The shell opens Start when Win is released without another key in between. The swallowed V
+    // does not count, so send an unassigned key to mark Win as used in a combination.
+    private static void MaskWindowsKeyRelease()
+    {
+        NativeMethods.Input[] inputs =
+        [
+            new() { Type = NativeMethods.InputKeyboard, Data = new NativeMethods.InputUnion { Keyboard = new NativeMethods.KeybdInput { Vk = VkUnassigned } } },
+            new() { Type = NativeMethods.InputKeyboard, Data = new NativeMethods.InputUnion { Keyboard = new NativeMethods.KeybdInput { Vk = VkUnassigned, Flags = NativeMethods.KeyEventKeyUp } } }
+        ];
+        NativeMethods.SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<NativeMethods.Input>());
     }
 
     private static bool IsPressed(int virtualKey) => (GetAsyncKeyState(virtualKey) & 0x8000) != 0;

@@ -180,7 +180,7 @@ public sealed class QuickTeachTests
         await session.StartAsync();
         await session.StopAsync();
 
-        Assert.Equal([new FinalizedDictation("synthetic sentence", "en-GB")], results);
+        Assert.Equal([new FinalizedDictation("synthetic sentence", "en-GB") { Inserted = false }], results);
     }
 
     [Fact]

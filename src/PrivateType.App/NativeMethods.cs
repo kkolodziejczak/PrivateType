@@ -46,6 +46,36 @@ internal static class NativeMethods
     [DllImport("user32.dll", SetLastError = true)]
     internal static extern uint SendInput(uint count, Input[] inputs, int size);
 
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static extern bool SetForegroundWindow(nint window);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static extern bool AttachThreadInput(uint attach, uint attachTo, [MarshalAs(UnmanagedType.Bool)] bool doAttach);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static extern bool BringWindowToTop(nint window);
+
+    [DllImport("kernel32.dll")]
+    internal static extern uint GetCurrentThreadId();
+
+    internal const uint SwpNoSize = 0x0001;
+    internal const uint SwpNoZOrder = 0x0004;
+    internal const uint SwpNoActivate = 0x0010;
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static extern bool SetWindowPos(nint window, nint insertAfter, int x, int y, int width, int height, uint flags);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static extern bool GetWindowRect(nint window, out NativeRect rect);
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct NativeRect { public int Left; public int Top; public int Right; public int Bottom; }
+
     [StructLayout(LayoutKind.Sequential)]
     internal struct NativePoint { public int X; public int Y; }
 

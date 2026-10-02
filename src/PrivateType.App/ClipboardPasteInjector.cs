@@ -5,9 +5,10 @@ using Forms = System.Windows.Forms;
 
 namespace PrivateType.App;
 
-// Inserts text by pasting it, then puts the user's previous clipboard back. Dictated text is
-// marked so Windows clipboard history, cloud clipboard, and clipboard monitors skip it.
-internal sealed class ClipboardPasteInjector : ITextInjector
+// Inserts text by pasting it, then puts the user's previous clipboard back. Unless the user opts in,
+// dictated text is marked so Windows clipboard history and clipboard monitors skip it; cloud
+// clipboard always skips it.
+internal sealed class ClipboardPasteInjector(bool includeInClipboardHistory = false) : ITextInjector
 {
     private static readonly TimeSpan RestoreDelay = TimeSpan.FromMilliseconds(600);
     private const ushort VkShift = 0x10;
@@ -24,7 +25,7 @@ internal sealed class ClipboardPasteInjector : ITextInjector
             previous = Snapshot(Forms.Clipboard.GetDataObject());
             try
             {
-                Forms.Clipboard.SetDataObject(CreatePasteData(text), copy: true, retryTimes: 10, retryDelay: 50);
+                Forms.Clipboard.SetDataObject(CreatePasteData(text, includeInClipboardHistory), copy: true, retryTimes: 10, retryDelay: 50);
             }
             catch (ExternalException exception)
             {
@@ -40,12 +41,31 @@ internal sealed class ClipboardPasteInjector : ITextInjector
         _ = RestoreLaterAsync(previous, sequence);
     }
 
-    internal static Forms.DataObject CreatePasteData(string text)
+    // Leaves the text on the clipboard for the user to paste themselves, with the same history marks.
+    public static void Copy(string text, bool includeInClipboardHistory)
+    {
+        RunOnStaThread(() =>
+        {
+            try
+            {
+                Forms.Clipboard.SetDataObject(CreatePasteData(text, includeInClipboardHistory), copy: true, retryTimes: 10, retryDelay: 50);
+            }
+            catch (ExternalException exception)
+            {
+                throw new InvalidOperationException("The clipboard is busy, so the text was not copied.", exception);
+            }
+        });
+    }
+
+    internal static Forms.DataObject CreatePasteData(string text, bool includeInClipboardHistory = false)
     {
         var data = new Forms.DataObject();
         data.SetData(Forms.DataFormats.UnicodeText, text);
-        data.SetData("ExcludeClipboardContentFromMonitorProcessing", new MemoryStream(new byte[4]));
-        data.SetData("CanIncludeInClipboardHistory", new MemoryStream(new byte[4]));
+        if (!includeInClipboardHistory)
+        {
+            data.SetData("ExcludeClipboardContentFromMonitorProcessing", new MemoryStream(new byte[4]));
+            data.SetData("CanIncludeInClipboardHistory", new MemoryStream(new byte[4]));
+        }
         data.SetData("CanUploadToCloudClipboard", new MemoryStream(new byte[4]));
         return data;
     }

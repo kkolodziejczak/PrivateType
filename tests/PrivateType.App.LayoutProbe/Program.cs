@@ -67,6 +67,7 @@ static void RenderWindows(bool pointerPlacementOnly)
     SettingsPackProbe.Run(outputDirectory);
     SettingsModelProbe.Run(outputDirectory);
     TeachProbe.Run(outputDirectory);
+    HistoryProbe.Run(outputDirectory);
     Render(new DiagnosticsWindow(new InMemoryDiagnostics()), Path.Combine(outputDirectory, "diagnostics-empty.png"));
     Render(new OpenSourceLicensesWindow(), Path.Combine(outputDirectory, "open-source-licenses.png"));
     var sharedModelSetup = new ModelSetupWindow();
@@ -136,6 +137,11 @@ static void RenderWindows(bool pointerPlacementOnly)
     cancelledPanel.ShowReady(PortableSettings.Default, modelLoaded: true);
     cancelledPanel.ShowCancellation("Text not inserted: the window does not accept input from PrivateType.");
     Render(cancelledPanel, Path.Combine(outputDirectory, "status-panel-cancelled.png"));
+
+    var keptPanel = new DictationBubble();
+    keptPanel.ShowReady(PortableSettings.Default, modelLoaded: true);
+    keptPanel.ShowCancellation($"Text not inserted: the active window changed. {DictationApplication.KeptTextHint}");
+    Render(keptPanel, Path.Combine(outputDirectory, "status-panel-kept.png"));
 
     var errorPanel = new DictationBubble();
     errorPanel.ShowReady(PortableSettings.Default, modelLoaded: true);
