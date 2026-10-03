@@ -89,7 +89,7 @@
             <Grid.ColumnDefinitions>
               <ColumnDefinition Width="22" />
               <ColumnDefinition Width="10" />
-              <ColumnDefinition Width="Auto" />
+              <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
             <Border x:Name="CheckBoxBorder" Grid.Column="0" Width="22" Height="22" VerticalAlignment="Center" Background="{DynamicResource ColorBg}"
                     BorderBrush="{DynamicResource ColorAccent}" BorderThickness="2" CornerRadius="4">
