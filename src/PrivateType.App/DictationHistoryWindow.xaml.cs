@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Windows;
 using System.Windows.Interop;
+using System.Windows.Threading;
 using PrivateType.Core;
 using Forms = System.Windows.Forms;
 using Input = System.Windows.Input;
@@ -13,25 +14,58 @@ public partial class DictationHistoryWindow : Window
 {
     private readonly DictationHistory history;
     private readonly TimeProvider clock;
+    private readonly Func<nint> foregroundWindow;
+    private readonly HistoryDismissal dismissal;
+    // Activation events miss a switch between two other apps while the list never held the foreground.
+    private readonly DispatcherTimer foregroundWatch = new() { Interval = TimeSpan.FromMilliseconds(250) };
     private bool closing;
 
-    internal DictationHistoryWindow(DictationHistory history, TimeProvider clock)
+    internal DictationHistoryWindow(DictationHistory history, TimeProvider clock, Func<nint>? foregroundWindow = null)
     {
         InitializeComponent();
         this.history = history;
         this.clock = clock;
+        this.foregroundWindow = foregroundWindow ?? NativeMethods.GetForegroundWindow;
+        dismissal = new HistoryDismissal(this.foregroundWindow());
         Refresh(selectIndex: 0);
         Loaded += (_, _) =>
         {
             CenterOnPointerScreen();
             FocusSelection();
+            foregroundWatch.Start();
         };
         DpiChanged += (_, _) => Dispatcher.BeginInvoke(CenterOnPointerScreen);
-        Deactivated += (_, _) => CloseOnce();
-        Closing += (_, _) => closing = true;
+        // Judged once the activation change has settled, never mid-handover.
+        Activated += (_, _) => Dispatcher.BeginInvoke(CloseIfUserMovedOn, DispatcherPriority.Input);
+        Deactivated += (_, _) => Dispatcher.BeginInvoke(CloseIfUserMovedOn, DispatcherPriority.Input);
+        foregroundWatch.Tick += (_, _) => CloseIfUserMovedOn();
+        Closing += (_, _) =>
+        {
+            closing = true;
+            CloseReason ??= "closed";
+        };
         // A dictation can finish, or an entry expire, while the list is open.
         history.Changed += RefreshAfterChange;
-        Closed += (_, _) => history.Changed -= RefreshAfterChange;
+        Closed += (_, _) =>
+        {
+            foregroundWatch.Stop();
+            history.Changed -= RefreshAfterChange;
+        };
+    }
+
+    // Why the list closed: chosen, escape, button, focus-lost, or closed (by the app).
+    internal string? CloseReason { get; private set; }
+
+    internal bool HeldForeground => dismissal.HeldForeground;
+
+    private void CloseIfUserMovedOn()
+    {
+        var handle = new WindowInteropHelper(this).Handle;
+        if (closing || handle == nint.Zero)
+            return;
+
+        if (dismissal.ShouldClose(foregroundWindow(), handle))
+            CloseOnce("focus-lost");
     }
 
     private void RefreshAfterChange()
@@ -70,7 +104,7 @@ public partial class DictationHistoryWindow : Window
         switch (e.Key)
         {
             case Input.Key.Escape:
-                CloseOnce();
+                CloseOnce("escape");
                 e.Handled = true;
                 break;
             case Input.Key.Enter when EntriesList.SelectedItem is DictationHistoryItem item:
@@ -115,18 +149,19 @@ public partial class DictationHistoryWindow : Window
 
     private void Choose(DictationHistoryItem item)
     {
-        CloseOnce();
+        CloseOnce("chosen");
         Chosen?.Invoke(item.Entry);
     }
 
-    private void CloseWindow(object sender, RoutedEventArgs e) => CloseOnce();
+    private void CloseWindow(object sender, RoutedEventArgs e) => CloseOnce("button");
 
-    private void CloseOnce()
+    private void CloseOnce(string reason)
     {
         if (closing)
             return;
 
         closing = true;
+        CloseReason = reason;
         Close();
     }
 
@@ -146,11 +181,13 @@ public partial class DictationHistoryWindow : Window
 
     // Opened from a global shortcut, so another app owns the foreground and Windows refuses a plain
     // Activate. Sharing that app's input queue for the call lets the list take keyboard focus.
-    internal void TakeForeground()
+    // Windows can still refuse; the list then stays on top until clicked. Returns whether it holds
+    // the foreground now.
+    internal bool TakeForeground()
     {
         var handle = new WindowInteropHelper(this).Handle;
         if (handle == nint.Zero)
-            return;
+            return false;
 
         var foregroundThread = NativeMethods.GetWindowThreadProcessId(NativeMethods.GetForegroundWindow(), out _);
         var currentThread = NativeMethods.GetCurrentThreadId();
@@ -167,6 +204,7 @@ public partial class DictationHistoryWindow : Window
                 NativeMethods.AttachThreadInput(currentThread, foregroundThread, false);
         }
         FocusSelection();
+        return foregroundWindow() == handle;
     }
 
     // Centered horizontally, a third of the way down the work area of the monitor under the pointer.

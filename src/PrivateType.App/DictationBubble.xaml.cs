@@ -564,7 +564,12 @@ public partial class DictationBubble : Window
 
     private void OpenTeach(object sender, RoutedEventArgs e) => TeachRequested?.Invoke();
 
-    private void OpenHistory(object sender, RoutedEventArgs e) => HistoryRequested?.Invoke();
+    // Opens the list only after the menu has closed, so the menu's teardown cannot take focus from it.
+    private void OpenHistory(object sender, RoutedEventArgs e)
+    {
+        CloseMenu();
+        Dispatcher.BeginInvoke(() => HistoryRequested?.Invoke(), System.Windows.Threading.DispatcherPriority.Background);
+    }
 
     private void Quit(object sender, RoutedEventArgs e)
     {

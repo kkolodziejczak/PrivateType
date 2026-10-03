@@ -77,12 +77,12 @@ internal sealed class DictationApplication : IDisposable
         heldKeyWatchdog.Tick += ReleaseShortcutIfKeyIsUp;
         hotkey.Held += localeCode => Wpf.Application.Current.Dispatcher.BeginInvoke(new Action(() => _ = BeginDictationAsync(localeCode)));
         hotkey.Released += () => Wpf.Application.Current.Dispatcher.BeginInvoke(new Action(() => _ = EndDictationAsync()));
-        hotkey.HistoryRequested += () => Wpf.Application.Current.Dispatcher.BeginInvoke(new Action(ShowHistory));
+        hotkey.HistoryRequested += () => Wpf.Application.Current.Dispatcher.BeginInvoke(new Action(() => ShowHistory("shortcut")));
         bubble.PositionChanged += SavePanelPosition;
         bubble.SettingsRequested += () => ShowSettings();
         bubble.VocabularyRequested += () => ShowSettings(openVocabulary: true);
         bubble.TeachRequested += ShowTeach;
-        bubble.HistoryRequested += ShowHistory;
+        bubble.HistoryRequested += () => ShowHistory("menu");
         lastDictation.Changed += () => bubble.SetTeachAvailable(lastDictation.HasValue);
         bubble.QuitRequested += Quit;
         bubble.RecordingIndicatorChanged += visible => trayIcon.Icon = visible ? trayIcons.Listening : trayIcons.Ready;
@@ -725,13 +725,13 @@ internal sealed class DictationApplication : IDisposable
     }
 
     // Remembers the active window before the list takes focus, so the chosen dictation goes back there.
-    private void ShowHistory()
+    private void ShowHistory(string source)
     {
         if (disposed || settingsStore is null || openSettingsWindow is not null || openTeachWindow is not null)
             return;
         if (openHistoryWindow is not null)
         {
-            openHistoryWindow.TakeForeground();
+            RecordDiagnostic("history.raised", details: [("source", source), ("foreground", openHistoryWindow.TakeForeground())]);
             return;
         }
 
@@ -739,11 +739,14 @@ internal sealed class DictationApplication : IDisposable
         var target = foreground.Capture();
         var window = new DictationHistoryWindow(history, TimeProvider.System);
         window.Chosen += entry => _ = PasteFromHistoryAsync(entry.Text, foreground, target);
-        window.Closed += (_, _) => openHistoryWindow = null;
+        window.Closed += (_, _) =>
+        {
+            openHistoryWindow = null;
+            RecordDiagnostic("history.closed", details: [("reason", window.CloseReason), ("heldForeground", window.HeldForeground)]);
+        };
         openHistoryWindow = window;
         window.Show();
-        window.TakeForeground();
-        RecordDiagnostic("history.opened");
+        RecordDiagnostic("history.opened", details: [("source", source), ("foreground", window.TakeForeground())]);
     }
 
     // Pastes into the window that was active when the list opened. When that window cannot take

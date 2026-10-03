@@ -142,5 +142,46 @@ public sealed class DictationHistoryTests
         Assert.Equal(expected, DictationHistoryItem.Age(now.AddSeconds(-secondsAgo), now, TimeZoneInfo.Utc));
     }
 
+    private const nint PreviousApp = 100, List = 200, OtherApp = 300;
+
+    [Fact]
+    public void List_that_never_got_the_foreground_stays_open_while_the_previous_app_keeps_it()
+    {
+        var dismissal = new HistoryDismissal(PreviousApp);
+
+        Assert.False(dismissal.ShouldClose(PreviousApp, List));
+        Assert.False(dismissal.ShouldClose(nint.Zero, List));
+        Assert.False(dismissal.HeldForeground);
+    }
+
+    [Fact]
+    public void List_closes_when_it_loses_the_foreground_it_held()
+    {
+        var dismissal = new HistoryDismissal(PreviousApp);
+
+        Assert.False(dismissal.ShouldClose(List, List));
+        Assert.True(dismissal.HeldForeground);
+        Assert.False(dismissal.ShouldClose(nint.Zero, List));
+        Assert.True(dismissal.ShouldClose(PreviousApp, List));
+    }
+
+    [Fact]
+    public void List_closes_when_another_app_takes_the_foreground_even_if_it_never_held_it()
+    {
+        var dismissal = new HistoryDismissal(PreviousApp);
+
+        Assert.True(dismissal.ShouldClose(OtherApp, List));
+    }
+
+    [Fact]
+    public void List_opened_without_a_foreground_window_waits_on_the_first_app_that_takes_it()
+    {
+        var dismissal = new HistoryDismissal(nint.Zero);
+
+        Assert.False(dismissal.ShouldClose(PreviousApp, List));
+        Assert.False(dismissal.ShouldClose(PreviousApp, List));
+        Assert.True(dismissal.ShouldClose(OtherApp, List));
+    }
+
     private static Func<int, bool> Pressed(params int[] keys) => key => keys.Contains(key);
 }

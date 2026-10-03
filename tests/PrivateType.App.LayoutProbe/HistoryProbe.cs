@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Automation.Peers;
 using System.Windows.Automation.Provider;
 using System.Windows.Controls;
+using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
@@ -21,7 +22,76 @@ internal static class HistoryProbe
         VerifyManyEntries(outputDirectory);
         VerifyEmptyStates(outputDirectory);
         VerifySettingsSection(outputDirectory);
-        Console.WriteLine("PASS: Recent dictations lists newest first with age, language and a Not inserted badge, pastes with Enter or click, removes with Delete or ×, clears all, scrolls when long, explains empty and off states, and Settings saves the retention and clipboard-history choices.");
+        VerifyFocusDismissal();
+        Console.WriteLine("PASS: Recent dictations lists newest first with age, language and a Not inserted badge, pastes with Enter or click, removes with Delete or ×, clears all, scrolls when long, explains empty and off states, stays open when Windows refuses it the foreground, closes once the user moves on, and Settings saves the retention and clipboard-history choices.");
+    }
+
+    private const nint PreviousApp = 100, OtherApp = 300;
+
+    // Windows decides the real foreground, so the probe supplies it. Activation events may or may
+    // not arrive in a background probe; the list's foreground watch must decide either way.
+    private static void VerifyFocusDismissal()
+    {
+        var clock = new FixedClock(Now);
+        var history = new DictationHistory(clock);
+        history.Add(new FinalizedDictation("Synthetic sentence for the focus probe.", "en-US"));
+
+        var foreground = PreviousApp;
+        var window = new DictationHistoryWindow(history, clock, () => foreground);
+        var other = new Window { Width = 120, Height = 80, ShowInTaskbar = false, ShowActivated = false };
+        window.Show();
+        other.Show();
+        try
+        {
+            Flush(window);
+            other.Activate();
+            Pump(TimeSpan.FromMilliseconds(600));
+            Require(window.IsVisible && !window.HeldForeground, "A list Windows never gave the foreground must stay open after losing activation.");
+
+            foreground = new WindowInteropHelper(window).Handle;
+            window.Activate();
+            Pump(TimeSpan.FromMilliseconds(600));
+            Require(window.IsVisible && window.HeldForeground, "The list notices when it holds the foreground.");
+
+            foreground = PreviousApp;
+            other.Activate();
+            Pump(TimeSpan.FromMilliseconds(600));
+            Require(!window.IsVisible && window.CloseReason == "focus-lost", "The list closes once it loses the foreground it held.");
+        }
+        finally
+        {
+            window.Close();
+            other.Close();
+        }
+
+        foreground = PreviousApp;
+        var unfocused = new DictationHistoryWindow(history, clock, () => foreground);
+        unfocused.Show();
+        try
+        {
+            Pump(TimeSpan.FromMilliseconds(600));
+            Require(unfocused.IsVisible, "The list waits while the previous app keeps the foreground.");
+            foreground = OtherApp;
+            Pump(TimeSpan.FromMilliseconds(600));
+            Require(!unfocused.IsVisible && unfocused.CloseReason == "focus-lost", "Switching to another app closes a list that never held the foreground.");
+        }
+        finally
+        {
+            unfocused.Close();
+        }
+    }
+
+    private static void Pump(TimeSpan duration)
+    {
+        var frame = new DispatcherFrame();
+        var timer = new DispatcherTimer { Interval = duration };
+        timer.Tick += (_, _) =>
+        {
+            timer.Stop();
+            frame.Continue = false;
+        };
+        timer.Start();
+        Dispatcher.PushFrame(frame);
     }
 
     private static void VerifyListStates(string outputDirectory)
@@ -217,9 +287,9 @@ internal static class HistoryProbe
             "Save keeps the history choices.");
     }
 
-    // Not activated, so the list's close-on-deactivate does not fire while other probe windows open.
+    // Not activated, and the foreground never moves, so the list stays open while other probe windows open.
     private static DictationHistoryWindow CreateWindow(DictationHistory history, TimeProvider clock) =>
-        new(history, clock) { ShowActivated = false };
+        new(history, clock, () => PreviousApp) { ShowActivated = false };
 
     private static void Press(Window window, Input.Key key)
     {
