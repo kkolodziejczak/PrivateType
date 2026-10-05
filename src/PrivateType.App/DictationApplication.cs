@@ -451,7 +451,6 @@ internal sealed class DictationApplication : IDisposable
         }
 
         RecordDiagnostic("model.standby");
-        _ = Task.Run(PrepareSpokenCues);
         await EnsureEngineLoadedAsync();
         ShowReadyPanel();
         ScheduleModelUnload();
@@ -462,18 +461,6 @@ internal sealed class DictationApplication : IDisposable
         return availability.DisabledHotkeys.Count == 0
             ? "Dictation ready"
             : $"Dictation ready — unavailable: {availability.DescribeDisabledHotkeys()}";
-    }
-
-    private void PrepareSpokenCues()
-    {
-        try
-        {
-            SpokenCue.Prepare();
-        }
-        catch (Exception exception)
-        {
-            RecordDiagnostic("cue.prepare.failed", exception);
-        }
     }
 
     private void ShowSettings(bool openVocabulary = false, string? vocabularyScope = null)

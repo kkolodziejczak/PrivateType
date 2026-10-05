@@ -1,5 +1,5 @@
-using System.Speech.Synthesis;
 using PrivateType.App;
+using PrivateType.Core;
 using Xunit;
 
 namespace PrivateType.App.Tests;
@@ -23,25 +23,24 @@ public sealed class DictationCueTests
         Assert.False(DictationBubble.FollowsForegroundWindow((nint)foreground, processId, 7, className));
     }
 
-    [Fact]
-    public void Spoken_cues_render_audible_audio_at_the_chosen_volume()
+    [Theory]
+    [InlineData(SpokenCueVoices.Female, SpokenCue.LoadingModel)]
+    [InlineData(SpokenCueVoices.Female, SpokenCue.Transcribing)]
+    [InlineData(SpokenCueVoices.Male, SpokenCue.LoadingModel)]
+    [InlineData(SpokenCueVoices.Male, SpokenCue.Transcribing)]
+    public void Bundled_spoken_cues_play_at_the_chosen_volume(string voice, string phrase)
     {
-        using (var synthesizer = new SpeechSynthesizer())
-        {
-            // Machines without a Windows voice skip spoken cues; the app records a diagnostic instead.
-            if (synthesizer.GetInstalledVoices().Count == 0)
-                return;
-        }
+        var loud = SpokenCue.Load(phrase, PortableSettings.Default with { SpokenCueVoice = voice, ReadySoundVolume = 100 })!;
+        var muted = SpokenCue.Load(phrase, PortableSettings.Default with { SpokenCueVoice = voice, ReadySoundVolume = 0 })!;
 
-        SpokenCue.Prepare();
-        foreach (var phrase in new[] { SpokenCue.LoadingModel, SpokenCue.Transcribing })
-        {
-            var loud = SpokenCue.LoadIfPrepared(phrase, 100)!;
-            var muted = SpokenCue.LoadIfPrepared(phrase, 0)!;
+        Assert.InRange(loud.Samples.Max(Math.Abs), 0.9f, 0.96f);
+        Assert.All(muted.Samples, sample => Assert.Equal(0, sample));
+        Assert.InRange(loud.Samples.Length / (double)(loud.WaveFormat.SampleRate * loud.WaveFormat.Channels), 0.5, 1.5);
+    }
 
-            Assert.InRange(loud.Samples.Max(Math.Abs), 0.9f, 0.96f);
-            Assert.All(muted.Samples, sample => Assert.Equal(0, sample));
-            Assert.InRange(loud.Samples.Length / (double)(loud.WaveFormat.SampleRate * loud.WaveFormat.Channels), 0.3, 3);
-        }
+    [Fact]
+    public void Spoken_cues_stay_silent_when_turned_off()
+    {
+        Assert.Null(SpokenCue.Load(SpokenCue.LoadingModel, PortableSettings.Default with { SpokenCueVoice = SpokenCueVoices.Off }));
     }
 }

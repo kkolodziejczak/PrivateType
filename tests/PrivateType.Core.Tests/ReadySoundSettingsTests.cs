@@ -36,19 +36,27 @@ public sealed class ReadySoundSettingsTests : IDisposable
         Assert.Equal("ping", result.Settings.ReadySound);
         Assert.Equal(80, result.Settings.ReadySoundVolume);
         Assert.Null(result.Settings.CustomReadySoundPath);
-        Assert.True(result.Settings.SpokenStatusCues);
+        Assert.Equal(SpokenCueVoices.Female, result.Settings.SpokenCueVoice);
     }
 
-    [Fact]
-    public void Saving_and_loading_retains_turned_off_spoken_status_cues()
+    [Theory]
+    [InlineData(SpokenCueVoices.Male)]
+    [InlineData(SpokenCueVoices.Off)]
+    public void Saving_and_loading_retains_the_spoken_cue_voice(string voice)
     {
         var store = new PortableSettingsStore(directory);
 
-        store.Save(PortableSettings.Default with { SpokenStatusCues = false });
+        store.Save(PortableSettings.Default with { SpokenCueVoice = voice });
         var result = store.Load();
 
         Assert.Null(result.Warning);
-        Assert.False(result.Settings.SpokenStatusCues);
+        Assert.Equal(voice, result.Settings.SpokenCueVoice);
+    }
+
+    [Fact]
+    public void Unknown_spoken_cue_voice_cannot_be_saved()
+    {
+        Assert.NotNull(PortableSettingsValidator.Validate(PortableSettings.Default with { SpokenCueVoice = "robot" }));
     }
 
     [Theory]

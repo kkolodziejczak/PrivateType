@@ -183,9 +183,9 @@ choice immediately, without loading the model. **Save changes** keeps your
 preferences; **Cancel** discards them. Custom files are copied into app storage
 when saved, and playback uses at most the first three seconds. If a saved custom
 file becomes unreadable, PrivateType uses Ping instead. Settings scrolls when
-needed, with Save and Cancel always accessible. **Spoken status cues** (on by
-default) speak "Loading model" and "Transcribing" with a local Windows voice, at
-the same volume.
+needed, with Save and Cancel always accessible. **Spoken cues** choose a female
+voice (default), a male voice, or Off for "Loading model" and "Transcribing";
+they use the same volume and **Preview** plays one.
 
 ![Settings](docs/images/settings.png)
 
@@ -269,7 +269,7 @@ if it is not already installed.
 PrivateType's own source and maintainer-owned assets are available under the
 [MIT License](LICENSE). The portable release includes complete notices in
 `app/licenses`, including `THIRD-PARTY-NOTICES.txt` for NeMo-Speech.cpp, ggml, cpp-httplib,
-SentencePiece, Protobuf, Abseil, utf8-range, NAudio, System.Speech, and the self-contained
+SentencePiece, Protobuf, Abseil, utf8-range, NAudio, the Kokoro-82M credit for the spoken cues, and the self-contained
 .NET runtime. Open the same notices from **Settings → Open-source licenses…**.
 
 ## Report a problem or contribute

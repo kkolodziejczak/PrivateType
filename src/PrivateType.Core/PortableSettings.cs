@@ -26,7 +26,7 @@ public sealed record PortableSettings(
     public int ReadySoundVolume { get; init; } = 80;
     public string? CustomReadySoundPath { get; init; }
     // Says "Loading model" and "Transcribing" so the state is audible without looking at the bubble.
-    public bool SpokenStatusCues { get; init; } = true;
+    public string SpokenCueVoice { get; init; } = SpokenCueVoices.Female;
     public string ShortcutMode { get; init; } = DictationShortcutModes.Hold;
     // Pasting is atomic, so an early Enter cannot send half-typed text.
     public string InsertionMode { get; init; } = TextInsertionModes.Paste;
@@ -51,6 +51,15 @@ public static class DictationShortcutModes
 {
     public const string Hold = "hold";
     public const string Toggle = "toggle";
+}
+
+public static class SpokenCueVoices
+{
+    public const string Off = "off";
+    public const string Female = "female";
+    public const string Male = "male";
+
+    public static bool IsSupported(string? value) => value is Off or Female or Male;
 }
 
 public static class TextInsertionModes
@@ -110,6 +119,9 @@ public static class PortableSettingsValidator
         new("dictation history",
             settings => DictationHistoryRetentions.IsSupported(settings.DictationHistory) ? null : "Choose how long recent dictations are kept.",
             settings => settings with { DictationHistory = PortableSettings.Default.DictationHistory }),
+        new("spoken cue voice",
+            settings => SpokenCueVoices.IsSupported(settings.SpokenCueVoice) ? null : "Choose a supported spoken cue voice.",
+            settings => settings with { SpokenCueVoice = PortableSettings.Default.SpokenCueVoice }),
         new("ready sound volume",
             settings => settings.ReadySoundVolume is < 0 or > 100 ? "Choose a ready sound volume between 0 and 100%." : null,
             settings => settings with { ReadySoundVolume = PortableSettings.Default.ReadySoundVolume }),

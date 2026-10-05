@@ -61,7 +61,8 @@ public partial class SettingsWindow : Window
         ReadySoundBox.ItemsSource = ReadySoundOption.Supported;
         ReadySoundBox.SelectedValue = settings.ReadySound;
         ReadyVolumeSlider.Value = settings.ReadySoundVolume;
-        SpokenStatusCuesCheckBox.IsChecked = settings.SpokenStatusCues;
+        SpokenCueVoiceBox.ItemsSource = ChoiceOption.SpokenCueVoices;
+        SpokenCueVoiceBox.SelectedValue = settings.SpokenCueVoice;
         UpdateSoundControls();
         Closed += (_, _) =>
         {
@@ -390,11 +391,37 @@ public partial class SettingsWindow : Window
         SoundStatusText.BringIntoView();
     }
 
+    private void SpokenCueVoiceChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    {
+        if (PreviewSpokenCueButton is null)
+            return;
+
+        soundPreview.Stop();
+        PreviewSpokenCueButton.IsEnabled = SpokenCueVoiceBox.SelectedValue as string != SpokenCueVoices.Off;
+    }
+
+    private void PreviewSpokenCue(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            soundPreview.Announce(SpokenCue.LoadingModel, PendingSoundSettings());
+            SoundStatusText.Text = ReadyVolumeSlider.Value == 0
+                ? "Sound is muted. Increase the volume to hear a preview."
+                : "Preview started.";
+        }
+        catch (Exception)
+        {
+            SoundStatusText.Text = "Couldn't play the spoken cue. Check your audio output.";
+        }
+        SoundStatusText.BringIntoView();
+    }
+
     private PortableSettings PendingSoundSettings() => originalSettings with
     {
         ReadySound = ReadySoundBox.SelectedValue as string ?? "ping",
         ReadySoundVolume = (int)Math.Round(ReadyVolumeSlider.Value),
-        CustomReadySoundPath = customSoundPath
+        CustomReadySoundPath = customSoundPath,
+        SpokenCueVoice = SpokenCueVoiceBox.SelectedValue as string ?? PortableSettings.Default.SpokenCueVoice
     };
 
     private void AddBinding(object sender, RoutedEventArgs e)
@@ -472,8 +499,7 @@ public partial class SettingsWindow : Window
             CorrectAfterDictation = vocabulary.CorrectAfterDictation,
             ModelIdleTimeoutMinutes = IdleTimeoutBox.SelectedValue is int minutes ? minutes : 10,
             SpeechModel = models.SelectedId,
-            OfflinePreview = OfflinePreviewCheckBox.IsChecked == true,
-            SpokenStatusCues = SpokenStatusCuesCheckBox.IsChecked == true
+            OfflinePreview = OfflinePreviewCheckBox.IsChecked == true
         };
         var validationError = PortableSettingsValidator.Validate(settings);
         if (validationError is not null)
@@ -529,6 +555,13 @@ public sealed record ChoiceOption(string Id, string Label)
     [
         new(TextInsertionModes.Paste, "Pasting"),
         new(TextInsertionModes.Type, "Typing characters")
+    ];
+
+    public static IReadOnlyList<ChoiceOption> SpokenCueVoices { get; } =
+    [
+        new(PrivateType.Core.SpokenCueVoices.Female, "Female voice"),
+        new(PrivateType.Core.SpokenCueVoices.Male, "Male voice"),
+        new(PrivateType.Core.SpokenCueVoices.Off, "Off")
     ];
 
     public static IReadOnlyList<ChoiceOption> HistoryRetentions { get; } =

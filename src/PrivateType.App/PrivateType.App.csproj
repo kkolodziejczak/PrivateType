@@ -10,7 +10,6 @@
       <AssemblyName>PrivateType</AssemblyName>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="System.Speech" Version="10.0.12" />
     <ProjectReference Include="..\PrivateType.Core\PrivateType.Core.csproj" />
     <PackageReference Include="NAudio" Version="2.2.1" />
   </ItemGroup>
@@ -18,5 +17,6 @@
     <Resource Include="Assets\PrivateType.ready.ico" />
     <Resource Include="Assets\PrivateType.listening.ico" />
     <EmbeddedResource Include="Assets\ModelReady.wav" LogicalName="PrivateType.ModelReady.wav" />
+    <EmbeddedResource Include="Assets\Cues\*.wav" LogicalName="PrivateType.Cues.%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>

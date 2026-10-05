@@ -15,11 +15,7 @@ internal sealed class DictationCues : IDisposable
 
     public void Preview(PortableSettings settings) => Start(settings, () => ReadySoundAudio.Load(settings, fallbackToPing: false));
 
-    public void Announce(string phrase, PortableSettings settings)
-    {
-        if (settings.SpokenStatusCues)
-            Start(settings, () => SpokenCue.LoadIfPrepared(phrase, settings.ReadySoundVolume));
-    }
+    public void Announce(string phrase, PortableSettings settings) => Start(settings, () => SpokenCue.Load(phrase, settings));
 
     private void Start(PortableSettings settings, Func<ReadySoundClip?> loadClip)
     {

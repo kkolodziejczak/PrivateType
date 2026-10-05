@@ -284,13 +284,19 @@
               </Grid>
               <TextBlock Margin="0,6,0,0" FontSize="12" Opacity="0.7" TextWrapping="Wrap" Text="WAV or MP3, up to 3 seconds of playback. Copied into app storage when saved." />
               <TextBlock x:Name="SoundStatusText" Margin="0,6,0,0" FontSize="12" Foreground="{DynamicResource ColorAccent300}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
-              <CheckBox x:Name="SpokenStatusCuesCheckBox" Margin="0,18,0,0" AutomationProperties.Name="Spoken status cues">
-                <StackPanel>
-                  <TextBlock FontWeight="SemiBold" FontSize="14" Text="Spoken status cues" />
-                  <TextBlock Margin="0,3,0,0" FontSize="12" Opacity="0.6" TextWrapping="Wrap"
-                             Text="Says &#x201C;Loading model&#x201D; while the model loads and &#x201C;Transcribing&#x201D; while Parakeet finishes your text. Spoken by a local Windows voice." />
-                </StackPanel>
-              </CheckBox>
+              <TextBlock Margin="0,18,0,6" Text="Spoken cues" />
+              <Grid>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ComboBox x:Name="SpokenCueVoiceBox" Height="36" SelectedValuePath="Id" AutomationProperties.Name="Spoken cues" SelectionChanged="SpokenCueVoiceChanged">
+                  <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Label}" Foreground="{DynamicResource ColorText}" /></DataTemplate></ComboBox.ItemTemplate>
+                </ComboBox>
+                <Button x:Name="PreviewSpokenCueButton" Grid.Column="1" Margin="8,0,0,0" Content="▶ Preview" AutomationProperties.Name="Preview spoken cue" Click="PreviewSpokenCue" />
+              </Grid>
+              <TextBlock Margin="0,6,0,0" FontSize="12" Opacity="0.7" TextWrapping="Wrap"
+                         Text="Says &#x201C;Loading model&#x201D; while the model loads and &#x201C;Transcribing&#x201D; while Parakeet finishes your text. Uses the volume above." />
             </StackPanel>
           </Grid>
         </Grid>
