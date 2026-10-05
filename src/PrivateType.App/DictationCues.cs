@@ -18,6 +18,9 @@ internal sealed class DictationCues : IDisposable
 
     public void Announce(string phrase, PortableSettings settings) => Start(settings, () => SpokenCue.Load(phrase, settings));
 
+    public void PlayReleased(PortableSettings settings, bool sayTranscribing) =>
+        Start(settings, () => ReleaseCue.Load(settings, sayTranscribing));
+
     // An idle audio output swallows the first moments of the next sound (the "Tr" of "Transcribing").
     // Streaming silence keeps it running, so a cue is heard from its first syllable.
     public void KeepOutputAwake()

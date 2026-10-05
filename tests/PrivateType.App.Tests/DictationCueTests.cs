@@ -43,4 +43,39 @@ public sealed class DictationCueTests
     {
         Assert.Null(SpokenCue.Load(SpokenCue.LoadingModel, PortableSettings.Default with { SpokenCueVoice = SpokenCueVoices.Off }));
     }
+
+    [Fact]
+    public void Release_plays_a_short_soft_blip_on_its_own()
+    {
+        var blip = ReleaseCue.Load(PortableSettings.Default with { ReadySoundVolume = 100 }, sayTranscribing: false);
+
+        var seconds = blip.Samples.Length / (double)(blip.WaveFormat.SampleRate * blip.WaveFormat.Channels);
+        Assert.InRange(seconds, 0.05, 0.1);
+        Assert.InRange(blip.Samples.Max(Math.Abs), 0.4f, 0.5f);
+    }
+
+    [Fact]
+    public void A_long_dictation_hears_the_blip_then_transcribing()
+    {
+        var settings = PortableSettings.Default with { ReadySoundVolume = 100 };
+        var blip = ReleaseCue.Load(settings, sayTranscribing: false);
+        var voice = SpokenCue.Load(SpokenCue.Transcribing, settings)!;
+
+        var cue = ReleaseCue.Load(settings, sayTranscribing: true);
+
+        Assert.Equal(voice.WaveFormat, cue.WaveFormat);
+        Assert.True(cue.Samples.Length > voice.Samples.Length + blip.Samples.Length);
+        Assert.Equal(voice.Samples, cue.Samples[^voice.Samples.Length..]);
+    }
+
+    [Theory]
+    [InlineData(SpokenCueVoices.Off, 100, false)]
+    [InlineData(SpokenCueVoices.Female, 0, true)]
+    public void Release_stays_a_blip_without_a_voice_and_silent_when_muted(string voice, int volume, bool silent)
+    {
+        var cue = ReleaseCue.Load(PortableSettings.Default with { SpokenCueVoice = voice, ReadySoundVolume = volume }, sayTranscribing: true);
+
+        Assert.True(cue.Samples.Length / (double)cue.WaveFormat.SampleRate < 0.1 || silent);
+        Assert.Equal(silent, cue.Samples.All(sample => sample == 0));
+    }
 }

@@ -72,7 +72,7 @@ model loads when PrivateType starts; after the selected idle timeout unloads
 it, the next held shortcut loads it again. Keep
 holding the shortcut while **Loading local model…** is shown; PrivateType says
 "Loading model". A short ping always means the microphone is listening: you can
-speak.
+speak. When you release, a soft falling blip means the microphone is off.
 
 Prefer not to hold? Set **Settings → Shortcuts → Shortcut behavior** to
 **Press to start and stop**: press the shortcut once to start listening and

@@ -704,12 +704,11 @@ internal sealed class DictationApplication : IDisposable
                 : null,
             keptTextHint: history.IsEnabled ? KeptTextHint : null);
         session.PresentationChanged += presentation => Present(localeCode, presentation);
-        if (activeModel.Style == RecognitionStyle.Offline)
-        {
-            var forecast = transcriptionForecast;
-            session.FinalizingStarted += recorded => AnnounceTranscribingIfLong(forecast, recorded);
+        // Only models that transcribe on release make the user wait for the text.
+        var forecast = activeModel.Style == RecognitionStyle.Offline ? transcriptionForecast : null;
+        session.FinalizingStarted += recorded => PlayReleaseCue(forecast, recorded);
+        if (forecast is not null)
             session.FinalizingCompleted += (recorded, took) => LearnTranscriptionTime(forecast, recorded, took);
-        }
         session.AudioMeterChanged += PresentAudioMeter;
         // Keep the result only if no newer dictation has started since this one.
         session.Finalized += result => Wpf.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
@@ -724,18 +723,22 @@ internal sealed class DictationApplication : IDisposable
     }
 
     // Runs on the session's thread the moment the shortcut is released, so the cue is immediate.
-    // Short dictations are inserted almost at once and stay silent.
-    private void AnnounceTranscribingIfLong(TranscriptionTimeForecast forecast, TimeSpan recorded)
+    // Every release says "microphone off"; only a dictation long enough to wait for adds "Transcribing".
+    private void PlayReleaseCue(TranscriptionTimeForecast? forecast, TimeSpan recorded)
     {
-        // Never speak into the microphone of a dictation that started meanwhile. A hold that begins
+        var announced = false;
+        // Never play into the microphone of a dictation that started meanwhile. A hold that begins
         // after this check stops the cue before its own microphone starts.
-        bool announced;
         lock (releaseCueGate)
         {
-            announced = forecast.IsWorthAnnouncing(recorded) && !shortcutHeld;
-            if (announced)
-                PlayCue(() => cues.Announce(SpokenCue.Transcribing, settings));
+            if (!shortcutHeld)
+            {
+                announced = forecast?.IsWorthAnnouncing(recorded) == true;
+                PlayCue(() => cues.PlayReleased(settings, announced));
+            }
         }
+        if (forecast is null)
+            return;
         RecordDiagnostic("cue.transcribing", details:
         [
             ("recordedSeconds", Math.Round(recorded.TotalSeconds, 1)),
