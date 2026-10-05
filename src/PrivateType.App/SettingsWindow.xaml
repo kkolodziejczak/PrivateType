@@ -194,6 +194,16 @@
                   </ComboBox.ItemTemplate>
                 </ComboBox>
               </Grid>
+              <Grid Margin="0,10,0,0">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="220" />
+                </Grid.ColumnDefinitions>
+                <TextBlock x:Name="HistoryShortcutLabel" VerticalAlignment="Center" FontSize="13" Foreground="{DynamicResource ColorText}" Opacity="0.8" Text="Shortcut" />
+                <TextBox x:Name="HistoryShortcutBox" Grid.Column="1" Height="36" Padding="9,0" VerticalContentAlignment="Center" IsReadOnly="True"
+                         ToolTip="Click, then press the new shortcut, for example Win+Shift+V." AutomationProperties.Name="Recent dictations shortcut"
+                         GotKeyboardFocus="StartRecordingHistoryShortcut" LostKeyboardFocus="StopRecordingHistoryShortcut" />
+              </Grid>
               <TextBlock x:Name="HistoryHint" Margin="0,8,0,0" Foreground="{DynamicResource ColorText}" Opacity="0.55" FontSize="12" TextWrapping="Wrap" />
               <CheckBox x:Name="ClipboardHistoryCheckBox" Margin="0,14,0,0"
                         Content="Show pasted dictations in Win+V clipboard history"

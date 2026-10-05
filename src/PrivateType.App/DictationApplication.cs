@@ -702,7 +702,7 @@ internal sealed class DictationApplication : IDisposable
             correctText: settings.CorrectAfterDictation
                 ? TranscriptCorrector.Create(settings.Vocabulary, settings.VocabularyPacks, settings.VocabularyCorrections, localeCode).Correct
                 : null,
-            keptTextHint: history.IsEnabled ? KeptTextHint : null);
+            keptTextHint: history.IsEnabled ? KeptTextHint(settings.HistoryShortcut) : null);
         session.PresentationChanged += presentation => Present(localeCode, presentation);
         // Only models that transcribe on release make the user wait for the text.
         var forecast = activeModel.Style == RecognitionStyle.Offline ? transcriptionForecast : null;
@@ -757,7 +757,7 @@ internal sealed class DictationApplication : IDisposable
         ]);
     }
 
-    internal const string KeptTextHint = $"Press {HistoryShortcut.Label} to paste it.";
+    internal static string KeptTextHint(KeyChord historyShortcut) => $"Press {historyShortcut.Label} to paste it.";
 
     private ITextInjector CreateInjector() => settings.InsertionMode == TextInsertionModes.Paste
         ? new ClipboardPasteInjector(settings.IncludeInClipboardHistory)
@@ -766,6 +766,7 @@ internal sealed class DictationApplication : IDisposable
     private void ApplyHistorySettings()
     {
         history.Retention = settings.DictationHistory;
+        hotkey.HistoryShortcut = settings.HistoryShortcut;
         hotkey.HistoryShortcutEnabled = history.IsEnabled;
     }
 
@@ -801,7 +802,7 @@ internal sealed class DictationApplication : IDisposable
     {
         try
         {
-            await WaitForModifierReleaseAsync();
+            await WaitForModifierReleaseAsync(settings.HistoryShortcut.VirtualKey);
             if (await RestoreForegroundAsync(foreground, target))
             {
                 try
@@ -827,11 +828,11 @@ internal sealed class DictationApplication : IDisposable
         }
     }
 
-    // Win, Shift or V still held from Win+Shift+V would turn the synthetic Ctrl+V into another
-    // shortcut, so wait (briefly) until they are up.
-    private static async Task WaitForModifierReleaseAsync()
+    // Modifiers or the key still held from the history shortcut would turn the synthetic Ctrl+V into
+    // another shortcut, so wait (briefly) until they are up.
+    private static async Task WaitForModifierReleaseAsync(int historyKey)
     {
-        int[] keys = [0x5B, 0x5C, 0x10, 0x11, 0x12, HistoryShortcut.VirtualKey];
+        int[] keys = [0x5B, 0x5C, 0x10, 0x11, 0x12, historyKey];
         for (var attempt = 0; attempt < 40 && keys.Any(key => (GetAsyncKeyState(key) & 0x8000) != 0); attempt++)
             await Task.Delay(25);
     }

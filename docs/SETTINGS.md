@@ -76,6 +76,7 @@ long dictation, where holding keys is tiring.
 If you switch windows before the text arrives, the text isn't inserted. Recent
 dictations let you paste it again: press **Win+Shift+V** or choose **Recent
 dictations…** in the bubble menu. Up to 50 dictations are listed, newest first.
+A dictation that wasn't inserted is marked **Not inserted**.
 
 **Keep dictations**: how long they stay in the list.
 
@@ -83,7 +84,18 @@ dictations…** in the bubble menu. Up to 50 dictations are listed, newest first
 | --- | --- |
 | **Until PrivateType exits** (default) | Cleared when you close PrivateType or sign out. |
 | **For 1 hour** / **For 15 minutes** | Each dictation is removed after that time. |
-| **Don't keep** | No list. `Win+Shift+V` goes back to Windows. |
+| **Don't keep** | No list. The shortcut is left to Windows and other apps. |
+
+**Shortcut** opens the list (default `Win+Shift+V`). Click the box, then press
+the new combination. It needs **Win**, or two of **Ctrl**, **Alt**, and
+**Shift**, plus a letter, number, or function key. PrivateType refuses:
+
+- a single modifier such as `Ctrl+V`, which would block typing or pasting,
+- `Ctrl+Alt` combinations, which are AltGr on many keyboards and type letters
+  such as ą,
+- the exact combination of a dictation shortcut.
+
+Some Win combinations, such as `Win+L`, are kept by Windows and can't be used.
 
 Dictations are kept in memory only and are never written to disk.
 
@@ -260,7 +272,7 @@ These work anywhere in Windows:
 | --- | --- | --- |
 | `Ctrl+Shift+R` | Dictate in Polish | **General → Shortcuts** |
 | `Ctrl+Shift+E` | Dictate in English | **General → Shortcuts** |
-| `Win+Shift+V` | Open **Recent dictations** to paste one again, including one marked **Not inserted** | Fixed. Off when **Keep dictations** is **Don't keep** |
+| `Win+Shift+V` | Open **Recent dictations** to paste one again, including one marked **Not inserted** | **General → Recent dictations → Shortcut**. Off when **Keep dictations** is **Don't keep** |
 
 In **Recent dictations**:
 

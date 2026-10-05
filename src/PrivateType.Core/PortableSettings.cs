@@ -43,6 +43,7 @@ public sealed record PortableSettings(
     public string DictationHistory { get; init; } = DictationHistoryRetentions.UntilExit;
     // Opt-in: lets pasted dictations appear in Windows clipboard history (Win+V).
     public bool IncludeInClipboardHistory { get; init; }
+    public KeyChord HistoryShortcut { get; init; } = KeyChord.DefaultHistory;
 
     public static PortableSettings Default { get; } = new("default", ShortcutBinding.Defaults);
 }
@@ -84,6 +85,9 @@ public static class PortableSettingsValidator
         new("shortcuts",
             ValidateShortcuts,
             settings => settings with { Shortcuts = ShortcutBinding.Defaults }),
+        new("recent dictations shortcut",
+            settings => HistoryShortcutRules.Validate(settings.HistoryShortcut, settings.Shortcuts ?? []),
+            settings => settings with { HistoryShortcut = KeyChord.DefaultHistory }),
         new("bubble position",
             settings => settings.PanelLeftFraction is < 0 or > 1 || settings.PanelTopFraction is < 0 or > 1
                 ? "The saved panel position is outside the screen."
@@ -203,11 +207,14 @@ public sealed class PortableSettingsStore(string dataDirectory)
                 return new SettingsLoadResult(PortableSettings.Default);
 
             var root = JsonNode.Parse(File.ReadAllText(SettingsPath));
-            var settings = root is null ? null : PortableSettingsMigration.MigrateToCurrent(root).Deserialize<PortableSettings>(JsonOptions);
+            var migrated = root is null ? null : PortableSettingsMigration.MigrateToCurrent(root);
+            var shortcutUnreadable = migrated is not null && DropUnreadableHistoryShortcut(migrated);
+            var settings = migrated?.Deserialize<PortableSettings>(JsonOptions);
             if (settings is null)
                 return new SettingsLoadResult(PortableSettings.Default, "Saved settings were ignored: Settings file is empty.");
 
-            var (repaired, resetNames) = PortableSettingsValidator.Repair(settings);
+            var (repaired, repairedNames) = PortableSettingsValidator.Repair(settings);
+            IReadOnlyList<string> resetNames = shortcutUnreadable ? ["recent dictations shortcut", .. repairedNames] : repairedNames;
             return resetNames.Count == 0
                 ? new SettingsLoadResult(settings)
                 : new SettingsLoadResult(repaired, $"Some saved settings were invalid and have been reset: {string.Join(", ", resetNames)}.");
@@ -219,6 +226,23 @@ public sealed class PortableSettingsStore(string dataDirectory)
         catch (IOException)
         {
             return new SettingsLoadResult(PortableSettings.Default, "Saved settings could not be read; safe defaults were restored.");
+        }
+    }
+
+    // A hand-edited shortcut of the wrong shape would otherwise fail the whole file and reset every setting.
+    private static bool DropUnreadableHistoryShortcut(JsonNode root)
+    {
+        if (root is not JsonObject settings || settings[nameof(PortableSettings.HistoryShortcut)] is not { } shortcut)
+            return false;
+        try
+        {
+            shortcut.Deserialize<KeyChord>(JsonOptions);
+            return false;
+        }
+        catch (Exception exception) when (exception is JsonException or InvalidOperationException)
+        {
+            settings.Remove(nameof(PortableSettings.HistoryShortcut));
+            return true;
         }
     }
 

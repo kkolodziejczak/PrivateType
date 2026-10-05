@@ -26,23 +26,12 @@ internal static class HotkeyCatalog
             binding.LocaleCode,
             binding.VirtualKey,
             ModifierControl | ModifierShift,
-            $"Ctrl+Shift+{KeyLabel(binding.VirtualKey)}")).ToArray();
+            $"Ctrl+Shift+{KeyNames.Label(binding.VirtualKey)}")).ToArray();
     }
 
     internal static uint ToRegistrationModifiers(HotkeyDefinition hotkey)
     {
         return hotkey.Modifiers | ModifierNoRepeat;
-    }
-
-    private static string KeyLabel(int virtualKey)
-    {
-        return virtualKey switch
-        {
-            >= 0x30 and <= 0x39 => ((char)virtualKey).ToString(),
-            >= 0x41 and <= 0x5A => ((char)virtualKey).ToString(),
-            >= 0x70 and <= 0x87 => $"F{virtualKey - 0x6F}",
-            _ => $"VK-{virtualKey:X2}"
-        };
     }
 }
 

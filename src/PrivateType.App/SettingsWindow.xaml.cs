@@ -18,6 +18,8 @@ public partial class SettingsWindow : Window
     private readonly VocabularyEditor vocabulary;
     private readonly ModelLibraryEditor models;
     private string? customSoundPath;
+    private KeyChord historyShortcut;
+    private ShortcutRecorderHook? historyShortcutRecorder;
 
     internal SettingsWindow(PortableSettings settings, IReadOnlyList<MicrophoneOption> microphones, IModelStore modelStore, bool openVocabulary = false, string? vocabularyScope = null)
     {
@@ -54,6 +56,8 @@ public partial class SettingsWindow : Window
         HistoryRetentionBox.ItemsSource = ChoiceOption.HistoryRetentions;
         HistoryRetentionBox.SelectedValue = settings.DictationHistory;
         ClipboardHistoryCheckBox.IsChecked = settings.IncludeInClipboardHistory;
+        historyShortcut = settings.HistoryShortcut;
+        HistoryShortcutBox.Text = historyShortcut.Label;
         UpdateHistoryHints();
         IdleTimeoutBox.ItemsSource = IdleTimeoutOption.Supported;
         IdleTimeoutBox.SelectedValue = settings.ModelIdleTimeoutMinutes;
@@ -72,10 +76,13 @@ public partial class SettingsWindow : Window
         catch (Exception)
         {
         }
+        // A recorder left running after the user switches apps would swallow their shortcuts.
+        Deactivated += (_, _) => StopRecordingHistoryShortcut();
         Closed += (_, _) =>
         {
             models.CancelAll();
             soundPreview.Dispose();
+            StopRecordingHistoryShortcut();
         };
     }
 
@@ -300,12 +307,18 @@ public partial class SettingsWindow : Window
     private void UpdateHistoryHints()
     {
         // Called while InitializeComponent is still wiring events.
-        if (HistoryRetentionBox is null || HistoryHint is null || ClipboardHistoryHint is null || ClipboardHistoryCheckBox is null || InsertionModeBox is null)
+        if (HistoryRetentionBox is null || HistoryHint is null || HistoryShortcutBox is null || HistoryShortcutLabel is null || ClipboardHistoryHint is null || ClipboardHistoryCheckBox is null || InsertionModeBox is null)
             return;
 
-        HistoryHint.Text = HistoryRetentionBox.SelectedValue as string == DictationHistoryRetentions.Off
-            ? $"No dictations are kept, and {HistoryShortcut.Label} stays with Windows."
-            : $"Press {HistoryShortcut.Label} to pick a recent dictation and paste it into the active window. Kept in memory only, never saved to disk.";
+        // Before the constructor reads the saved shortcut, show the default.
+        var label = historyShortcut?.Label ?? KeyChord.DefaultHistory.Label;
+        var kept = HistoryRetentionBox.SelectedValue as string != DictationHistoryRetentions.Off;
+        HistoryShortcutBox.IsEnabled = kept;
+        HistoryShortcutLabel.Opacity = kept ? 0.8 : 0.45;
+        HistoryShortcutBox.Opacity = kept ? 1 : 0.45;
+        HistoryHint.Text = !kept
+            ? $"No dictations are kept, and {label} is left to Windows and other apps."
+            : $"Press {label} to pick a recent dictation and paste it into the active window. Kept in memory only, never saved to disk.";
 
         var pasting = InsertionModeBox.SelectedValue as string == TextInsertionModes.Paste;
         ClipboardHistoryCheckBox.IsEnabled = pasting;
@@ -314,6 +327,47 @@ public partial class SettingsWindow : Window
             : ClipboardHistoryCheckBox.IsChecked == true
                 ? "Windows keeps them in clipboard history until you clear it or restart, and clipboard tools can read them. Cloud clipboard still skips them."
                 : "Off keeps dictated text out of clipboard history, cloud clipboard, and clipboard tools.";
+    }
+
+    private void StartRecordingHistoryShortcut(object sender, Input.KeyboardFocusChangedEventArgs e)
+    {
+        if (historyShortcutRecorder is not null)
+            return;
+        try
+        {
+            historyShortcutRecorder = new ShortcutRecorderHook(RecordHistoryShortcut);
+            HistoryShortcutBox.Text = "Press the new shortcut…";
+        }
+        catch (Exception)
+        {
+            ValidationText.Text = "Couldn't listen for the new shortcut. Close Settings and try again.";
+        }
+    }
+
+    private void StopRecordingHistoryShortcut(object sender, Input.KeyboardFocusChangedEventArgs e) => StopRecordingHistoryShortcut();
+
+    private void StopRecordingHistoryShortcut()
+    {
+        historyShortcutRecorder?.Dispose();
+        historyShortcutRecorder = null;
+        HistoryShortcutBox.Text = historyShortcut.Label;
+    }
+
+    // Keeps the previous shortcut when the new one can't be used, and says why.
+    internal void RecordHistoryShortcut(KeyChord chord)
+    {
+        var shortcuts = bindings.Select(binding => new ShortcutBinding(binding.LocaleCode, binding.VirtualKey)).ToArray();
+        if (HistoryShortcutRules.Validate(chord, shortcuts) is { } error)
+        {
+            ValidationText.Text = error;
+            HistoryShortcutBox.Text = historyShortcut.Label;
+            return;
+        }
+
+        historyShortcut = chord;
+        HistoryShortcutBox.Text = chord.Label;
+        ValidationText.Text = string.Empty;
+        UpdateHistoryHints();
     }
 
     private void ReadySoundChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
@@ -500,6 +554,7 @@ public partial class SettingsWindow : Window
             InsertionMode = InsertionModeBox.SelectedValue as string ?? PortableSettings.Default.InsertionMode,
             DictationHistory = HistoryRetentionBox.SelectedValue as string ?? PortableSettings.Default.DictationHistory,
             IncludeInClipboardHistory = ClipboardHistoryCheckBox.IsChecked == true,
+            HistoryShortcut = historyShortcut,
             Vocabulary = vocabulary.Entries,
             VocabularyPacks = vocabulary.Packs,
             VocabularyStrength = vocabulary.Strength,

@@ -23,7 +23,7 @@ internal static class HistoryProbe
         VerifyEmptyStates(outputDirectory);
         VerifySettingsSection(outputDirectory);
         VerifyFocusDismissal();
-        Console.WriteLine("PASS: Recent dictations lists newest first with age, language and a Not inserted badge, pastes with Enter or click, removes with Delete or ×, clears all, scrolls when long, explains empty and off states, stays open when Windows refuses it the foreground, closes once the user moves on, and Settings saves the retention and clipboard-history choices.");
+        Console.WriteLine("PASS: Recent dictations lists newest first with age, language and a Not inserted badge, pastes with Enter or click, removes with Delete or ×, clears all, scrolls when long, explains empty and off states, stays open when Windows refuses it the foreground, closes once the user moves on, and Settings saves the retention, clipboard-history choice, and a re-recorded shortcut.");
     }
 
     private const nint PreviousApp = 100, OtherApp = 300;
@@ -232,6 +232,8 @@ internal static class HistoryProbe
             Require(Equals(retention.SelectedValue, DictationHistoryRetentions.UntilExit) && retention.Items.Count == 4, "Retention defaults to until exit and offers four choices.");
             Require(clipboard.IsChecked == false && clipboard.IsEnabled, "Clipboard history starts off and is available while pasting.");
             Require(hint.Text.Contains("Win+Shift+V", StringComparison.Ordinal), "The hint names the shortcut.");
+            var shortcutBox = Find<TextBox>(window, "HistoryShortcutBox");
+            Require(shortcutBox.Text == "Win+Shift+V" && shortcutBox.IsEnabled && shortcutBox.ActualWidth > 200, "The shortcut box shows the current shortcut.");
             retention.BringIntoView();
             clipboardHint.BringIntoView();
             Flush(window);
@@ -241,11 +243,23 @@ internal static class HistoryProbe
             Require(label.TranslatePoint(new Point(label.ActualWidth, 0), section).X <= section.ActualWidth + 1, "The clipboard-history label must not be clipped.");
             Capture(window, outputDirectory, "settings-history.png");
 
+            window.RecordHistoryShortcut(new KeyChord(Control: true, Shift: true, Alt: false, Windows: false, 0x52));
+            Flush(window);
+            Require(Find<TextBlock>(window, "ValidationText").Text == "Ctrl+Shift+R is already a dictation shortcut."
+                && shortcutBox.Text == "Win+Shift+V", "A shortcut that clashes with dictation is refused with a reason and the old one stays.");
+            Capture(window, outputDirectory, "settings-history-shortcut-refused.png");
+            window.RecordHistoryShortcut(new KeyChord(Control: false, Shift: true, Alt: true, Windows: false, 0x48));
+            Flush(window);
+            Require(shortcutBox.Text == "Alt+Shift+H" && hint.Text.Contains("Alt+Shift+H", StringComparison.Ordinal)
+                && Find<TextBlock>(window, "ValidationText").Text.Length == 0, "A valid shortcut replaces the old one in the box and the hint.");
+            Capture(window, outputDirectory, "settings-history-shortcut.png");
+
             clipboard.IsChecked = true;
             retention.SelectedValue = DictationHistoryRetentions.Off;
             Flush(window);
-            Require(hint.Text.Contains("stays with Windows", StringComparison.Ordinal) && clipboardHint.Text.Contains("Cloud clipboard still skips", StringComparison.Ordinal),
+            Require(hint.Text.Contains("left to Windows", StringComparison.Ordinal) && clipboardHint.Text.Contains("Cloud clipboard still skips", StringComparison.Ordinal),
                 "Hints follow the chosen options.");
+            Require(!shortcutBox.IsEnabled, "The shortcut box is unavailable when no dictations are kept.");
             Capture(window, outputDirectory, "settings-history-off.png");
 
             Find<ComboBox>(window, "InsertionModeBox").SelectedValue = TextInsertionModes.Type;
@@ -272,6 +286,7 @@ internal static class HistoryProbe
             {
                 Find<ComboBox>(window, "HistoryRetentionBox").SelectedValue = DictationHistoryRetentions.OneHour;
                 Find<CheckBox>(window, "ClipboardHistoryCheckBox").IsChecked = true;
+                window.RecordHistoryShortcut(new KeyChord(Control: false, Shift: true, Alt: false, Windows: true, 0x48));
                 Click(Find<Button>(window, "SaveSettingsButton"));
             }
             catch (Exception exception)
@@ -283,8 +298,9 @@ internal static class HistoryProbe
         var result = window.ShowDialog();
         if (failure is not null)
             throw failure;
-        Require(result == true && window.SavedSettings is { DictationHistory: DictationHistoryRetentions.OneHour, IncludeInClipboardHistory: true },
-            "Save keeps the history choices.");
+        Require(result == true && window.SavedSettings is { DictationHistory: DictationHistoryRetentions.OneHour, IncludeInClipboardHistory: true }
+            && window.SavedSettings.HistoryShortcut.Label == "Win+Shift+H",
+            "Save keeps the history choices and shortcut.");
     }
 
     // Not activated, and the foreground never moves, so the list stays open while other probe windows open.

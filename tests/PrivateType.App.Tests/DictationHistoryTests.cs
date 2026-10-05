@@ -7,7 +7,7 @@ namespace PrivateType.App.Tests;
 
 public sealed class DictationHistoryTests
 {
-    private const int VkShift = 0x10, VkControl = 0x11, VkMenu = 0x12, VkLeftWindows = 0x5B, VkRightWindows = 0x5C, VkV = 0x56;
+    private const int VkShift = 0x10, VkControl = 0x11, VkMenu = 0x12, VkLeftWindows = 0x5B, VkRightWindows = 0x5C, VkV = 0x56, VkH = 0x48, VkLeftMenu = 0xA4, VkRightMenu = 0xA5;
 
     [Theory]
     [InlineData(VkLeftWindows)]
@@ -65,13 +65,13 @@ public sealed class DictationHistoryTests
     public void Holds_back_only_the_first_win_release_after_opening(int windowsKey)
     {
         var shortcut = new HistoryShortcut();
-        Assert.False(shortcut.TakeWindowsRelease(HotkeyMessage.KeyUp, windowsKey));
+        Assert.False(shortcut.TakeModifierRelease(HotkeyMessage.KeyUp, windowsKey));
 
         shortcut.Handle(HotkeyMessage.KeyDown, VkV, Pressed(windowsKey, VkShift), out _);
 
-        Assert.False(shortcut.TakeWindowsRelease(HotkeyMessage.KeyUp, VkShift));
-        Assert.True(shortcut.TakeWindowsRelease(HotkeyMessage.KeyUp, windowsKey));
-        Assert.False(shortcut.TakeWindowsRelease(HotkeyMessage.KeyUp, windowsKey));
+        Assert.False(shortcut.TakeModifierRelease(HotkeyMessage.KeyUp, VkShift));
+        Assert.True(shortcut.TakeModifierRelease(HotkeyMessage.KeyUp, windowsKey));
+        Assert.False(shortcut.TakeModifierRelease(HotkeyMessage.KeyUp, windowsKey));
     }
 
     [Fact]
@@ -80,8 +80,8 @@ public sealed class DictationHistoryTests
         var shortcut = new HistoryShortcut();
         shortcut.Handle(HotkeyMessage.KeyDown, VkV, Pressed(VkLeftWindows, VkShift), out _);
 
-        Assert.False(shortcut.TakeWindowsRelease(HotkeyMessage.KeyDown, VkLeftWindows));
-        Assert.False(shortcut.TakeWindowsRelease(HotkeyMessage.KeyUp, VkLeftWindows));
+        Assert.False(shortcut.TakeModifierRelease(HotkeyMessage.KeyDown, VkLeftWindows));
+        Assert.False(shortcut.TakeModifierRelease(HotkeyMessage.KeyUp, VkLeftWindows));
     }
 
     [Fact]
@@ -94,6 +94,76 @@ public sealed class DictationHistoryTests
         Assert.False(shortcut.Handle(HotkeyMessage.KeyUp, VkV, Pressed(), out _));
         Assert.True(shortcut.Handle(HotkeyMessage.KeyDown, VkV, Pressed(VkLeftWindows, VkShift), out var reopened));
         Assert.True(reopened);
+    }
+
+    [Fact]
+    public void A_custom_shortcut_opens_only_on_its_exact_combination()
+    {
+        var shortcut = new HistoryShortcut { Chord = new KeyChord(Control: false, Shift: true, Alt: true, Windows: false, VkH) };
+
+        Assert.False(shortcut.Handle(HotkeyMessage.KeyDown, VkV, Pressed(VkLeftWindows, VkShift), out _));
+        Assert.False(shortcut.Handle(HotkeyMessage.KeyDown, VkH, Pressed(VkMenu, VkShift, VkControl), out _));
+        Assert.True(shortcut.Handle(HotkeyMessage.KeyDown, VkH, Pressed(VkMenu, VkShift), out var opened));
+        Assert.True(opened);
+    }
+
+    [Theory]
+    [InlineData(VkMenu)]
+    [InlineData(VkLeftMenu)]
+    [InlineData(VkRightMenu)]
+    public void Holds_back_the_alt_release_so_the_menu_bar_does_not_open(int altKey)
+    {
+        var shortcut = new HistoryShortcut { Chord = new KeyChord(false, true, true, false, VkH) };
+        shortcut.Handle(HotkeyMessage.KeyDown, VkH, Pressed(VkMenu, VkShift), out _);
+
+        Assert.False(shortcut.TakeModifierRelease(HotkeyMessage.KeyUp, VkLeftWindows));
+        Assert.True(shortcut.TakeModifierRelease(HotkeyMessage.KeyUp, altKey));
+    }
+
+    [Fact]
+    public void Ctrl_shift_shortcuts_hold_back_no_release()
+    {
+        var shortcut = new HistoryShortcut { Chord = new KeyChord(true, true, false, false, VkH) };
+        shortcut.Handle(HotkeyMessage.KeyDown, VkH, Pressed(VkControl, VkShift), out _);
+
+        Assert.False(shortcut.TakeModifierRelease(HotkeyMessage.KeyUp, VkMenu));
+        Assert.False(shortcut.TakeModifierRelease(HotkeyMessage.KeyUp, VkLeftWindows));
+    }
+
+    [Fact]
+    public void Win_shift_v_does_not_hold_back_an_alt_release()
+    {
+        var shortcut = new HistoryShortcut();
+        shortcut.Handle(HotkeyMessage.KeyDown, VkV, Pressed(VkLeftWindows, VkShift), out _);
+
+        Assert.False(shortcut.TakeModifierRelease(HotkeyMessage.KeyUp, VkLeftMenu));
+    }
+
+    [Fact]
+    public void Recorder_captures_a_win_combination_once_and_swallows_its_key()
+    {
+        var recorder = new KeyChordRecorder();
+        var pressed = Pressed(VkLeftWindows, VkShift);
+
+        Assert.False(recorder.Handle(HotkeyMessage.KeyDown, VkLeftWindows, pressed, out _));
+        Assert.True(recorder.Handle(HotkeyMessage.KeyDown, VkV, pressed, out var recorded));
+        Assert.Equal(KeyChord.DefaultHistory, recorded);
+        Assert.True(recorder.Handle(HotkeyMessage.KeyDown, VkV, pressed, out var repeated));
+        Assert.Null(repeated);
+        Assert.True(recorder.Handle(HotkeyMessage.KeyUp, VkV, pressed, out _));
+        Assert.True(recorder.TakeModifierRelease(HotkeyMessage.KeyUp, VkLeftWindows));
+    }
+
+    [Theory]
+    [InlineData(0x09)]
+    [InlineData(0x1B)]
+    [InlineData(VkH, VkShift)]
+    public void Recorder_lets_plain_and_shift_keys_through_so_tab_and_esc_still_work(int key, params int[] held)
+    {
+        var recorder = new KeyChordRecorder();
+
+        Assert.False(recorder.Handle(HotkeyMessage.KeyDown, key, Pressed(held), out var recorded));
+        Assert.Null(recorded);
     }
 
     [Fact]
@@ -112,7 +182,8 @@ public sealed class DictationHistoryTests
     [Fact]
     public void Kept_text_hint_names_the_history_shortcut()
     {
-        Assert.Equal("Press Win+Shift+V to paste it.", DictationApplication.KeptTextHint);
+        Assert.Equal("Press Win+Shift+V to paste it.", DictationApplication.KeptTextHint(KeyChord.DefaultHistory));
+        Assert.Equal("Press Alt+Shift+H to paste it.", DictationApplication.KeptTextHint(new KeyChord(false, true, true, false, 0x48)));
     }
 
     [Fact]

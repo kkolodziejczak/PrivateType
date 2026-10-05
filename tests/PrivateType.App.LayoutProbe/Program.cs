@@ -142,7 +142,7 @@ static void RenderWindows(bool monitorPlacementOnly)
 
     var keptPanel = new DictationBubble();
     keptPanel.ShowReady(PortableSettings.Default, modelLoaded: true);
-    keptPanel.ShowCancellation($"Text not inserted: the active window changed. {DictationApplication.KeptTextHint}");
+    keptPanel.ShowCancellation($"Text not inserted: the active window changed. {DictationApplication.KeptTextHint(KeyChord.DefaultHistory)}");
     Render(keptPanel, Path.Combine(outputDirectory, "status-panel-kept.png"));
 
     var errorPanel = new DictationBubble();

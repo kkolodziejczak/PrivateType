@@ -12,7 +12,6 @@ internal sealed class HoldHotkeyHook : IDisposable
     private const int WhKeyboardLl = 13;
     private const int VkControl = 0x11;
     private const int VkShift = 0x10;
-    private const ushort VkUnassigned = 0xE8;
     private readonly HookProcedure callback;
     private nint hook;
     private readonly HeldShortcutTracker held = new();
@@ -26,7 +25,13 @@ internal sealed class HoldHotkeyHook : IDisposable
     public event Action? Released;
     public event Action? HistoryRequested;
 
-    // Win+Shift+V is claimed only while dictation history is on; otherwise Windows keeps it.
+    public KeyChord HistoryShortcut
+    {
+        get => history.Chord;
+        set => history.Chord = value;
+    }
+
+    // The history shortcut is claimed only while dictation history is on; otherwise Windows keeps it.
     public bool HistoryShortcutEnabled
     {
         get => historyShortcutEnabled;
@@ -128,9 +133,9 @@ internal sealed class HoldHotkeyHook : IDisposable
         if (code < 0)
             return CallNextHookEx(hook, code, wParam, lParam);
         var key = Marshal.ReadInt32(lParam);
-        if (history.TakeWindowsRelease(wParam, key))
+        if (history.TakeModifierRelease(wParam, key))
         {
-            ReplayMaskedWindowsRelease((ushort)key);
+            ModifierReleaseMask.Replay((ushort)key);
             return 1;
         }
 
@@ -185,20 +190,6 @@ internal sealed class HoldHotkeyHook : IDisposable
         if (HotkeyMessage.IsKeyUp(wParam) && held.ToggleKeyUp(key))
             return 1;
         return CallNextHookEx(hook, code, wParam, lParam);
-    }
-
-    // The shell opens Start when Win is released without another key in between, and the swallowed
-    // V does not count. An unassigned key followed by the held-back Win key-up, sent as one batch,
-    // keeps that order however fast the keys were released.
-    private static void ReplayMaskedWindowsRelease(ushort windowsKey)
-    {
-        NativeMethods.Input[] inputs =
-        [
-            new() { Type = NativeMethods.InputKeyboard, Data = new NativeMethods.InputUnion { Keyboard = new NativeMethods.KeybdInput { Vk = VkUnassigned } } },
-            new() { Type = NativeMethods.InputKeyboard, Data = new NativeMethods.InputUnion { Keyboard = new NativeMethods.KeybdInput { Vk = VkUnassigned, Flags = NativeMethods.KeyEventKeyUp } } },
-            new() { Type = NativeMethods.InputKeyboard, Data = new NativeMethods.InputUnion { Keyboard = new NativeMethods.KeybdInput { Vk = windowsKey, Flags = NativeMethods.KeyEventKeyUp } } }
-        ];
-        NativeMethods.SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<NativeMethods.Input>());
     }
 
     private static bool IsPressed(int virtualKey) => (GetAsyncKeyState(virtualKey) & 0x8000) != 0;

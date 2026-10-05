@@ -42,6 +42,8 @@ Releases are unsigned, so download them only from this repository.
 | `Ctrl+Shift+E` | Dictate in English |
 | `Win+Shift+V` | Paste a recent dictation, including one that wasn't inserted |
 
+You can change every shortcut in **Settings**.
+
 Hold a dictation shortcut while you speak, then release it to insert the text.
 A short ping means PrivateType is listening. In **Settings → Shortcuts** you
 can:
