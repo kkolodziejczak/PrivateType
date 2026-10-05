@@ -9,11 +9,17 @@ public sealed class SpeechModelTests : IDisposable
     private readonly string directory = Path.Combine(Path.GetTempPath(), $"private-type-speech-model-tests-{Guid.NewGuid():N}");
 
     [Fact]
-    public void Keeps_Nemotron_as_the_default_so_existing_installs_are_unchanged()
+    public void Recommends_Parakeet_for_new_installs()
     {
-        Assert.Equal(SpeechModelCatalog.NemotronId, SpeechModelCatalog.DefaultId);
-        Assert.Equal(SpeechModelCatalog.DefaultId, PortableSettings.Default.SpeechModel);
+        Assert.Equal(SpeechModelCatalog.ParakeetId, SpeechModelCatalog.DefaultId);
+        Assert.Equal(SpeechModelCatalog.ParakeetId, PortableSettings.Default.SpeechModel);
         Assert.Equal(RecognitionStyle.Streaming, SpeechModelCatalog.Nemotron.Style);
+    }
+
+    [Fact]
+    public void A_new_install_without_a_settings_file_uses_Parakeet()
+    {
+        Assert.Equal(SpeechModelCatalog.ParakeetId, new PortableSettingsStore(directory).Load().Settings.SpeechModel);
     }
 
     [Fact]
@@ -27,6 +33,49 @@ public sealed class SpeechModelTests : IDisposable
         Assert.Equal("https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3/resolve/541d1f99c6b0c3cd0b11a95167540bb8edefd82b/parakeet-tdt-0.6b-v3.q8_0.gguf", manifest.DownloadUri.AbsoluteUri);
         Assert.Equal(713975456L, manifest.ExpectedBytes);
         Assert.Equal("e3880d0aaaaf2c308ea2c35016b2b895c423eb3fda924c1b463d1c19b7f4d32e", ModelArtifactVerifier.NormalizeSha256(manifest.Sha256));
+    }
+
+    [Theory]
+    [InlineData(new string[0], SpeechModelCatalog.ParakeetId)]
+    [InlineData(new[] { SpeechModelCatalog.ParakeetId }, SpeechModelCatalog.ParakeetId)]
+    [InlineData(new[] { SpeechModelCatalog.NemotronId }, SpeechModelCatalog.NemotronId)]
+    [InlineData(new[] { SpeechModelCatalog.NemotronId, SpeechModelCatalog.ParakeetId }, SpeechModelCatalog.NemotronId)]
+    public void A_copy_without_a_saved_choice_reuses_a_verified_model_as_earlier_versions_did(string[] available, string expected)
+    {
+        Assert.Equal(expected, SpeechModelCatalog.ChooseWithoutSavedChoice(model => available.Contains(model.Id)));
+    }
+
+    [Fact]
+    public void A_missing_settings_file_has_no_saved_model_choice()
+    {
+        Assert.False(new PortableSettingsStore(directory).Load().HasSavedModel);
+    }
+
+    [Theory]
+    [InlineData(SpeechModelCatalog.NemotronId)]
+    [InlineData(SpeechModelCatalog.ParakeetId)]
+    public void A_file_broken_elsewhere_keeps_its_saved_model(string model)
+    {
+        Directory.CreateDirectory(directory);
+        File.WriteAllText(Path.Combine(directory, "settings.json"), $$"""{"SchemaVersion":2,"MicrophoneId":"default","ReadySoundVolume":"loud","SpeechModel":"{{model}}"}""");
+
+        var loaded = new PortableSettingsStore(directory).Load();
+
+        Assert.True(loaded.HasSavedModel);
+        Assert.Equal(model, loaded.Settings.SpeechModel);
+        Assert.NotNull(loaded.Warning);
+    }
+
+    [Fact]
+    public void An_unparseable_file_has_no_saved_model_choice()
+    {
+        Directory.CreateDirectory(directory);
+        File.WriteAllText(Path.Combine(directory, "settings.json"), "{ not json");
+
+        var loaded = new PortableSettingsStore(directory).Load();
+
+        Assert.False(loaded.HasSavedModel);
+        Assert.NotNull(loaded.Warning);
     }
 
     [Fact]
@@ -53,7 +102,7 @@ public sealed class SpeechModelTests : IDisposable
     }
 
     [Fact]
-    public void Loads_settings_saved_before_model_choice_with_the_default_model()
+    public void Keeps_settings_saved_before_model_choice_on_Nemotron_which_those_versions_ran()
     {
         Directory.CreateDirectory(directory);
         File.WriteAllText(Path.Combine(directory, "settings.json"), """{"SchemaVersion":2,"MicrophoneId":"default","Shortcuts":[{"LocaleCode":"pl-PL","VirtualKey":82}]}""");
@@ -61,7 +110,7 @@ public sealed class SpeechModelTests : IDisposable
         var loaded = new PortableSettingsStore(directory).Load();
 
         Assert.Null(loaded.Warning);
-        Assert.Equal(SpeechModelCatalog.DefaultId, loaded.Settings.SpeechModel);
+        Assert.Equal(SpeechModelCatalog.NemotronId, loaded.Settings.SpeechModel);
         Assert.True(loaded.Settings.OfflinePreview);
     }
 
@@ -70,9 +119,9 @@ public sealed class SpeechModelTests : IDisposable
     {
         var store = new PortableSettingsStore(directory);
 
-        store.Save(PortableSettings.Default with { SpeechModel = SpeechModelCatalog.ParakeetId });
+        store.Save(PortableSettings.Default with { SpeechModel = SpeechModelCatalog.NemotronId });
 
-        Assert.Equal(SpeechModelCatalog.ParakeetId, store.Load().Settings.SpeechModel);
+        Assert.Equal(SpeechModelCatalog.NemotronId, store.Load().Settings.SpeechModel);
     }
 
     [Fact]

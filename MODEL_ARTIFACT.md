@@ -2,7 +2,7 @@
 
 PrivateType offers two models. Each is downloaded separately after the user accepts its terms, and neither is included in the portable ZIP. The identities below are pinned in `src/PrivateType.Core/SpeechModels.cs`.
 
-## Nemotron 3.5 ASR Streaming 0.6B (default)
+## Nemotron 3.5 ASR Streaming 0.6B
 
 | Field | Value |
 |---|---|
@@ -19,7 +19,7 @@ PrivateType verifies both the byte count and SHA-256 before activating the downl
 
 Revision `ea30d66` (2026-09-10) re-converted the GGUF with the model's SentencePiece tokenizer embedded (`asr.tokenizer.spm_model`), which the engine needs for RNNT word boosting. The previous pin, `1c8deae` (741,548,352 bytes, SHA-256 `a5c435f2…`), recognizes identically but cannot boost vocabulary.
 
-## Parakeet TDT 0.6B v3
+## Parakeet TDT 0.6B v3 (recommended for new installs)
 
 | Field | Value |
 |---|---|

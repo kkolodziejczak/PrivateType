@@ -71,15 +71,18 @@ Every setting, with its default and when to change it, is explained in the
 
 ### Speech models
 
-Pick a model on first launch. You can download the other one, switch, or delete
-one later in **Settings → Model**.
+Pick a model on first launch; Parakeet is recommended. You can download the
+other one, switch, or delete one later in **Settings → Model**.
 
-| | Nemotron 3.5 Streaming (default) | Parakeet TDT v3 |
+| | Parakeet TDT v3 (recommended) | Nemotron 3.5 Streaming |
 | --- | --- | --- |
-| While you speak | Words appear live | Preview about once a second |
-| Language | From the shortcut | Detected automatically (25 European languages) |
-| Vocabulary boosting | Yes | No |
-| Download | About 708 MiB | About 681 MiB |
+| While you speak | Preview about once a second | Words appear live |
+| Language | Detected automatically (25 European languages) | From the shortcut (32 languages) |
+| Vocabulary boosting | No | Yes |
+| Download | About 681 MiB | About 708 MiB |
+
+Choose Nemotron for live words while you speak, vocabulary boosting, or Asian
+languages.
 
 ### Vocabulary
 

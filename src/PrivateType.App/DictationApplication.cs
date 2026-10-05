@@ -207,6 +207,13 @@ internal sealed class DictationApplication : IDisposable
             settingsStore = new PortableSettingsStore(PortablePaths.DataDirectory);
             var loaded = settingsStore.Load();
             settings = ReconcileStartupPreference(loaded.Settings);
+            if (!loaded.HasSavedModel)
+            {
+                settings = settings with { SpeechModel = SpeechModelCatalog.ChooseWithoutSavedChoice(model => models.Provisioner(model).IsAvailable()) };
+                // Remember it, so later starts skip verifying cached models again. A damaged file is left for the user to repair.
+                if (!File.Exists(settingsStore.SettingsPath))
+                    settingsStore.Save(settings);
+            }
             activeModel = SpeechModelCatalog.Get(settings.SpeechModel);
             var modelStorage = models.Storage(activeModel);
             var modelProvisioner = models.Provisioner(activeModel);

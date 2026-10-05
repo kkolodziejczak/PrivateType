@@ -23,7 +23,9 @@ public static class SpeechModelCatalog
 {
     public const string NemotronId = "nemotron-3.5-asr-streaming-0.6b";
     public const string ParakeetId = "parakeet-tdt-0.6b-v3";
-    public const string DefaultId = NemotronId;
+    // Recommended for new installs. Settings saved before the model choice existed ran Nemotron and keep it.
+    public const string DefaultId = ParakeetId;
+    public const string PreChoiceId = NemotronId;
 
     public static SpeechModelDefinition Nemotron { get; } = new(
         NemotronId,
@@ -60,6 +62,12 @@ public static class SpeechModelCatalog
     public static IReadOnlyList<SpeechModelDefinition> All { get; } = [Nemotron, Parakeet];
 
     public static bool IsSupported(string? id) => All.Any(model => model.Id == id);
+
+    // Each release folder starts without settings, but models are shared, so a copy with no saved
+    // choice is usually an update. Earlier versions started such a copy on Nemotron, so a verified
+    // Nemotron is reused first; the recommended model is downloaded only when nothing is cached.
+    public static string ChooseWithoutSavedChoice(Func<SpeechModelDefinition, bool> isAvailable) =>
+        new[] { Nemotron, Parakeet }.FirstOrDefault(isAvailable)?.Id ?? DefaultId;
 
     public static SpeechModelDefinition Get(string id) =>
         All.FirstOrDefault(model => model.Id == id)

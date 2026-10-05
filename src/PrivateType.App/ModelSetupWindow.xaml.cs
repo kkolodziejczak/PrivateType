@@ -26,8 +26,12 @@ public partial class ModelSetupWindow : Window
     internal ModelSetupWindow(string chosenModelId)
     {
         InitializeComponent();
-        chosenModel = SpeechModelCatalog.IsSupported(chosenModelId) ? SpeechModelCatalog.Get(chosenModelId) : SpeechModelCatalog.Nemotron;
-        ModelChoices.ItemsSource = SpeechModelCatalog.All.Select(model => new SetupModelChoice(model, model == chosenModel, Choose)).ToArray();
+        chosenModel = SpeechModelCatalog.Get(SpeechModelCatalog.IsSupported(chosenModelId) ? chosenModelId : SpeechModelCatalog.DefaultId);
+        // The recommended model comes first.
+        ModelChoices.ItemsSource = SpeechModelCatalog.All
+            .OrderByDescending(model => model.Id == SpeechModelCatalog.DefaultId)
+            .Select(model => new SetupModelChoice(model, model == chosenModel, Choose))
+            .ToArray();
         ShowChosenTerms();
         StorageNoticeText.Text = StorageNotice(ModelStorageMode.Shared);
         Closing += (_, _) => { if (!completed) CancelRequested?.Invoke(); };
@@ -158,6 +162,7 @@ internal sealed class SetupModelChoice(SpeechModelDefinition model, bool isChose
     public SpeechModelDefinition Model { get; } = model;
     public string Name => Model.DisplayName;
     public string Summary => Model.Summary;
+    public bool IsRecommended => Model.Id == SpeechModelCatalog.DefaultId;
     public string Details => $"{SpeechModelCatalog.SizeLabel(Model)}. Downloaded from NVIDIA on Hugging Face and kept on this computer.";
 
     public bool IsChosen

@@ -211,7 +211,7 @@ static void VerifyModelTermsLinkAndSharedCopy(Window window)
 {
     var link = window.FindName("ModelTermsLink") as System.Windows.Documents.Hyperlink
         ?? throw new InvalidOperationException("Model terms were not rendered as a hyperlink.");
-    if (link.NavigateUri != new Uri("https://openmdw.ai/license/1-1/"))
+    if (link.NavigateUri != new Uri("https://creativecommons.org/licenses/by/4.0/"))
         throw new InvalidOperationException($"Model terms hyperlink targets an unexpected URI: {link.NavigateUri}");
     if (!link.Focus() || !link.IsKeyboardFocused)
         throw new InvalidOperationException("Model terms hyperlink could not receive keyboard focus.");

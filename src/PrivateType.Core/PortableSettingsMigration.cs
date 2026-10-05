@@ -16,6 +16,11 @@ internal static class PortableSettingsMigration
         if (root is not JsonObject settings)
             return root;
 
+        // Not tied to a schema version: files of the current schema saved before the model choice
+        // existed have no model either, and they ran Nemotron.
+        if (!settings.ContainsKey(nameof(PortableSettings.SpeechModel)))
+            settings[nameof(PortableSettings.SpeechModel)] = SpeechModelCatalog.PreChoiceId;
+
         var version = settings["SchemaVersion"] is JsonValue value && value.TryGetValue<int>(out var number) ? number : 1;
         if (version >= CurrentSchemaVersion)
             return settings;

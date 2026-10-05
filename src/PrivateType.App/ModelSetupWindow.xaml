@@ -5,6 +5,7 @@
         WindowStartupLocation="CenterScreen" ResizeMode="NoResize" WindowStyle="None" AllowsTransparency="True"
         Background="Transparent" Foreground="{DynamicResource ColorText}" FontFamily="{DynamicResource AppFont}">
   <Window.Resources>
+    <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
     <Style TargetType="CheckBox"><Setter Property="Foreground" Value="{DynamicResource ColorText}"/><Setter Property="Cursor" Value="Hand"/><Setter Property="Template"><Setter.Value><ControlTemplate TargetType="CheckBox"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="22"/><ColumnDefinition Width="10"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><Border x:Name="Box" Width="22" Height="22" VerticalAlignment="Center" Background="{DynamicResource ColorBg}" BorderBrush="{DynamicResource ColorAccent}" BorderThickness="2" CornerRadius="4"><Path x:Name="Mark" Data="M3,9 L7,13 L15,4" Stroke="{DynamicResource ColorAccent100}" StrokeThickness="2" Visibility="Collapsed"/></Border><ContentPresenter Grid.Column="2" VerticalAlignment="Center" RecognizesAccessKey="True"/></Grid><ControlTemplate.Triggers><Trigger Property="IsChecked" Value="True"><Setter TargetName="Box" Property="Background" Value="{DynamicResource ColorAccent800}"/><Setter TargetName="Mark" Property="Visibility" Value="Visible"/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter></Style>
     <Style TargetType="ProgressBar">
       <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ProgressBar"><Border x:Name="PART_Track" Background="{DynamicResource ColorNeutral800}" CornerRadius="4"><Border x:Name="PART_Indicator" HorizontalAlignment="Left" Background="{DynamicResource ColorAccent}" CornerRadius="4"/></Border></ControlTemplate></Setter.Value></Setter>
@@ -32,7 +33,13 @@
                       <ControlTemplate TargetType="RadioButton">
                         <Border x:Name="Card" Padding="12" Background="{DynamicResource ColorBg}" BorderBrush="{DynamicResource ColorDivider}" BorderThickness="1" CornerRadius="8">
                           <StackPanel>
-                            <TextBlock FontWeight="SemiBold" Text="{Binding Name}"/>
+                            <StackPanel Orientation="Horizontal">
+                              <TextBlock FontWeight="SemiBold" Text="{Binding Name}"/>
+                              <Border Margin="8,0,0,0" Padding="6,1" CornerRadius="5" VerticalAlignment="Center" Background="{DynamicResource ColorAccent800}"
+                                      Visibility="{Binding IsRecommended, Converter={StaticResource BoolToVisibility}}">
+                                <TextBlock Foreground="{DynamicResource ColorAccent100}" FontSize="11" Text="Recommended"/>
+                              </Border>
+                            </StackPanel>
                             <TextBlock Margin="0,4,0,0" FontSize="12" Opacity=".75" Text="{Binding Summary}" TextWrapping="Wrap"/>
                             <TextBlock Margin="0,4,0,0" FontSize="12" Opacity=".6" Text="{Binding Details}" TextWrapping="Wrap"/>
                           </StackPanel>
@@ -47,6 +54,8 @@
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
+            <TextBlock x:Name="ModelAdviceText" Margin="0,0,0,10" FontSize="12" Opacity=".75" TextWrapping="Wrap"
+                       Text="Choose Nemotron for live words while you speak, vocabulary boosting, or Asian languages."/>
             <TextBlock Margin="0,2,0,0" FontSize="12" Foreground="{DynamicResource ColorAccent300}">
               <Run x:Name="ModelTermsName" Text="Model terms: "/><Hyperlink x:Name="ModelTermsLink" RequestNavigate="OpenModelTerms" ToolTip="Open the model terms in your default browser"><Run x:Name="ModelTermsLinkText"/></Hyperlink>
             </TextBlock>

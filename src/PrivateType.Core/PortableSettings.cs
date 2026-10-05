@@ -69,7 +69,8 @@ public static class TextInsertionModes
     public const string Paste = "paste";
 }
 
-public sealed record SettingsLoadResult(PortableSettings Settings, string? Warning = null);
+// HasSavedModel is false when the file is missing or unreadable, so the model choice must be inferred.
+public sealed record SettingsLoadResult(PortableSettings Settings, string? Warning = null, bool HasSavedModel = true);
 
 public static class PortableSettingsValidator
 {
@@ -201,17 +202,18 @@ public sealed class PortableSettingsStore(string dataDirectory)
 
     public SettingsLoadResult Load()
     {
+        JsonNode? migrated = null;
         try
         {
             if (!File.Exists(SettingsPath))
-                return new SettingsLoadResult(PortableSettings.Default);
+                return new SettingsLoadResult(PortableSettings.Default, HasSavedModel: false);
 
             var root = JsonNode.Parse(File.ReadAllText(SettingsPath));
-            var migrated = root is null ? null : PortableSettingsMigration.MigrateToCurrent(root);
+            migrated = root is null ? null : PortableSettingsMigration.MigrateToCurrent(root);
             var shortcutUnreadable = migrated is not null && DropUnreadableHistoryShortcut(migrated);
             var settings = migrated?.Deserialize<PortableSettings>(JsonOptions);
             if (settings is null)
-                return new SettingsLoadResult(PortableSettings.Default, "Saved settings were ignored: Settings file is empty.");
+                return new SettingsLoadResult(PortableSettings.Default, "Saved settings were ignored: Settings file is empty.", HasSavedModel: false);
 
             var (repaired, repairedNames) = PortableSettingsValidator.Repair(settings);
             IReadOnlyList<string> resetNames = shortcutUnreadable ? ["recent dictations shortcut", .. repairedNames] : repairedNames;
@@ -221,13 +223,27 @@ public sealed class PortableSettingsStore(string dataDirectory)
         }
         catch (JsonException)
         {
-            return new SettingsLoadResult(PortableSettings.Default, "Saved settings could not be read; safe defaults were restored.");
+            return Unreadable(SavedModel(migrated));
         }
         catch (IOException)
         {
-            return new SettingsLoadResult(PortableSettings.Default, "Saved settings could not be read; safe defaults were restored.");
+            return Unreadable(null);
         }
     }
+
+    // Keeps the saved model when another field breaks the file, so recovery never switches models.
+    private static SettingsLoadResult Unreadable(string? savedModel) => new(
+        savedModel is null ? PortableSettings.Default : PortableSettings.Default with { SpeechModel = savedModel },
+        "Saved settings could not be read; safe defaults were restored.",
+        HasSavedModel: savedModel is not null);
+
+    private static string? SavedModel(JsonNode? root) =>
+        root is JsonObject settings
+        && settings[nameof(PortableSettings.SpeechModel)] is JsonValue value
+        && value.TryGetValue<string>(out var model)
+        && SpeechModelCatalog.IsSupported(model)
+            ? model
+            : null;
 
     // A hand-edited shortcut of the wrong shape would otherwise fail the whole file and reset every setting.
     private static bool DropUnreadableHistoryShortcut(JsonNode root)

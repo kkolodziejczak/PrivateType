@@ -47,13 +47,13 @@ internal static class SettingsModelProbe
         VerifyModelPage(outputDirectory);
         VerifySavedChoice();
         VerifySetupChoice(outputDirectory);
-        Console.WriteLine("PASS: Model page lists both models, downloads with progress and cancel, blocks saving mid-download, selects, protects the model in use from deletion, deletes with confirmation, and saves the choice; setup offers both models with per-model terms.");
+        Console.WriteLine("PASS: Model page lists both models, downloads with progress and cancel, blocks saving mid-download, selects, protects the model in use from deletion, deletes with confirmation, and saves the choice; setup recommends Parakeet first, says when to choose Nemotron, and keeps per-model terms.");
     }
 
     private static void VerifyModelPage(string outputDirectory)
     {
         var store = new ProbeModelStore(SpeechModelCatalog.NemotronId);
-        var window = new SettingsWindow(PortableSettings.Default, [new MicrophoneOption("default", "System default microphone")], store) { ShowInTaskbar = false };
+        var window = new SettingsWindow(PortableSettings.Default with { SpeechModel = SpeechModelCatalog.NemotronId }, [new MicrophoneOption("default", "System default microphone")], store) { ShowInTaskbar = false };
         window.ShowModelPage();
         window.Show();
         try
@@ -116,7 +116,7 @@ internal static class SettingsModelProbe
     private static void VerifySavedChoice()
     {
         var store = new ProbeModelStore(SpeechModelCatalog.NemotronId, SpeechModelCatalog.ParakeetId);
-        var window = new SettingsWindow(PortableSettings.Default, [new MicrophoneOption("default", "System default microphone")], store) { ShowInTaskbar = false };
+        var window = new SettingsWindow(PortableSettings.Default with { SpeechModel = SpeechModelCatalog.NemotronId }, [new MicrophoneOption("default", "System default microphone")], store) { ShowInTaskbar = false };
         Exception? failure = null;
         window.ContentRendered += (_, _) => window.Dispatcher.InvokeAsync(() =>
         {
@@ -145,7 +145,7 @@ internal static class SettingsModelProbe
 
     private static void VerifySetupChoice(string outputDirectory)
     {
-        var setup = new ModelSetupWindow(SpeechModelCatalog.NemotronId) { ShowInTaskbar = false };
+        var setup = new ModelSetupWindow { ShowInTaskbar = false };
         setup.ShowDownloadConsent();
         setup.Show();
         try
@@ -153,21 +153,41 @@ internal static class SettingsModelProbe
             Flush(setup);
             var terms = (CheckBox)setup.FindName("TermsCheckBox");
             var link = (System.Windows.Documents.Hyperlink)setup.FindName("ModelTermsLink");
-            Require(link.NavigateUri == SpeechModelCatalog.Nemotron.LicenseUri, "Setup must start with the default model's terms.");
-            terms.IsChecked = true;
             var cards = Descendants(setup).OfType<RadioButton>().ToList();
             Require(cards.Count == 2, "Setup must offer both models.");
+            Require(setup.ChosenModel.Id == SpeechModelCatalog.ParakeetId && cards[0].IsChecked == true
+                && link.NavigateUri == SpeechModelCatalog.Parakeet.LicenseUri, "A new install must start on the recommended Parakeet, listed first, with its terms.");
+            var badges = cards.Select(card => Descendants(card).OfType<TextBlock>().Any(text => text.Text == "Recommended" && text.IsVisible)).ToList();
+            Require(badges.SequenceEqual([true, false]), "Only the recommended model carries the Recommended tag.");
+            var advice = (TextBlock)setup.FindName("ModelAdviceText");
+            Require(advice.IsVisible && advice.Text.Contains("Nemotron", StringComparison.Ordinal), "Setup must say when to choose Nemotron instead.");
+            Require(advice.TranslatePoint(new Point(0, advice.ActualHeight), setup).Y <= setup.ActualHeight, "The advice must fit inside the setup window.");
+            Capture(setup, outputDirectory, "model-consent-recommended.png");
+
+            terms.IsChecked = true;
             cards[1].IsChecked = true;
             Flush(setup);
-            Require(setup.ChosenModel.Id == SpeechModelCatalog.ParakeetId, "Choosing a card must choose its model.");
-            Require(link.NavigateUri == SpeechModelCatalog.Parakeet.LicenseUri, "Terms must follow the chosen model.");
+            Require(setup.ChosenModel.Id == SpeechModelCatalog.NemotronId, "Choosing a card must choose its model.");
+            Require(link.NavigateUri == SpeechModelCatalog.Nemotron.LicenseUri, "Terms must follow the chosen model.");
             Require(terms.IsChecked == false && !((Button)setup.FindName("DownloadButton")).IsEnabled, "Changing the model must ask for consent again.");
-            Require(((TextBlock)setup.FindName("TermsText")).Text.Contains("CC-BY-4.0", StringComparison.Ordinal), "Consent must name the chosen model's terms.");
-            Capture(setup, outputDirectory, "model-consent-parakeet.png");
+            Require(((TextBlock)setup.FindName("TermsText")).Text.Contains("OpenMDW-1.1", StringComparison.Ordinal), "Consent must name the chosen model's terms.");
+            Capture(setup, outputDirectory, "model-consent-nemotron.png");
         }
         finally
         {
             setup.Close();
+        }
+
+        var returning = new ModelSetupWindow(SpeechModelCatalog.NemotronId) { ShowInTaskbar = false };
+        returning.Show();
+        try
+        {
+            Flush(returning);
+            Require(returning.ChosenModel.Id == SpeechModelCatalog.NemotronId, "Someone whose Nemotron model went missing must be offered Nemotron again.");
+        }
+        finally
+        {
+            returning.Close();
         }
     }
 

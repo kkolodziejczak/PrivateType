@@ -237,13 +237,18 @@ The line under Packs shows how many phrases the selected language uses.
 
 PrivateType can use either of two local NVIDIA speech models.
 
-| | Nemotron 3.5 ASR Streaming 0.6B (default) | Parakeet TDT 0.6B v3 |
+| | Parakeet TDT 0.6B v3 (recommended) | Nemotron 3.5 ASR Streaming 0.6B |
 | --- | --- | --- |
-| While you speak | Words appear live | Text appears on release, with an optional preview |
-| Language | From each shortcut (32 languages) | Detected automatically (25 European languages) |
-| Vocabulary boosting | Yes | No; **Fix phrases after dictation** still applies |
-| Download | About 708 MiB | About 681 MiB |
-| Memory while loaded | About 935 MiB | About 790 MiB, up to 1.1 GiB while finishing a long dictation |
+| While you speak | Text appears on release, with an optional preview | Words appear live |
+| Language | Detected automatically (25 European languages) | From each shortcut (32 languages) |
+| Vocabulary boosting | No; **Fix phrases after dictation** still applies | Yes |
+| Download | About 681 MiB | About 708 MiB |
+| Memory while loaded | About 790 MiB, up to 1.1 GiB while finishing a long dictation | About 935 MiB |
+
+New installs start with Parakeet. A new release folder reuses a model another
+PrivateType version already downloaded, so updating never asks you to download
+again. If you have both models, it starts with Nemotron, as earlier versions
+did; switch in **Settings → Model**.
 
 - **Download** fetches a model. Downloading accepts its terms (**Terms** link).
 - **Use** selects a downloaded model. It takes effect when you save.
@@ -255,8 +260,7 @@ said about once a second while you hold the shortcut, so you can spot mistakes
 early. It uses more CPU while you speak. The inserted text still comes from one
 pass on release. Turn it off on a slow computer.
 
-**Recommended:** Nemotron for live feedback and vocabulary. Try Parakeet if
-Nemotron struggles with your language or accent.
+**Recommended:** Parakeet, which finishes the whole sentence at once on release. Choose Nemotron for live words while you speak, vocabulary boosting, or Asian languages such as Japanese, Korean, and Chinese.
 
 **Where models are stored:** by default, models are shared by all PrivateType
 versions on your Windows account, in `%LOCALAPPDATA%\PrivateType\models`.
