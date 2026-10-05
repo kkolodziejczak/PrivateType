@@ -204,8 +204,7 @@ internal sealed class DictationApplication : IDisposable
         {
             PortablePaths.EnsureWritable();
             LegacyDiagnosticsCleanup.DeleteKnownLogs(PortablePaths.DataDirectory, diagnostics);
-            settingsStore = new PortableSettingsStore(PortablePaths.DataDirectory);
-            RememberThisCopy();
+            settingsStore = new PortableSettingsStore(PortablePaths.SettingsDirectory);
             if (!File.Exists(settingsStore.SettingsPath))
                 OfferEarlierSettings(settingsStore);
             var loaded = settingsStore.Load();
@@ -292,30 +291,14 @@ internal sealed class DictationApplication : IDisposable
         }
     }
 
-    // A portable copy keeps everything in its own folder, so it leaves no trace beside the shared cache.
-    // Only release folders (…pp) are recorded, so builds run from source are never offered for import.
-    private void RememberThisCopy()
-    {
-        var appDirectory = Path.TrimEndingDirectorySeparator(Path.GetFullPath(AppContext.BaseDirectory));
-        if (!EarlierCopy.IsAppFolder(appDirectory) || Directory.Exists(Path.Combine(appDirectory, "models")))
-            return;
-        try
-        {
-            KnownCopies.ForCurrentUser().Remember(appDirectory);
-        }
-        catch (Exception exception)
-        {
-            RecordDiagnostic("copies.remember.failed", exception);
-        }
-    }
-
-    // Asked once: either choice creates this copy's settings file, so the next start does not ask again.
+    // Asked once, when there are no settings yet: either choice creates the settings file, so the next
+    // start (of this or any other copy sharing it) does not ask again.
     private void OfferEarlierSettings(PortableSettingsStore store)
     {
         try
         {
             var startup = RegisteredStartupDirectory() is { } directory ? new[] { directory } : [];
-            if (EarlierCopyFinder.FindMostRecent(AppContext.BaseDirectory, KnownCopies.ForCurrentUser().Read(), startup) is not { } copy)
+            if (EarlierCopyFinder.FindMostRecent(AppContext.BaseDirectory, startup) is not { } copy)
                 return;
             if (new ImportSettingsPromptWindow(copy).ShowDialog() != true)
             {
@@ -323,8 +306,10 @@ internal sealed class DictationApplication : IDisposable
                 return;
             }
 
-            SettingsImport.ImportInto(copy, store, PortablePaths.DataDirectory);
+            var imported = SettingsImport.ImportInto(copy, store, PortablePaths.SettingsDirectory);
             RecordDiagnostic("settings.imported");
+            if (imported.Warning is not null)
+                trayIcon.ShowBalloonTip(5000, "PrivateType", $"Settings were imported. {imported.Warning}", Forms.ToolTipIcon.Warning);
         }
         catch (Exception exception)
         {
@@ -333,7 +318,7 @@ internal sealed class DictationApplication : IDisposable
         }
     }
 
-    // Copies up to 1.3 do not record themselves; the one registered to start with Windows is still findable.
+    // Copies up to 1.3 kept settings in their own folder; the one registered to start with Windows is findable.
     private string? RegisteredStartupDirectory()
     {
         try
@@ -604,7 +589,7 @@ internal sealed class DictationApplication : IDisposable
                     {
                         newSettings = newSettings with
                         {
-                            CustomReadySoundPath = ReadySoundStorage.Import(newSettings.CustomReadySoundPath!, PortablePaths.DataDirectory)
+                            CustomReadySoundPath = ReadySoundStorage.Import(newSettings.CustomReadySoundPath!, PortablePaths.SettingsDirectory)
                         };
                     }
                     settingsStore.Save(newSettings);

@@ -1,5 +1,4 @@
 using System.IO;
-using System.Text.Json;
 using PrivateType.Core;
 
 namespace PrivateType.App;
@@ -18,30 +17,26 @@ internal sealed record EarlierCopy(string AppDirectory, Version? Version, DateTi
         string.Equals(Path.GetFileName(directory), "app", StringComparison.OrdinalIgnoreCase);
 }
 
-// Each release folder starts without settings. Copies record themselves from now on; copies up to
-// 1.3 do not, so the Windows startup entry and the folders beside this release are searched too.
+// Copies up to 1.3 kept settings in their own folder. They are found through this copy's own folder,
+// the Windows startup entry, and the releases unpacked beside this one; the last one changed wins.
 internal static class EarlierCopyFinder
 {
     private const int MaximumSiblings = 200;
 
-    // Recorded copies are listed newest launch first, which is the best sign of the copy in use. Older
-    // copies never recorded themselves, so for them the last settings change has to do.
-    public static EarlierCopy? FindMostRecent(string currentAppDirectory, IEnumerable<string> recordedAppDirectories, IEnumerable<string> otherAppDirectories)
+    public static EarlierCopy? FindMostRecent(string currentAppDirectory, IEnumerable<string> otherAppDirectories)
     {
         var current = Normalize(currentAppDirectory);
-        return Candidates(recordedAppDirectories, current).FirstOrDefault()
-            ?? Candidates(otherAppDirectories.Concat(SiblingAppDirectories(current)), current)
-                .OrderByDescending(copy => copy.LastUsedUtc)
-                .FirstOrDefault();
-    }
-
-    private static IEnumerable<EarlierCopy> Candidates(IEnumerable<string> appDirectories, string current) =>
-        appDirectories
+        return otherAppDirectories
+            .Prepend(current)
+            .Concat(SiblingAppDirectories(current))
             .Select(Normalize)
-            .Where(directory => directory.Length > 0 && !string.Equals(directory, current, StringComparison.OrdinalIgnoreCase))
+            .Where(directory => directory.Length > 0)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .Select(Inspect)
-            .OfType<EarlierCopy>();
+            .OfType<EarlierCopy>()
+            .OrderByDescending(copy => copy.LastUsedUtc)
+            .FirstOrDefault();
+    }
 
     // Accepts the folder the user unpacked, its app folder, or the data folder inside it.
     public static EarlierCopy? FromChosenFolder(string folder)
@@ -101,53 +96,6 @@ internal static class EarlierCopyFinder
     }
 }
 
-// The app folders of copies that have run, kept beside the shared model cache. Only folder paths are
-// stored; never settings, vocabulary, or dictated text.
-internal sealed class KnownCopies(string listPath)
-{
-    private const int MaximumCopies = 20;
-
-    public static KnownCopies ForCurrentUser() => new(Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PrivateType", "copies.json"));
-
-    public IReadOnlyList<string> Read()
-    {
-        try
-        {
-            return File.Exists(listPath)
-                ? JsonSerializer.Deserialize<string[]>(File.ReadAllText(listPath)) ?? []
-                : [];
-        }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException)
-        {
-            return [];
-        }
-    }
-
-    // Newest first; copies whose folder is gone drop off. Two copies starting together may lose one
-    // entry, which only means a later prompt falls back to searching.
-    public void Remember(string appDirectory)
-    {
-        var copies = Read()
-            .Where(directory => !string.Equals(directory, appDirectory, StringComparison.OrdinalIgnoreCase) && Directory.Exists(directory))
-            .Prepend(appDirectory)
-            .Take(MaximumCopies)
-            .ToArray();
-        Directory.CreateDirectory(Path.GetDirectoryName(listPath)!);
-        var temporaryPath = $"{listPath}.{Guid.NewGuid():N}.tmp";
-        try
-        {
-            File.WriteAllText(temporaryPath, JsonSerializer.Serialize(copies));
-            File.Move(temporaryPath, listPath, true);
-        }
-        finally
-        {
-            if (File.Exists(temporaryPath))
-                File.Delete(temporaryPath);
-        }
-    }
-}
-
 // Warning names settings that were damaged in the earlier copy and reset to defaults.
 internal sealed record ImportedSettings(PortableSettings Settings, string? Warning);
 
@@ -176,13 +124,24 @@ internal static class SettingsImport
         return new ImportedSettings(imported, loaded.Warning);
     }
 
-    // For the first start of a new copy: copies the custom sound, then saves.
-    public static PortableSettings ImportInto(EarlierCopy copy, PortableSettingsStore store, string dataDirectory)
+    // For the first start: copies the custom sound, then saves. A sound that can't be copied falls back
+    // to Ping with a warning rather than losing the rest of the settings.
+    public static ImportedSettings ImportInto(EarlierCopy copy, PortableSettingsStore store, string dataDirectory)
     {
-        var imported = Read(copy, startWithWindows: false).Settings;
+        var (imported, warning) = Read(copy, startWithWindows: false);
         if (imported.ReadySound == "custom")
-            imported = imported with { CustomReadySoundPath = ReadySoundStorage.Import(imported.CustomReadySoundPath!, dataDirectory) };
+        {
+            try
+            {
+                imported = imported with { CustomReadySoundPath = ReadySoundStorage.Import(imported.CustomReadySoundPath!, dataDirectory) };
+            }
+            catch (Exception exception) when (exception is not OutOfMemoryException)
+            {
+                imported = imported with { ReadySound = PortableSettings.Default.ReadySound, CustomReadySoundPath = null };
+                warning = $"{warning} The custom ready sound could not be copied, so Ping is used.".Trim();
+            }
+        }
         store.Save(imported);
-        return imported;
+        return new ImportedSettings(imported, warning);
     }
 }

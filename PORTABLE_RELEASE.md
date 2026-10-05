@@ -23,8 +23,9 @@ download. The application does not have a cloud-recognition fallback.
 In portable-local mode, the complete versioned folder is portable: after the
 initial verified model download, move the whole folder, including `app/models/`
 and `app/data/`, to retain the downloaded model and settings. In the default
-shared mode, moving the folder retains settings but the model remains in the
-per-user cache. Existing v1.0.2 or other release folders are not scanned or
+shared mode, settings live in `%LOCALAPPDATA%\PrivateType\settings.json` and
+the model in the per-user cache, so every copy shares them and the folder can
+be moved freely. Existing v1.0.2 or other release folders are not scanned or
 migrated, so they remain independent rollback copies until you remove them
 manually.
 
@@ -35,7 +36,7 @@ downloads its pinned model again when needed.
 ## Privacy and supported targets
 
 - Audio and recognition stay on the computer. The recognizer is a child process bound to `127.0.0.1`; there is no account, telemetry, transcript history, or cloud fallback.
-- The application does not retain audio or inserted transcripts. Its portable `app/data/settings.json` stores only the selected microphone, shortcut bindings, and bubble position.
+- The application does not retain audio or inserted transcripts. Its settings file (`%LOCALAPPDATA%\PrivateType\settings.json`, or `app/data/settings.json` for a portable copy) stores preferences and vocabulary, never audio or dictated text.
 - Unicode insertion is supported for ordinary desktop text fields. Elevated applications, secure/password fields, remote desktops, games, and applications that reject synthetic input are intentionally unsupported. The application cancels instead of redirecting text after a foreground-target change.
 
 ## Model and runtime notices

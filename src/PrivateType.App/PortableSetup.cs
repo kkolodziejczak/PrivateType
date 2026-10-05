@@ -86,7 +86,21 @@ internal static class MicrophoneCatalog
 
 internal static class PortablePaths
 {
+    // This copy's own data folder. Copies up to 1.3 kept their settings here.
     internal static string DataDirectory => DataDirectoryFor(AppContext.BaseDirectory);
+
+    // Where settings and custom sounds live: one place shared by every copy for this Windows user, so an
+    // update starts with your settings. A portable copy (one with app\models) keeps them in its own folder.
+    internal static string SettingsDirectory => SettingsDirectoryFor(
+        AppContext.BaseDirectory, Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData));
+
+    internal static string SettingsDirectoryFor(string baseDirectory, string? localAppData)
+    {
+        var applicationDirectory = Path.GetFullPath(baseDirectory);
+        if (Directory.Exists(Path.Combine(applicationDirectory, "models")) || string.IsNullOrWhiteSpace(localAppData) || !Path.IsPathRooted(localAppData))
+            return DataDirectoryFor(applicationDirectory);
+        return Path.Combine(Path.GetFullPath(localAppData), "PrivateType");
+    }
 
     internal static void EnsureWritable()
         => EnsureWritable(AppContext.BaseDirectory);

@@ -19,8 +19,9 @@ transcript history.
 5. Open **Settings** from the tray icon and pick your microphone.
 
 To update, close PrivateType, unpack the new ZIP, and start the new
-`PrivateType.exe`. On its first start it offers to bring over your settings
-from the copy you used before.
+`PrivateType.exe`. Every copy shares your settings, so the new one starts
+with them. The first version that shares settings offers once to bring them
+over from the copy you used before.
 
 <details>
 <summary>Verify the download (optional)</summary>
@@ -110,8 +111,9 @@ language or for all of them. You can import and export phrase lists as packs.
 - Audio is never saved. Recognition runs locally.
 - Recent dictations stay in memory only and are cleared when PrivateType exits.
   In Settings you can keep them for less time, or not at all.
-- Settings and your vocabulary are stored in `app/data/settings.json` in the
-  release folder.
+- Settings and your vocabulary are stored on this computer in
+  `%LOCALAPPDATA%\PrivateType\settings.json`, shared by every copy. A portable
+  copy keeps them in its own `app\data` folder.
 - Models are downloaded from NVIDIA's public releases. See
   [MODEL_ARTIFACT.md](MODEL_ARTIFACT.md) for their sources and checksums.
 

@@ -16,7 +16,7 @@ public sealed class EarlierCopiesTests : IDisposable
         var older = Release("PrivateType 1.2.0", lastUsed: new DateTime(2026, 9, 1, 0, 0, 0, DateTimeKind.Utc));
         var newer = Release("PrivateType 1.3.0", lastUsed: new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc));
 
-        var found = EarlierCopyFinder.FindMostRecent(current, [], []);
+        var found = EarlierCopyFinder.FindMostRecent(current, []);
 
         Assert.Equal(newer, found?.AppDirectory);
         Assert.Equal(Path.Combine(root, "PrivateType 1.3.0"), found?.Folder);
@@ -24,32 +24,13 @@ public sealed class EarlierCopiesTests : IDisposable
     }
 
     [Fact]
-    public void Finds_a_known_copy_elsewhere_and_never_offers_itself()
-    {
-        var current = Release(Path.Combine("downloads", "PrivateType 1.4.0"));
-        var elsewhere = Release(Path.Combine("tools", "PrivateType 1.3.0"));
-
-        Assert.Equal(elsewhere, EarlierCopyFinder.FindMostRecent(current, [current, elsewhere], [])?.AppDirectory);
-    }
-
-    [Fact]
-    public void Prefers_the_most_recently_launched_recorded_copy_over_a_later_settings_change()
-    {
-        var current = Release(Path.Combine("new", "PrivateType 1.5.0"), withSettings: false);
-        var launchedLast = Release(Path.Combine("a", "PrivateType 1.4.0"), lastUsed: new DateTime(2026, 9, 1, 0, 0, 0, DateTimeKind.Utc));
-        var savedLast = Release(Path.Combine("b", "PrivateType 1.4.1"), lastUsed: new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc));
-
-        Assert.Equal(launchedLast, EarlierCopyFinder.FindMostRecent(current, [launchedLast, savedLast], [])?.AppDirectory);
-    }
-
-    [Fact]
-    public void Unrecorded_copies_are_ranked_by_their_last_settings_change()
+    public void Copies_are_ranked_by_their_last_settings_change()
     {
         var current = Release(Path.Combine("new", "PrivateType 1.5.0"), withSettings: false);
         var startup = Release(Path.Combine("a", "PrivateType 1.2.0"), lastUsed: new DateTime(2026, 9, 1, 0, 0, 0, DateTimeKind.Utc));
         var sibling = Release(Path.Combine("new", "PrivateType 1.3.0"), lastUsed: new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc));
 
-        Assert.Equal(sibling, EarlierCopyFinder.FindMostRecent(current, [], [startup])?.AppDirectory);
+        Assert.Equal(sibling, EarlierCopyFinder.FindMostRecent(current, [startup])?.AppDirectory);
     }
 
     [Fact]
@@ -60,7 +41,7 @@ public sealed class EarlierCopiesTests : IDisposable
             Directory.CreateDirectory(Path.Combine(root, $"folder {index:D3}"));
         var older = Release("zz PrivateType 1.3.0");
 
-        Assert.Equal(older, EarlierCopyFinder.FindMostRecent(current, [], [])?.AppDirectory);
+        Assert.Equal(older, EarlierCopyFinder.FindMostRecent(current, [])?.AppDirectory);
     }
 
     [Fact]
@@ -85,13 +66,57 @@ public sealed class EarlierCopiesTests : IDisposable
     }
 
     [Fact]
+    public void Offers_this_copys_own_settings_from_before_they_were_shared()
+    {
+        var current = Release("PrivateType 1.4.0", lastUsed: new DateTime(2026, 10, 2, 0, 0, 0, DateTimeKind.Utc));
+        Release("PrivateType 1.3.0", lastUsed: new DateTime(2026, 9, 1, 0, 0, 0, DateTimeKind.Utc));
+
+        Assert.Equal(current, EarlierCopyFinder.FindMostRecent(current, [])?.AppDirectory);
+    }
+
+    [Fact]
+    public void Finds_the_copy_that_starts_with_windows_anywhere()
+    {
+        var current = Release(Path.Combine("downloads", "PrivateType 1.4.0"), withSettings: false);
+        var startup = Release(Path.Combine("tools", "PrivateType 1.3.0"));
+
+        Assert.Equal(startup, EarlierCopyFinder.FindMostRecent(current, [startup])?.AppDirectory);
+    }
+
+    [Fact]
+    public void Settings_are_shared_beside_the_model_cache()
+    {
+        var app = Release("PrivateType 1.4.0", withSettings: false);
+        var localAppData = Path.Combine(root, "LocalAppData");
+
+        Assert.Equal(Path.Combine(localAppData, "PrivateType"), PortablePaths.SettingsDirectoryFor(app, localAppData));
+    }
+
+    [Fact]
+    public void A_portable_copy_keeps_its_settings_in_its_own_folder()
+    {
+        var app = Release("PrivateType 1.4.0", withSettings: false);
+        Directory.CreateDirectory(Path.Combine(app, "models"));
+
+        Assert.Equal(Path.Combine(app, "data"), PortablePaths.SettingsDirectoryFor(app, Path.Combine(root, "LocalAppData")));
+    }
+
+    [Fact]
+    public void Without_local_app_data_settings_stay_in_the_copy()
+    {
+        var app = Release("PrivateType 1.4.0", withSettings: false);
+
+        Assert.Equal(Path.Combine(app, "data"), PortablePaths.SettingsDirectoryFor(app, null));
+    }
+
+    [Fact]
     public void Finds_nothing_when_no_other_copy_has_settings()
     {
         var current = Release("PrivateType 1.4.0", withSettings: false);
         Release("PrivateType 1.3.0", withSettings: false);
         Directory.CreateDirectory(Path.Combine(root, "Photos"));
 
-        Assert.Null(EarlierCopyFinder.FindMostRecent(current, [Path.Combine(root, "missing", "app")], []));
+        Assert.Null(EarlierCopyFinder.FindMostRecent(current, [Path.Combine(root, "missing", "app")]));
     }
 
     [Theory]
@@ -111,35 +136,6 @@ public sealed class EarlierCopiesTests : IDisposable
         Directory.CreateDirectory(Path.Combine(root, "Photos"));
 
         Assert.Null(EarlierCopyFinder.FromChosenFolder(Path.Combine(root, "Photos")));
-    }
-
-    [Fact]
-    public void Remembers_copies_newest_first_without_duplicates_or_missing_folders()
-    {
-        var copies = new KnownCopies(Path.Combine(root, "shared", "copies.json"));
-        var first = Release("PrivateType 1.3.0");
-        var second = Release("PrivateType 1.4.0");
-        var gone = Path.Combine(root, "gone", "app");
-        Directory.CreateDirectory(gone);
-
-        copies.Remember(first);
-        copies.Remember(gone);
-        copies.Remember(second);
-        copies.Remember(first);
-        Directory.Delete(gone);
-        copies.Remember(second);
-
-        Assert.Equal([second, first], copies.Read());
-    }
-
-    [Fact]
-    public void An_unreadable_list_counts_as_empty()
-    {
-        var path = Path.Combine(root, "copies.json");
-        Directory.CreateDirectory(root);
-        File.WriteAllText(path, "{ broken");
-
-        Assert.Empty(new KnownCopies(path).Read());
     }
 
     [Fact]
@@ -163,6 +159,29 @@ public sealed class EarlierCopiesTests : IDisposable
         Assert.Equal("WireGuard", Assert.Single(saved.Vocabulary).Phrase);
         Assert.Equal("Alt+Shift+H", saved.HistoryShortcut.Label);
         Assert.Equal(35, saved.ReadySoundVolume);
+    }
+
+    [Fact]
+    public void A_damaged_custom_sound_falls_back_to_ping_and_keeps_the_other_settings()
+    {
+        var broken = Path.Combine(root, "broken.wav");
+        Directory.CreateDirectory(root);
+        File.WriteAllText(broken, "not audio");
+        var app = Release("PrivateType 1.3.0", settings: PortableSettings.Default with
+        {
+            ReadySound = "custom",
+            CustomReadySoundPath = broken,
+            Vocabulary = [new VocabularyEntry("WireGuard", VocabularyScopes.Shared)]
+        });
+        var target = Path.Combine(root, "shared");
+
+        var imported = SettingsImport.ImportInto(EarlierCopyFinder.FromChosenFolder(app)!, new PortableSettingsStore(target), target);
+
+        var saved = new PortableSettingsStore(target).Load().Settings;
+        Assert.Equal("ping", saved.ReadySound);
+        Assert.Null(saved.CustomReadySoundPath);
+        Assert.Equal("WireGuard", Assert.Single(saved.Vocabulary).Phrase);
+        Assert.NotNull(imported.Warning);
     }
 
     [Fact]

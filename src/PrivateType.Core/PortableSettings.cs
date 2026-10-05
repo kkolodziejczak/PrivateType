@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 
 namespace PrivateType.Core;
 
@@ -44,6 +45,11 @@ public sealed record PortableSettings(
     // Opt-in: lets pasted dictations appear in Windows clipboard history (Win+V).
     public bool IncludeInClipboardHistory { get; init; }
     public KeyChord HistoryShortcut { get; init; } = KeyChord.DefaultHistory;
+
+    // Settings written by a newer version that this one does not know. Every copy shares one file,
+    // so they are written back unchanged instead of being dropped on save.
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? UnknownSettings { get; init; }
 
     public static PortableSettings Default { get; } = new("default", ShortcutBinding.Defaults);
 }
@@ -232,6 +238,35 @@ public sealed class PortableSettingsStore(string dataDirectory)
         }
     }
 
+    // Every copy shares one file, and the settings being saved may come from elsewhere (an import) or
+    // from an older version. Settings this version does not write are kept from the file on disk, and
+    // a newer schema version is never lowered, or that version would migrate its own file again.
+    private JsonObject MergeWithSavedFile(PortableSettings settings)
+    {
+        var saved = ReadSavedFile();
+        var savedSchema = saved?[nameof(PortableSettings.SchemaVersion)] is JsonValue value && value.TryGetValue<int>(out var number) ? number : 0;
+        var schemaVersion = Math.Max(Math.Max(settings.SchemaVersion, savedSchema), PortableSettingsMigration.CurrentSchemaVersion);
+        var merged = JsonSerializer.SerializeToNode(settings with { SchemaVersion = schemaVersion }, JsonOptions)!.AsObject();
+        foreach (var (name, savedValue) in saved ?? [])
+        {
+            if (!merged.ContainsKey(name))
+                merged[name] = savedValue?.DeepClone();
+        }
+        return merged;
+    }
+
+    private JsonObject? ReadSavedFile()
+    {
+        try
+        {
+            return File.Exists(SettingsPath) ? JsonNode.Parse(File.ReadAllText(SettingsPath)) as JsonObject : null;
+        }
+        catch (Exception exception) when (exception is JsonException or IOException or UnauthorizedAccessException)
+        {
+            return null;
+        }
+    }
+
     // Keeps the saved model when another field breaks the file, so recovery never switches models.
     private static SettingsLoadResult Unreadable(string? savedModel) => new(
         savedModel is null ? PortableSettings.Default : PortableSettings.Default with { SpeechModel = savedModel },
@@ -274,7 +309,7 @@ public sealed class PortableSettingsStore(string dataDirectory)
         var temporaryPath = $"{SettingsPath}.{Guid.NewGuid():N}.tmp";
         try
         {
-            File.WriteAllText(temporaryPath, JsonSerializer.Serialize(settings with { SchemaVersion = PortableSettingsMigration.CurrentSchemaVersion }, JsonOptions));
+            File.WriteAllText(temporaryPath, MergeWithSavedFile(settings).ToJsonString(JsonOptions));
             File.Move(temporaryPath, SettingsPath, true);
         }
         finally

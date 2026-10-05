@@ -241,9 +241,9 @@ public partial class SettingsWindow : Window
             ValidationText.Text = "No PrivateType settings were found in that folder. Choose the folder you unpacked PrivateType into.";
             return;
         }
-        if (string.Equals(copy.AppDirectory, Path.TrimEndingDirectorySeparator(Path.GetFullPath(AppContext.BaseDirectory)), StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(Path.GetFullPath(copy.DataDirectory), Path.GetFullPath(PortablePaths.SettingsDirectory), StringComparison.OrdinalIgnoreCase))
         {
-            ValidationText.Text = "That folder is this copy of PrivateType. Choose another copy.";
+            ValidationText.Text = "That folder holds the settings PrivateType already uses. Choose another copy.";
             return;
         }
         if (!ConfirmImport(copy))

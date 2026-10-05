@@ -147,15 +147,16 @@ before the microphone is listening and lose your first word.
 
 ### Other copies
 
-Each PrivateType folder keeps its own settings. The first time a new copy
-starts, for example after an update, it looks for the copy you used most
-recently and asks **Bring over your settings?**
+Every PrivateType copy on your Windows account shares one set of settings, so
+an update starts with yours. Copies up to 1.3 kept settings in their own
+folder. The first time a version that shares settings starts, it looks for the
+one you changed most recently and asks **Bring over your settings?**
 
 - **Import settings** copies your shortcuts, microphone, vocabulary and packs,
   sounds (including a custom sound file), recent dictation options, and speech
   model choice. Windows startup is asked separately. The earlier copy isn't
   changed.
-- **Start fresh** (or **×**) uses the defaults. The new copy doesn't ask again.
+- **Start fresh** (or **×**) uses the defaults. You aren't asked again.
 
 **Import settings from another copy…** does the same at any time: choose the
 folder you unpacked the other copy into, confirm, and Settings shows its
@@ -163,11 +164,9 @@ values. Nothing changes until you choose **Save changes**. If that copy's
 speech model isn't downloaded here, your current model stays selected until
 you download it on the **Model** tab.
 
-To find earlier copies, PrivateType remembers the folders of copies that have
-run, in `%LOCALAPPDATA%\PrivateType\copies.json`. It stores folder paths only.
-A portable copy (one with an `app\models` folder) doesn't add itself. Copies up
-to 1.3 didn't record themselves, so PrivateType also checks the copy that
-starts with Windows and the folders next to the new one.
+To find an earlier copy, PrivateType checks its own folder, the copy that
+starts with Windows, and the folders next to it. Use the button for a copy
+somewhere else, or for a portable copy.
 
 ## Vocabulary
 
@@ -328,7 +327,10 @@ In **Teach from last dictation**:
 
 - **Bubble position**: drag the bubble by its icon. PrivateType remembers
   where you left it, relative to the screen.
-- **Where settings are saved**: `app\data\settings.json` in the PrivateType
-  folder. It holds the settings on this page and your vocabulary, but never
-  audio or dictated text. If part of the file is damaged, only that part is
-  reset to its default when PrivateType starts.
+- **Where settings are saved**: `%LOCALAPPDATA%\PrivateType\settings.json`,
+  shared by every copy, with custom sounds beside it. A portable copy (one with
+  an `app\models` folder) keeps them in its own `app\data` folder instead. The
+  file holds the settings on this page and your vocabulary, but never audio or
+  dictated text, and it never leaves this computer. If part of the file is
+  damaged, only that part is reset to its default when PrivateType starts. A
+  newer version's settings are kept when an older version saves.
