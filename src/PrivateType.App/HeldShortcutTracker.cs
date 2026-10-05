@@ -12,6 +12,7 @@ internal enum HeldKeyUpResult
 internal sealed class HeldShortcutTracker
 {
     private int? recoveredVirtualKey;
+    private bool heldKeySeenDown;
 
     public HotkeyDefinition? Held { get; private set; }
 
@@ -22,6 +23,7 @@ internal sealed class HeldShortcutTracker
 
         Held = hotkey;
         recoveredVirtualKey = null;
+        heldKeySeenDown = false;
         return true;
     }
 
@@ -45,7 +47,17 @@ internal sealed class HeldShortcutTracker
 
     public bool ReleaseIfPhysicallyUp(Func<int, bool> isPressed)
     {
-        if (Held is null || isPressed(Held.VirtualKey))
+        if (Held is null)
+            return false;
+
+        // The swallowed key-down never reaches the async key state, so the key reads as up until
+        // auto-repeat shows it down. Only an up after that proves a missed key-up.
+        if (isPressed(Held.VirtualKey))
+        {
+            heldKeySeenDown = true;
+            return false;
+        }
+        if (!heldKeySeenDown)
             return false;
 
         recoveredVirtualKey = Held.VirtualKey;
@@ -57,6 +69,7 @@ internal sealed class HeldShortcutTracker
     {
         Held = null;
         recoveredVirtualKey = null;
+        heldKeySeenDown = false;
         toggleKeyDown = null;
     }
 

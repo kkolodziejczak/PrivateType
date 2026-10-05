@@ -61,10 +61,36 @@ public sealed class MicrophoneAndShortcutTests
     }
 
     [Fact]
+    public void Watchdog_ignores_the_key_reading_up_before_auto_repeat_shows_it_down()
+    {
+        var tracker = new HeldShortcutTracker();
+        tracker.TryPress(Polish);
+
+        // The hook swallowed the key-down, so the async key state still reads up.
+        Assert.False(tracker.ReleaseIfPhysicallyUp(_ => false));
+        Assert.Same(Polish, tracker.Held);
+        Assert.False(tracker.TryPress(Polish));
+    }
+
+    [Fact]
+    public void Watchdog_needs_the_key_seen_down_again_for_every_press()
+    {
+        var tracker = new HeldShortcutTracker();
+        tracker.TryPress(Polish);
+        tracker.ReleaseIfPhysicallyUp(_ => true);
+        tracker.KeyUp(0x52);
+        tracker.TryPress(Polish);
+
+        Assert.False(tracker.ReleaseIfPhysicallyUp(_ => false));
+        Assert.Same(Polish, tracker.Held);
+    }
+
+    [Fact]
     public void Watchdog_releases_a_missed_key_up_and_swallows_the_late_one()
     {
         var tracker = new HeldShortcutTracker();
         tracker.TryPress(Polish);
+        tracker.ReleaseIfPhysicallyUp(_ => true);
 
         Assert.True(tracker.ReleaseIfPhysicallyUp(_ => false));
         Assert.Null(tracker.Held);
