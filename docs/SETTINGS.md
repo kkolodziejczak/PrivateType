@@ -145,6 +145,30 @@ off. It is replaced by "Transcribing" when the text will take a moment.
 **Recommended:** keep a sound on. Without it, it's easy to start speaking
 before the microphone is listening and lose your first word.
 
+### Other copies
+
+Each PrivateType folder keeps its own settings. The first time a new copy
+starts, for example after an update, it looks for the copy you used most
+recently and asks **Bring over your settings?**
+
+- **Import settings** copies your shortcuts, microphone, vocabulary and packs,
+  sounds (including a custom sound file), recent dictation options, and speech
+  model choice. Windows startup is asked separately. The earlier copy isn't
+  changed.
+- **Start fresh** (or **×**) uses the defaults. The new copy doesn't ask again.
+
+**Import settings from another copy…** does the same at any time: choose the
+folder you unpacked the other copy into, confirm, and Settings shows its
+values. Nothing changes until you choose **Save changes**. If that copy's
+speech model isn't downloaded here, your current model stays selected until
+you download it on the **Model** tab.
+
+To find earlier copies, PrivateType remembers the folders of copies that have
+run, in `%LOCALAPPDATA%\PrivateType\copies.json`. It stores folder paths only.
+A portable copy (one with an `app\models` folder) doesn't add itself. Copies up
+to 1.3 didn't record themselves, so PrivateType also checks the copy that
+starts with Windows and the folders next to the new one.
+
 ## Vocabulary
 
 Vocabulary helps the model write names, acronyms, and technical terms

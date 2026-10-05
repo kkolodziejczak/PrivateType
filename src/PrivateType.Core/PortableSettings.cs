@@ -70,7 +70,8 @@ public static class TextInsertionModes
 }
 
 // HasSavedModel is false when the file is missing or unreadable, so the model choice must be inferred.
-public sealed record SettingsLoadResult(PortableSettings Settings, string? Warning = null, bool HasSavedModel = true);
+// Unreadable means the settings are safe defaults rather than what the file holds.
+public sealed record SettingsLoadResult(PortableSettings Settings, string? Warning = null, bool HasSavedModel = true, bool Unreadable = false);
 
 public static class PortableSettingsValidator
 {
@@ -213,7 +214,7 @@ public sealed class PortableSettingsStore(string dataDirectory)
             var shortcutUnreadable = migrated is not null && DropUnreadableHistoryShortcut(migrated);
             var settings = migrated?.Deserialize<PortableSettings>(JsonOptions);
             if (settings is null)
-                return new SettingsLoadResult(PortableSettings.Default, "Saved settings were ignored: Settings file is empty.", HasSavedModel: false);
+                return new SettingsLoadResult(PortableSettings.Default, "Saved settings were ignored: Settings file is empty.", HasSavedModel: false, Unreadable: true);
 
             var (repaired, repairedNames) = PortableSettingsValidator.Repair(settings);
             IReadOnlyList<string> resetNames = shortcutUnreadable ? ["recent dictations shortcut", .. repairedNames] : repairedNames;
@@ -235,7 +236,8 @@ public sealed class PortableSettingsStore(string dataDirectory)
     private static SettingsLoadResult Unreadable(string? savedModel) => new(
         savedModel is null ? PortableSettings.Default : PortableSettings.Default with { SpeechModel = savedModel },
         "Saved settings could not be read; safe defaults were restored.",
-        HasSavedModel: savedModel is not null);
+        HasSavedModel: savedModel is not null,
+        Unreadable: true);
 
     private static string? SavedModel(JsonNode? root) =>
         root is JsonObject settings

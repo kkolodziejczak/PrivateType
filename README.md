@@ -19,7 +19,8 @@ transcript history.
 5. Open **Settings** from the tray icon and pick your microphone.
 
 To update, close PrivateType, unpack the new ZIP, and start the new
-`PrivateType.exe`.
+`PrivateType.exe`. On its first start it offers to bring over your settings
+from the copy you used before.
 
 <details>
 <summary>Verify the download (optional)</summary>

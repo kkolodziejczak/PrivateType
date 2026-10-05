@@ -72,6 +72,8 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="22" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="22" />
+            <RowDefinition Height="Auto" />
           </Grid.RowDefinitions>
 
 
@@ -307,6 +309,24 @@
               </Grid>
               <TextBlock Margin="0,6,0,0" FontSize="12" Opacity="0.7" TextWrapping="Wrap"
                          Text="Says &#x201C;Loading model&#x201D; while the model loads and &#x201C;Transcribing&#x201D; while Parakeet finishes your text. Uses the volume above." />
+            </StackPanel>
+          </Grid>
+
+          <Grid Grid.Row="12">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="140" />
+              <ColumnDefinition Width="16" />
+              <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <StackPanel>
+              <TextBlock FontWeight="SemiBold" FontSize="14" Text="Other copies" />
+              <TextBlock Margin="0,3,0,0" FontSize="12" Opacity="0.7" TextWrapping="Wrap" Text="Bring settings from an earlier version" />
+            </StackPanel>
+            <StackPanel Grid.Column="2">
+              <Button x:Name="ImportFromCopyButton" HorizontalAlignment="Left" Content="Import settings from another copy…" Click="ImportFromCopy"
+                      AutomationProperties.Name="Import settings from another copy" />
+              <TextBlock Margin="0,6,0,0" FontSize="12" Opacity="0.7" TextWrapping="Wrap"
+                         Text="Choose the folder of another PrivateType copy. You'll see what will be copied before anything changes." />
             </StackPanel>
           </Grid>
         </Grid>

@@ -31,11 +31,12 @@ internal sealed class ModelLibraryEditor : INotifyPropertyChanged
     private readonly IModelStore store;
     private string selectedId;
 
-    public ModelLibraryEditor(IModelStore store, string activeId)
+    // Selected may differ from active while reviewing imported settings; only Save makes it active.
+    public ModelLibraryEditor(IModelStore store, string activeId, string? selectedId = null)
     {
         this.store = store;
         ActiveId = activeId;
-        selectedId = activeId;
+        this.selectedId = selectedId ?? activeId;
         Rows = SpeechModelCatalog.All.Select(model => new SpeechModelRow(this, model, store.IsPresent(model))).ToArray();
         Refresh();
     }

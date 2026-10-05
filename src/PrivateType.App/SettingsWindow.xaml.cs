@@ -21,10 +21,12 @@ public partial class SettingsWindow : Window
     private KeyChord historyShortcut;
     private ShortcutRecorderHook? historyShortcutRecorder;
 
-    internal SettingsWindow(PortableSettings settings, IReadOnlyList<MicrophoneOption> microphones, IModelStore modelStore, bool openVocabulary = false, string? vocabularyScope = null)
+    internal SettingsWindow(PortableSettings settings, IReadOnlyList<MicrophoneOption> microphones, IModelStore modelStore, bool openVocabulary = false, string? vocabularyScope = null, string? notice = null, string? activeModelId = null)
     {
         InitializeComponent();
-        models = new ModelLibraryEditor(modelStore, settings.SpeechModel);
+        if (notice is not null)
+            ValidationText.Text = notice;
+        models = new ModelLibraryEditor(modelStore, activeModelId ?? settings.SpeechModel, settings.SpeechModel);
         ModelPage.DataContext = models;
         OfflinePreviewCheckBox.IsChecked = settings.OfflinePreview;
         ConfirmModelDeletion = AskToDeleteModel;
@@ -34,6 +36,8 @@ public partial class SettingsWindow : Window
         VocabularyPage.DataContext = vocabulary;
         ChoosePackFile = PickPackFile;
         ConfirmPackRemoval = AskToRemovePack;
+        ChooseCopyFolder = PickCopyFolder;
+        ConfirmImport = copy => new ImportSettingsPromptWindow(copy) { Owner = this }.ShowDialog() == true;
         if (openVocabulary)
             VocabularyTab.IsChecked = true;
         MaxHeight = Math.Max(320, SystemParameters.WorkArea.Height - 24);
@@ -89,6 +93,13 @@ public partial class SettingsWindow : Window
     internal static string HeaderText(Version? version) => $"{ApplicationVersion.Label(version)} — settings";
 
     public PortableSettings? SavedSettings { get; private set; }
+
+    // Set when the user imports another copy's settings: Settings closes, and reopens showing them unsaved.
+    internal PortableSettings? ImportedSettings { get; private set; }
+    internal EarlierCopy? ImportedFrom { get; private set; }
+    internal string? ImportWarning { get; private set; }
+    internal Func<string?> ChooseCopyFolder { get; set; }
+    internal Func<EarlierCopy, bool> ConfirmImport { get; set; }
     public event Action? DiagnosticsRequested;
     public event Action? LicensesRequested;
 
@@ -218,6 +229,45 @@ public partial class SettingsWindow : Window
             Multiselect = false
         };
         return picker.ShowDialog(this) == true ? picker.FileName : null;
+    }
+
+    private void ImportFromCopy(object sender, RoutedEventArgs e)
+    {
+        if (ChooseCopyFolder() is not { } folder)
+            return;
+        var copy = EarlierCopyFinder.FromChosenFolder(folder);
+        if (copy is null)
+        {
+            ValidationText.Text = "No PrivateType settings were found in that folder. Choose the folder you unpacked PrivateType into.";
+            return;
+        }
+        if (string.Equals(copy.AppDirectory, Path.TrimEndingDirectorySeparator(Path.GetFullPath(AppContext.BaseDirectory)), StringComparison.OrdinalIgnoreCase))
+        {
+            ValidationText.Text = "That folder is this copy of PrivateType. Choose another copy.";
+            return;
+        }
+        if (!ConfirmImport(copy))
+            return;
+
+        try
+        {
+            var imported = SettingsImport.Read(copy, originalSettings.StartWithWindows);
+            ImportedSettings = imported.Settings;
+            ImportWarning = imported.Warning;
+        }
+        catch (IOException)
+        {
+            ValidationText.Text = "That copy's settings could not be read. Nothing was changed.";
+            return;
+        }
+        ImportedFrom = copy;
+        DialogResult = false;
+    }
+
+    private string? PickCopyFolder()
+    {
+        var picker = new Microsoft.Win32.OpenFolderDialog { Title = "Choose another PrivateType copy" };
+        return picker.ShowDialog(this) == true ? picker.FolderName : null;
     }
 
     private bool AskToRemovePack(string name) =>

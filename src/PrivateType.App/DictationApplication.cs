@@ -205,6 +205,9 @@ internal sealed class DictationApplication : IDisposable
             PortablePaths.EnsureWritable();
             LegacyDiagnosticsCleanup.DeleteKnownLogs(PortablePaths.DataDirectory, diagnostics);
             settingsStore = new PortableSettingsStore(PortablePaths.DataDirectory);
+            RememberThisCopy();
+            if (!File.Exists(settingsStore.SettingsPath))
+                OfferEarlierSettings(settingsStore);
             var loaded = settingsStore.Load();
             settings = ReconcileStartupPreference(loaded.Settings);
             if (!loaded.HasSavedModel)
@@ -286,6 +289,61 @@ internal sealed class DictationApplication : IDisposable
             RecordDiagnostic("startup.failed", exception);
             trayIcon.ShowBalloonTip(5000, "PrivateType", $"Windows startup setting could not be updated: {exception.Message}", Forms.ToolTipIcon.Warning);
             return loadedSettings;
+        }
+    }
+
+    // A portable copy keeps everything in its own folder, so it leaves no trace beside the shared cache.
+    // Only release folders (…pp) are recorded, so builds run from source are never offered for import.
+    private void RememberThisCopy()
+    {
+        var appDirectory = Path.TrimEndingDirectorySeparator(Path.GetFullPath(AppContext.BaseDirectory));
+        if (!EarlierCopy.IsAppFolder(appDirectory) || Directory.Exists(Path.Combine(appDirectory, "models")))
+            return;
+        try
+        {
+            KnownCopies.ForCurrentUser().Remember(appDirectory);
+        }
+        catch (Exception exception)
+        {
+            RecordDiagnostic("copies.remember.failed", exception);
+        }
+    }
+
+    // Asked once: either choice creates this copy's settings file, so the next start does not ask again.
+    private void OfferEarlierSettings(PortableSettingsStore store)
+    {
+        try
+        {
+            var startup = RegisteredStartupDirectory() is { } directory ? new[] { directory } : [];
+            if (EarlierCopyFinder.FindMostRecent(AppContext.BaseDirectory, KnownCopies.ForCurrentUser().Read(), startup) is not { } copy)
+                return;
+            if (new ImportSettingsPromptWindow(copy).ShowDialog() != true)
+            {
+                RecordDiagnostic("settings.import.declined");
+                return;
+            }
+
+            SettingsImport.ImportInto(copy, store, PortablePaths.DataDirectory);
+            RecordDiagnostic("settings.imported");
+        }
+        catch (Exception exception)
+        {
+            RecordDiagnostic("settings.import.failed", exception);
+            trayIcon.ShowBalloonTip(5000, "PrivateType", "Settings could not be imported from the earlier copy, so this copy starts fresh.", Forms.ToolTipIcon.Warning);
+        }
+    }
+
+    // Copies up to 1.3 do not record themselves; the one registered to start with Windows is still findable.
+    private string? RegisteredStartupDirectory()
+    {
+        try
+        {
+            return Path.GetDirectoryName(windowsStartup.ReadTarget(windowsStartup.Capture()).ExecutablePath);
+        }
+        catch (Exception exception)
+        {
+            RecordDiagnostic("copies.startup.unreadable", exception);
+            return null;
         }
     }
 
@@ -498,19 +556,13 @@ internal sealed class DictationApplication : IDisposable
 
         openHistoryWindow?.Close();
         hotkey.Suspend();
-        var window = new SettingsWindow(settings, MicrophoneCatalog.Enumerate(), new LibraryModelStore(models), openVocabulary, vocabularyScope);
-        window.Loaded += (_, _) => BringToForeground(window);
-        window.DiagnosticsRequested += () => ShowDiagnostics(window);
-        window.LicensesRequested += () => new OpenSourceLicensesWindow { Owner = window }.ShowDialog();
-        openSettingsWindow = window;
-        bool? result;
-        try
+        var (window, result) = ShowSettingsWindow(settings, openVocabulary, vocabularyScope, notice: null);
+        // Importing another copy reopens Settings showing its values; nothing changes until Save.
+        while (window.ImportedSettings is { } imported)
         {
-            result = window.ShowDialog();
-        }
-        finally
-        {
-            openSettingsWindow = null;
+            RecordDiagnostic("settings.import.reviewed");
+            var (reviewed, notice) = PrepareImportReview(imported, window.ImportedFrom!, window.ImportWarning);
+            (window, result) = ShowSettingsWindow(reviewed, openVocabulary: false, vocabularyScope: null, notice);
         }
 
         if (result != true)
@@ -575,6 +627,40 @@ internal sealed class DictationApplication : IDisposable
             hotkey.Suspend();
             RestoreHotkeys(settings.Shortcuts);
             trayIcon.ShowBalloonTip(5000, "PrivateType", $"Settings were not saved: {exception.Message}", Forms.ToolTipIcon.Error);
+        }
+    }
+
+    // An imported model that isn't downloaded here would be dropped after Save, so the current one stays
+    // selected and the notice says how to get it.
+    private (PortableSettings Settings, string Notice) PrepareImportReview(PortableSettings imported, EarlierCopy source, string? warning)
+    {
+        imported = imported with { MicrophoneId = MicrophoneCatalog.MigrateLegacyId(imported.MicrophoneId, MicrophoneCatalog.Enumerate()) };
+        var notice = $"Showing settings from {source.Label}. Choose Save changes to use them.";
+        var model = SpeechModelCatalog.Get(imported.SpeechModel);
+        if (!models.Provisioner(model).IsPresent())
+        {
+            notice += $" Its speech model, {model.DisplayName}, isn't downloaded here; download it on the Model tab.";
+            imported = imported with { SpeechModel = settings.SpeechModel };
+        }
+        if (warning is not null)
+            notice += $" {warning}";
+        return (imported, notice);
+    }
+
+    private (SettingsWindow Window, bool? Result) ShowSettingsWindow(PortableSettings shown, bool openVocabulary, string? vocabularyScope, string? notice)
+    {
+        var window = new SettingsWindow(shown, MicrophoneCatalog.Enumerate(), new LibraryModelStore(models), openVocabulary, vocabularyScope, notice, activeModelId: settings.SpeechModel);
+        window.Loaded += (_, _) => BringToForeground(window);
+        window.DiagnosticsRequested += () => ShowDiagnostics(window);
+        window.LicensesRequested += () => new OpenSourceLicensesWindow { Owner = window }.ShowDialog();
+        openSettingsWindow = window;
+        try
+        {
+            return (window, window.ShowDialog());
+        }
+        finally
+        {
+            openSettingsWindow = null;
         }
     }
 

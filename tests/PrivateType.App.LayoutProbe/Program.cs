@@ -68,6 +68,7 @@ static void RenderWindows(bool monitorPlacementOnly)
     SettingsModelProbe.Run(outputDirectory);
     TeachProbe.Run(outputDirectory);
     HistoryProbe.Run(outputDirectory);
+    ImportProbe.Run(outputDirectory);
     DocsScreenshotProbe.Run(outputDirectory);
     Render(new DiagnosticsWindow(new InMemoryDiagnostics()), Path.Combine(outputDirectory, "diagnostics-empty.png"));
     Render(new OpenSourceLicensesWindow(), Path.Combine(outputDirectory, "open-source-licenses.png"));
