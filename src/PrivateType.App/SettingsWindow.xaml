@@ -200,7 +200,7 @@
                   <ColumnDefinition Width="220" />
                 </Grid.ColumnDefinitions>
                 <TextBlock x:Name="HistoryShortcutLabel" VerticalAlignment="Center" FontSize="13" Foreground="{DynamicResource ColorText}" Opacity="0.8" Text="Shortcut" />
-                <TextBox x:Name="HistoryShortcutBox" Grid.Column="1" Height="36" Padding="9,0" VerticalContentAlignment="Center" IsReadOnly="True"
+                <TextBox x:Name="HistoryShortcutBox" Grid.Column="1" MinWidth="128" Height="36" Padding="12,0" HorizontalAlignment="Right" TextAlignment="Center" VerticalContentAlignment="Center" IsReadOnly="True"
                          ToolTip="Click, then press the new shortcut, for example Win+Shift+V." AutomationProperties.Name="Recent dictations shortcut"
                          GotKeyboardFocus="StartRecordingHistoryShortcut" LostKeyboardFocus="StopRecordingHistoryShortcut" />
               </Grid>
