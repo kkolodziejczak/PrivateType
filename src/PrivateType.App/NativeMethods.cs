@@ -37,6 +37,9 @@ internal static class NativeMethods
     [return: MarshalAs(UnmanagedType.Bool)]
     internal static extern bool IsWindow(nint window);
 
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    internal static extern int GetClassNameW(nint window, System.Text.StringBuilder className, int maxCount);
+
     [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW")]
     internal static extern nint GetWindowLongPtr(nint window, int index);
 

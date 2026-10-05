@@ -25,6 +25,8 @@ public sealed record PortableSettings(
     public string ReadySound { get; init; } = "ping";
     public int ReadySoundVolume { get; init; } = 80;
     public string? CustomReadySoundPath { get; init; }
+    // Says "Loading model" and "Transcribing" so the state is audible without looking at the bubble.
+    public bool SpokenStatusCues { get; init; } = true;
     public string ShortcutMode { get; init; } = DictationShortcutModes.Hold;
     // Pasting is atomic, so an early Enter cannot send half-typed text.
     public string InsertionMode { get; init; } = TextInsertionModes.Paste;

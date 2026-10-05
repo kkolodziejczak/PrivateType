@@ -70,9 +70,9 @@ The app's own interface stays in English.
 Hold a shortcut while speaking, then release it to insert the final text. The
 model loads when PrivateType starts; after the selected idle timeout unloads
 it, the next held shortcut loads it again. Keep
-holding the shortcut while **Loading local model…** is shown. A short ping
-signals that loading has finished and the microphone is ready: you can speak.
-The ping plays only when that hold waited for the model to load.
+holding the shortcut while **Loading local model…** is shown; PrivateType says
+"Loading model". A short ping always means the microphone is listening: you can
+speak.
 
 Prefer not to hold? Set **Settings → Shortcuts → Shortcut behavior** to
 **Press to start and stop**: press the shortcut once to start listening and
@@ -102,7 +102,8 @@ you no longer need. The model in use cannot be deleted; switch first.
 | Download | About 708 MiB, OpenMDW-1.1 | About 681 MiB, CC-BY-4.0 |
 
 Parakeet writes the final text in one pass after you release the shortcut; the
-bubble shows **Transcribing…** until it is inserted. A minute of speech takes a
+bubble shows **Transcribing…** until it is inserted, and PrivateType says
+"Transcribing" when that takes longer than half a second. A minute of speech takes a
 few seconds on the recorded test machine. **Show a live preview with Parakeet**
 (on by default, in **Settings → Model**) re-transcribes what you have said so far
 about once a second, so you can stop and correct yourself early; it uses more
@@ -182,14 +183,17 @@ choice immediately, without loading the model. **Save changes** keeps your
 preferences; **Cancel** discards them. Custom files are copied into app storage
 when saved, and playback uses at most the first three seconds. If a saved custom
 file becomes unreadable, PrivateType uses Ping instead. Settings scrolls when
-needed, with Save and Cancel always accessible.
+needed, with Save and Cancel always accessible. **Spoken status cues** (on by
+default) speak "Loading model" and "Transcribing" with a local Windows voice, at
+the same volume.
 
 ![Settings](docs/images/settings.png)
 
 ### What the app does
 
-- When dictation starts, the bubble moves to the monitor under the mouse while
-  keeping the same relative screen position.
+- When dictation starts, the bubble moves to the monitor of the window you are
+  dictating into (or under the mouse, when no window is active) while keeping
+  the same relative screen position.
 - The ready bubble is semi-transparent (more faded while the model is unloaded)
   and click-through, so you can see what is behind it. Only the icon is
   draggable; the bubble expands when the model is loading or you are speaking.
@@ -256,7 +260,7 @@ if it is not already installed.
 | --- | --- |
 | First dictation pauses at loading | Keep holding the shortcut until the local model is ready. |
 | Text was not inserted | Check the original target is a normal, non-elevated text field, then open **Settings → View diagnostics…**. |
-| Bubble is on another monitor | Drag the ready bubble where you want it on that monitor. |
+| Bubble is on another monitor | It follows the window you dictate into; drag the ready bubble where you want it on that monitor. |
 | Recognition is weak | Select the right microphone and speak close to it. The spectrum is not an audio-gain control. |
 | Engine will not start | Install the current Microsoft Visual C++ x64 Redistributable, then relaunch the app. |
 
@@ -265,7 +269,7 @@ if it is not already installed.
 PrivateType's own source and maintainer-owned assets are available under the
 [MIT License](LICENSE). The portable release includes complete notices in
 `app/licenses`, including `THIRD-PARTY-NOTICES.txt` for NeMo-Speech.cpp, ggml, cpp-httplib,
-SentencePiece, Protobuf, Abseil, utf8-range, NAudio, and the self-contained
+SentencePiece, Protobuf, Abseil, utf8-range, NAudio, System.Speech, and the self-contained
 .NET runtime. Open the same notices from **Settings → Open-source licenses…**.
 
 ## Report a problem or contribute

@@ -249,7 +249,7 @@
             </Grid.ColumnDefinitions>
             <StackPanel>
               <TextBlock FontWeight="SemiBold" FontSize="14" Text="Ready sound" />
-              <TextBlock Margin="0,3,0,0" FontSize="12" Opacity="0.7" TextWrapping="Wrap" Text="Hear when you can speak after model loading" />
+              <TextBlock Margin="0,3,0,0" FontSize="12" Opacity="0.7" TextWrapping="Wrap" Text="Hear when the microphone is listening and you can speak" />
             </StackPanel>
             <StackPanel Grid.Column="2">
               <Grid>
@@ -272,7 +272,7 @@
                 <Slider x:Name="ReadyVolumeSlider" Style="{StaticResource SoundVolumeSlider}" Grid.Column="1" Margin="10,0" Minimum="0" Maximum="100" TickFrequency="1" IsSnapToTickEnabled="True" SmallChange="5" LargeChange="10" ValueChanged="ReadyVolumeChanged" VerticalAlignment="Center" AutomationProperties.Name="Ready sound volume" />
                 <TextBlock x:Name="ReadyVolumeText" Grid.Column="2" Text="80%" TextAlignment="Right" VerticalAlignment="Center" />
               </Grid>
-              <TextBlock Margin="0,4,0,0" FontSize="12" Opacity="0.7" Text="0% mutes the ready sound." />
+              <TextBlock Margin="0,4,0,0" FontSize="12" Opacity="0.7" Text="0% mutes the ready sound and spoken cues." />
               <TextBlock Margin="0,14,0,6" Text="Custom file" />
               <Grid>
                 <Grid.ColumnDefinitions>
@@ -284,6 +284,13 @@
               </Grid>
               <TextBlock Margin="0,6,0,0" FontSize="12" Opacity="0.7" TextWrapping="Wrap" Text="WAV or MP3, up to 3 seconds of playback. Copied into app storage when saved." />
               <TextBlock x:Name="SoundStatusText" Margin="0,6,0,0" FontSize="12" Foreground="{DynamicResource ColorAccent300}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
+              <CheckBox x:Name="SpokenStatusCuesCheckBox" Margin="0,18,0,0" AutomationProperties.Name="Spoken status cues">
+                <StackPanel>
+                  <TextBlock FontWeight="SemiBold" FontSize="14" Text="Spoken status cues" />
+                  <TextBlock Margin="0,3,0,0" FontSize="12" Opacity="0.6" TextWrapping="Wrap"
+                             Text="Says &#x201C;Loading model&#x201D; while the model loads and &#x201C;Transcribing&#x201D; while Parakeet finishes your text. Spoken by a local Windows voice." />
+                </StackPanel>
+              </CheckBox>
             </StackPanel>
           </Grid>
         </Grid>

@@ -11,7 +11,7 @@ namespace PrivateType.App;
 internal sealed class DictationApplication : IDisposable
 {
     private readonly EngineHost engine = new();
-    private readonly ModelReadySound modelReadySound = new();
+    private readonly DictationCues cues = new();
     private readonly EngineLoadCoordinator engineLoads;
     private readonly HoldHotkeyHook hotkey = new();
     private readonly DictationBubble bubble = new();
@@ -127,7 +127,7 @@ internal sealed class DictationApplication : IDisposable
         DisposeStep(trayIcon.Dispose);
         DisposeStep(trayIcons.Dispose);
         DisposeStep(engine.Dispose);
-        DisposeStep(modelReadySound.Dispose);
+        DisposeStep(cues.Dispose);
         DisposeStep(downloader.Dispose);
         DisposeStep(() => provisioningCancellation?.Dispose());
     }
@@ -451,6 +451,7 @@ internal sealed class DictationApplication : IDisposable
         }
 
         RecordDiagnostic("model.standby");
+        _ = Task.Run(PrepareSpokenCues);
         await EnsureEngineLoadedAsync();
         ShowReadyPanel();
         ScheduleModelUnload();
@@ -461,6 +462,18 @@ internal sealed class DictationApplication : IDisposable
         return availability.DisabledHotkeys.Count == 0
             ? "Dictation ready"
             : $"Dictation ready — unavailable: {availability.DescribeDisabledHotkeys()}";
+    }
+
+    private void PrepareSpokenCues()
+    {
+        try
+        {
+            SpokenCue.Prepare();
+        }
+        catch (Exception exception)
+        {
+            RecordDiagnostic("cue.prepare.failed", exception);
+        }
     }
 
     private void ShowSettings(bool openVocabulary = false, string? vocabularyScope = null)
@@ -833,10 +846,12 @@ internal sealed class DictationApplication : IDisposable
         // In toggle mode the key is up while dictating, so only hold mode needs the watchdog.
         if (!hotkey.ToggleMode)
             heldKeyWatchdog.Start();
-        bubble.MoveToPointerScreen();
-        var waitedForModel = !engineLoads.IsLoaded;
-        if (waitedForModel)
+        bubble.MoveToDictationScreen();
+        if (!engineLoads.IsLoaded)
+        {
             bubble.ShowModelLoading(hotkey.ToggleMode);
+            PlayCue(() => cues.Announce(SpokenCue.LoadingModel, settings));
+        }
         try
         {
             await EnsureEngineLoadedAsync();
@@ -848,9 +863,12 @@ internal sealed class DictationApplication : IDisposable
                 return;
             }
 
+            // The microphone must not record the end of "Loading model".
+            PlayCue(cues.Stop);
             await sessions.HoldAsync(localeCode);
-            if (waitedForModel && shortcutHeld && generation == heldGeneration && sessions.IsRecording)
-                PlayModelReadySound();
+            // The ping means the microphone is listening, whether or not the model had to load.
+            if (shortcutHeld && generation == heldGeneration && sessions.IsRecording)
+                PlayCue(() => cues.PlayReady(settings));
         }
         catch (Exception exception)
         {
@@ -861,15 +879,15 @@ internal sealed class DictationApplication : IDisposable
         }
     }
 
-    private void PlayModelReadySound()
+    private void PlayCue(Action play)
     {
         try
         {
-            modelReadySound.Play(settings);
+            play();
         }
         catch (Exception exception)
         {
-            RecordDiagnostic("model.ready.sound.failed", exception);
+            RecordDiagnostic("cue.failed", exception);
         }
     }
 
@@ -970,6 +988,8 @@ internal sealed class DictationApplication : IDisposable
                 break;
             case BubblePresentationKind.Finalizing:
                 bubble.ShowFinalizing();
+                if (activeModel.Style == RecognitionStyle.Offline)
+                    _ = AnnounceTranscribingWhenSlowAsync(version);
                 break;
             case BubblePresentationKind.Cancellation:
                 trayIcon.Icon = trayIcons.Ready;
@@ -987,6 +1007,17 @@ internal sealed class DictationApplication : IDisposable
                 _ = ReturnToReadyWhenCurrentAsync(version, cancellationRemaining > HideDelay ? cancellationRemaining : HideDelay);
                 break;
         }
+    }
+
+    // Quick dictations finish before this, so they stay silent.
+    internal static readonly TimeSpan TranscribingCueDelay = TimeSpan.FromMilliseconds(500);
+
+    private async Task AnnounceTranscribingWhenSlowAsync(int version)
+    {
+        await Task.Delay(TranscribingCueDelay);
+        // Never speak into the microphone of a dictation that started meanwhile.
+        if (version == presentationVersion && !shortcutHeld)
+            PlayCue(() => cues.Announce(SpokenCue.Transcribing, settings));
     }
 
     private static readonly TimeSpan HideDelay = TimeSpan.FromMilliseconds(700);

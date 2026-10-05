@@ -50,6 +50,7 @@ function Add-ReleaseNotices {
     Copy-ReleaseFile (Join-Path $VcpkgRoot 'installed\x64-windows\share\abseil\copyright') (Join-Path $licensesDirectory 'Abseil-APACHE-2.0.txt')
     Copy-ReleaseFile (Join-Path $VcpkgRoot 'installed\x64-windows\share\utf8-range\copyright') (Join-Path $licensesDirectory 'utf8-range-MIT.txt')
     Copy-ReleaseFile (Join-Path $naudioPackageRoot 'naudio\2.2.1\license.txt') (Join-Path $licensesDirectory 'NAudio-MIT.txt')
+    Copy-ReleaseFile (Join-Path $naudioPackageRoot 'system.speech\10.0.12\THIRD-PARTY-NOTICES.TXT') (Join-Path $licensesDirectory 'System.Speech-THIRD-PARTY-NOTICES.txt')
     Copy-ReleaseFile (Join-Path $dotnetRoot 'LICENSE.txt') (Join-Path $licensesDirectory 'dotnet-LICENSE.txt')
     Copy-ReleaseFile (Join-Path $dotnetRoot 'ThirdPartyNotices.txt') (Join-Path $licensesDirectory 'dotnet-THIRD-PARTY-NOTICES.txt')
 
@@ -68,6 +69,8 @@ shipped build:
 * SentencePiece and Abseil: Apache-2.0.
 * Protocol Buffers: BSD 3-Clause.
 * utf8-range and NAudio 2.2.1: MIT.
+* System.Speech 10.0.12 (part of .NET): MIT, as in dotnet-LICENSE.txt, with its
+  notices in System.Speech-THIRD-PARTY-NOTICES.txt.
 * Self-contained .NET runtime: .NET Library License and accompanying notices.
 
 PrivateType applies a Windows linker patch to the pinned NeMo-Speech.cpp source;

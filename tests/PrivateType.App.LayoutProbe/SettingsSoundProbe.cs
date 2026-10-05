@@ -65,7 +65,8 @@ internal static class SettingsSoundProbe
                 VerifySelectedLabel(sound);
             }
             Require(Find<TextBox>(window, "CustomSoundPathText").IsReadOnly, "The custom file display must be read-only.");
-            foreach (var name in new[] { "ReadySoundBox", "ReadyVolumeSlider", "BrowseSoundButton", "PreviewSoundButton", "SaveSettingsButton", "CancelSettingsButton" })
+            Require(Find<CheckBox>(window, "SpokenStatusCuesCheckBox").IsChecked == true, "Spoken status cues must start on by default.");
+            foreach (var name in new[] { "ReadySoundBox", "ReadyVolumeSlider", "SpokenStatusCuesCheckBox", "BrowseSoundButton", "PreviewSoundButton", "SaveSettingsButton", "CancelSettingsButton" })
                 VerifyAccessibleFocus(window, name);
 
             var volume = Find<Slider>(window, "ReadyVolumeSlider");
@@ -188,6 +189,7 @@ internal static class SettingsSoundProbe
                 ?? throw new InvalidOperationException("Custom sound save did not return preferences.");
             Require(selected.ReadySound == "custom" && selected.CustomReadySoundPath == soundPath && selected.ReadySoundVolume == 23,
                 "Save must return the chosen custom file and volume.");
+            Require(!selected.SpokenStatusCues, "Save must return the spoken status cue choice.");
             var importedPath = ReadySoundStorage.Import(selected.CustomReadySoundPath!, dataDirectory);
             Require(importedPath != soundPath && File.Exists(importedPath), "Saving a custom sound must create the managed audio copy.");
             var store = new PortableSettingsStore(dataDirectory);
@@ -273,6 +275,7 @@ internal static class SettingsSoundProbe
                 Require(Find<TextBlock>(window, "SoundStatusText").Text.Contains("muted", StringComparison.OrdinalIgnoreCase),
                     "Muted custom preview must report its silent outcome without opening audio hardware.");
                 volume.Value = 23;
+                Find<CheckBox>(window, "SpokenStatusCuesCheckBox").IsChecked = false;
                 Click(window, save ? "SaveSettingsButton" : "CancelSettingsButton");
                 Require(!window.IsVisible, "The custom sound dialog must close after Save or Cancel.");
             }

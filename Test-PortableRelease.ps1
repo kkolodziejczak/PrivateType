@@ -56,6 +56,7 @@ $noticeFiles = @(
     'licenses\Abseil-APACHE-2.0.txt',
     'licenses\utf8-range-MIT.txt',
     'licenses\NAudio-MIT.txt',
+    'licenses\System.Speech-THIRD-PARTY-NOTICES.txt',
     'licenses\dotnet-LICENSE.txt',
     'licenses\dotnet-THIRD-PARTY-NOTICES.txt'
 )

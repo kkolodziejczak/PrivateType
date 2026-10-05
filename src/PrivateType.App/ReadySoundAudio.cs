@@ -23,8 +23,14 @@ internal static class ReadySoundAudio
         {
             clip = ReadPing();
         }
+        return Scale(clip, settings.ReadySoundVolume);
+    }
+
+    // Normalizes the clip's peak, then applies the chosen volume, so every cue sounds equally loud.
+    internal static ReadySoundClip Scale(ReadySoundClip clip, int volume)
+    {
         var peak = clip.Samples.Max(sample => Math.Abs(sample));
-        var gain = peak > 0 ? 0.95f / peak * Math.Clamp(settings.ReadySoundVolume, 0, 100) / 100f : 0;
+        var gain = peak > 0 ? 0.95f / peak * Math.Clamp(volume, 0, 100) / 100f : 0;
         for (var index = 0; index < clip.Samples.Length; index++)
             clip.Samples[index] *= gain;
         return clip;
@@ -40,6 +46,12 @@ internal static class ReadySoundAudio
             throw new ArgumentException("Choose a WAV or MP3 sound file.");
         using var reader = new AudioFileReader(path);
         return ReadClip(reader);
+    }
+
+    internal static ReadySoundClip ReadWave(Stream wave)
+    {
+        using var reader = new WaveFileReader(wave);
+        return ReadClip(reader.ToSampleProvider());
     }
 
     private static ReadySoundClip ReadClip(ISampleProvider source)
@@ -68,10 +80,9 @@ internal static class ReadySoundAudio
 
     private static ReadySoundClip ReadPing()
     {
-        using var stream = typeof(ModelReadySound).Assembly.GetManifestResourceStream("PrivateType.ModelReady.wav")
+        using var stream = typeof(DictationCues).Assembly.GetManifestResourceStream("PrivateType.ModelReady.wav")
             ?? throw new InvalidOperationException("The model-ready sound is missing.");
-        using var reader = new WaveFileReader(stream);
-        return ReadClip(reader.ToSampleProvider());
+        return ReadWave(stream);
     }
 
     private static ReadySoundClip Synthesize(bool bell)
@@ -101,6 +112,9 @@ internal sealed class ReadySoundClip(WaveFormat waveFormat, float[] samples) : I
     private int position;
     public WaveFormat WaveFormat { get; } = waveFormat;
     internal float[] Samples { get; } = samples;
+
+    // Each playback reads its own copy; the position cannot be rewound.
+    internal ReadySoundClip Copy() => new(WaveFormat, (float[])Samples.Clone());
 
     public int Read(float[] buffer, int offset, int count)
     {

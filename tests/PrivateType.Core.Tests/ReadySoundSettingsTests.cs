@@ -36,6 +36,19 @@ public sealed class ReadySoundSettingsTests : IDisposable
         Assert.Equal("ping", result.Settings.ReadySound);
         Assert.Equal(80, result.Settings.ReadySoundVolume);
         Assert.Null(result.Settings.CustomReadySoundPath);
+        Assert.True(result.Settings.SpokenStatusCues);
+    }
+
+    [Fact]
+    public void Saving_and_loading_retains_turned_off_spoken_status_cues()
+    {
+        var store = new PortableSettingsStore(directory);
+
+        store.Save(PortableSettings.Default with { SpokenStatusCues = false });
+        var result = store.Load();
+
+        Assert.Null(result.Warning);
+        Assert.False(result.Settings.SpokenStatusCues);
     }
 
     [Theory]

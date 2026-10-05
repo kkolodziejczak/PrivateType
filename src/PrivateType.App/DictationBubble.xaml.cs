@@ -118,10 +118,13 @@ public partial class DictationBubble : Window
         TranscriptViewport.Visibility = Visibility.Collapsed;
     }
 
-    public void MoveToPointerScreen()
+    // Shows the bubble where the text will go: the monitor of the window being dictated into.
+    // The pointer's monitor is the fallback when no such window is active.
+    public void MoveToDictationScreen() => MoveToScreen(DictationScreen());
+
+    internal void MoveToScreen(Forms.Screen targetScreen)
     {
         var sourceScreen = CurrentScreen();
-        var targetScreen = Forms.Screen.FromPoint(Forms.Cursor.Position);
         var sourceWorkArea = WorkAreaFor(sourceScreen);
         var targetWorkArea = WorkAreaFor(targetScreen);
         var bubbleWidth = ActualWidth > 0 ? ActualWidth : Width;
@@ -129,6 +132,22 @@ public partial class DictationBubble : Window
         Left = MapCoordinateToWorkArea(Left, bubbleWidth, sourceWorkArea.Left, sourceWorkArea.Width, targetWorkArea.Left, targetWorkArea.Width);
         Top = MapCoordinateToWorkArea(Top, bubbleHeight, sourceWorkArea.Top, sourceWorkArea.Height, targetWorkArea.Top, targetWorkArea.Height);
     }
+
+    private static Forms.Screen DictationScreen()
+    {
+        var foreground = NativeMethods.GetForegroundWindow();
+        NativeMethods.GetWindowThreadProcessId(foreground, out var processId);
+        var className = new System.Text.StringBuilder(64);
+        NativeMethods.GetClassNameW(foreground, className, className.Capacity);
+        return FollowsForegroundWindow(foreground, processId, (uint)Environment.ProcessId, className.ToString())
+            ? Forms.Screen.FromHandle(foreground)
+            : Forms.Screen.FromPoint(Forms.Cursor.Position);
+    }
+
+    // The desktop spans every monitor and PrivateType's own windows are not dictation targets.
+    internal static bool FollowsForegroundWindow(nint foreground, uint processId, uint ownProcessId, string className) =>
+        foreground != nint.Zero && processId != 0 && processId != ownProcessId &&
+        className is not ("Progman" or "WorkerW");
 
     public void ShowRecording(string localeCode)
     {

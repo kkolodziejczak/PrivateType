@@ -10,6 +10,7 @@
       <AssemblyName>PrivateType</AssemblyName>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="System.Speech" Version="10.0.12" />
     <ProjectReference Include="..\PrivateType.Core\PrivateType.Core.csproj" />
     <PackageReference Include="NAudio" Version="2.2.1" />
   </ItemGroup>

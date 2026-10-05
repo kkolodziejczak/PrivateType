@@ -14,7 +14,7 @@ public partial class SettingsWindow : Window
         RecognitionLocaleCatalog.All.Select(locale => new LanguageOption(locale.Code, locale.DisplayName)).ToArray();
     private readonly ObservableCollection<ShortcutBindingEditor> bindings;
     private readonly PortableSettings originalSettings;
-    private readonly ModelReadySound soundPreview = new();
+    private readonly DictationCues soundPreview = new();
     private readonly VocabularyEditor vocabulary;
     private readonly ModelLibraryEditor models;
     private string? customSoundPath;
@@ -61,6 +61,7 @@ public partial class SettingsWindow : Window
         ReadySoundBox.ItemsSource = ReadySoundOption.Supported;
         ReadySoundBox.SelectedValue = settings.ReadySound;
         ReadyVolumeSlider.Value = settings.ReadySoundVolume;
+        SpokenStatusCuesCheckBox.IsChecked = settings.SpokenStatusCues;
         UpdateSoundControls();
         Closed += (_, _) =>
         {
@@ -471,7 +472,8 @@ public partial class SettingsWindow : Window
             CorrectAfterDictation = vocabulary.CorrectAfterDictation,
             ModelIdleTimeoutMinutes = IdleTimeoutBox.SelectedValue is int minutes ? minutes : 10,
             SpeechModel = models.SelectedId,
-            OfflinePreview = OfflinePreviewCheckBox.IsChecked == true
+            OfflinePreview = OfflinePreviewCheckBox.IsChecked == true,
+            SpokenStatusCues = SpokenStatusCuesCheckBox.IsChecked == true
         };
         var validationError = PortableSettingsValidator.Validate(settings);
         if (validationError is not null)
