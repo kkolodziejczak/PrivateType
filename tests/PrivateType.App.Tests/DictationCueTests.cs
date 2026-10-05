@@ -57,18 +57,18 @@ public sealed class DictationCueTests
     }
 
     [Fact]
-    public void A_long_dictation_hears_the_blip_then_transcribing()
+    public void A_long_dictation_hears_only_transcribing_after_the_same_delay()
     {
         var settings = PortableSettings.Default with { ReadySoundVolume = 100 };
-        var blip = ReleaseCue.Load(settings, sayTranscribing: false);
         var voice = SpokenCue.Load(SpokenCue.Transcribing, settings)!;
 
         var cue = ReleaseCue.Load(settings, sayTranscribing: true);
 
+        var delay = (int)(voice.WaveFormat.SampleRate * voice.WaveFormat.Channels * ReleaseCue.DelayAfterRelease.TotalSeconds);
         Assert.Equal(voice.WaveFormat, cue.WaveFormat);
-        Assert.True(cue.Samples.Length > voice.Samples.Length + blip.Samples.Length);
-        Assert.Equal(blip.Samples[..^1].TakeWhile(sample => sample == 0).Count(), cue.Samples.TakeWhile(sample => sample == 0).Count());
-        Assert.Equal(voice.Samples, cue.Samples[^voice.Samples.Length..]);
+        Assert.Equal(delay + voice.Samples.Length, cue.Samples.Length);
+        Assert.All(cue.Samples[..delay], sample => Assert.Equal(0, sample));
+        Assert.Equal(voice.Samples, cue.Samples[delay..]);
     }
 
     [Theory]
