@@ -55,7 +55,10 @@ When pasting, your clipboard is put back afterwards.
 is lost. Press **Win+Shift+V** to see recent dictations and paste one again.
 They are kept in memory only, until PrivateType exits by default.
 
-![Settings](docs/images/settings.png)
+![Settings](docs/images/settings-general-top.png)
+
+Every setting, with its default and when to change it, is explained in the
+[settings guide](docs/SETTINGS.md).
 
 ### Speech models
 
@@ -130,7 +133,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\Build-PortableRelease.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\Test-PortableRelease.ps1
 ```
 
-The README screenshots come from the layout probe (output in
+Screenshots in `docs/images` come from the layout probe (output in
 `%TEMP%\live-dictation-layout-probe`): `status-panel-recording.png`,
-`settings.png`, and `teach-one-fix.png`. Pass
-`-p:Version=<release>` so the window title shows the release version.
+`teach-one-fix.png` (as `teach-vocabulary.png`), and everything in its `docs`
+folder. Pass `-p:Version=<release>` so the window title shows the release
+version.
