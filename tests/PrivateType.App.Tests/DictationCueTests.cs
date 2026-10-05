@@ -35,7 +35,10 @@ public sealed class DictationCueTests
 
         Assert.InRange(loud.Samples.Max(Math.Abs), 0.9f, 0.96f);
         Assert.All(muted.Samples, sample => Assert.Equal(0, sample));
-        Assert.InRange(loud.Samples.Length / (double)(loud.WaveFormat.SampleRate * loud.WaveFormat.Channels), 0.5, 1.5);
+        var channels = loud.WaveFormat.Channels;
+        var leadingSilence = (int)(loud.WaveFormat.SampleRate * SpokenCue.LeadingSilence.TotalSeconds) * channels;
+        Assert.All(loud.Samples.Take(leadingSilence), sample => Assert.Equal(0, sample));
+        Assert.InRange(loud.Samples.Length / (double)(loud.WaveFormat.SampleRate * channels), 0.75, 1.75);
     }
 
     [Fact]
