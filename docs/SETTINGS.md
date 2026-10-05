@@ -252,6 +252,32 @@ Deleting one also removes it for those versions; they download it again when
 needed. For a fully portable copy, create an empty `app\models` folder in the
 PrivateType folder before its first start.
 
+## Keyboard shortcuts
+
+These work anywhere in Windows:
+
+| Shortcut | What it does | Change it |
+| --- | --- | --- |
+| `Ctrl+Shift+R` | Dictate in Polish | **General → Shortcuts** |
+| `Ctrl+Shift+E` | Dictate in English | **General → Shortcuts** |
+| `Win+Shift+V` | Open **Recent dictations** to paste one again, including one marked **Not inserted** | Fixed. Off when **Keep dictations** is **Don't keep** |
+
+In **Recent dictations**:
+
+| Key | What it does |
+| --- | --- |
+| `↑` / `↓` | Choose a dictation |
+| `Enter` | Paste it into the window you were in |
+| `Delete` | Remove it from the list |
+| `Esc` | Close the list |
+
+In **Teach from last dictation**:
+
+| Key | What it does |
+| --- | --- |
+| `Enter` (in the spelling box) | Add the fix |
+| `Esc` | Clear the selected words; press again to close |
+
 ## Other buttons
 
 - **Licenses…** shows the open-source notices.

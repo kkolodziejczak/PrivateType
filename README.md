@@ -36,13 +36,15 @@ Releases are unsigned, so download them only from this repository.
 
 ## Use it
 
-| Shortcut | Language |
+| Shortcut | What it does |
 | --- | --- |
-| `Ctrl+Shift+R` | Polish |
-| `Ctrl+Shift+E` | English |
+| `Ctrl+Shift+R` | Dictate in Polish |
+| `Ctrl+Shift+E` | Dictate in English |
+| `Win+Shift+V` | Paste a recent dictation, including one that wasn't inserted |
 
-Hold the shortcut while you speak, then release it to insert the text. A short
-ping means PrivateType is listening. In **Settings → Shortcuts** you can:
+Hold a dictation shortcut while you speak, then release it to insert the text.
+A short ping means PrivateType is listening. In **Settings → Shortcuts** you
+can:
 
 - add more shortcuts, each with one of 32 languages or Automatic,
 - switch to **Press to start and stop** if you'd rather not hold the keys,
@@ -51,9 +53,14 @@ ping means PrivateType is listening. In **Settings → Shortcuts** you can:
 
 When pasting, your clipboard is put back afterwards.
 
-**Missed a dictation?** If you switch windows before the text arrives, nothing
-is lost. Press **Win+Shift+V** to see recent dictations and paste one again.
-They are kept in memory only, until PrivateType exits by default.
+**Text not inserted?** If you switch windows before the text arrives, or the
+app doesn't accept typing, the bubble says the text wasn't inserted. Nothing is
+lost: press **Win+Shift+V**, and the dictation is in the list (newest first),
+marked **Not inserted**. Press Enter to paste it into the window you're in now.
+Dictations are kept in memory only, until PrivateType exits by default.
+
+All shortcuts, including the keys inside PrivateType's windows, are listed in
+the [settings guide](docs/SETTINGS.md#keyboard-shortcuts).
 
 ![Settings](docs/images/settings-general-top.png)
 
