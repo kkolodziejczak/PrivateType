@@ -106,7 +106,8 @@ static void RenderWindows(bool monitorPlacementOnly)
     recordingPanel.ShowReady(PortableSettings.Default, modelLoaded: true);
     recordingPanel.ShowRecording("en-US");
     recordingPanel.ShowAudioMeter(new AudioMeter(0.72, Enumerable.Range(0, 44).Select(index => index is > 15 and < 28 ? 0.95 : 0.24).ToArray()));
-    recordingPanel.ShowTranscript("First transcript line with enough realistic words to wrap.\nSecond transcript line.\nThird transcript line.\nFourth transcript line stays latest.");
+    // Sample text doubles as the README screenshot; the first line must scroll out of view.
+    recordingPanel.ShowTranscript("Quick update on the release before the weekend.\nThe installer is ready and the notes are written.\nI will send the download link to the team today\nand check the feedback on Monday morning.");
     Render(recordingPanel, Path.Combine(outputDirectory, "status-panel-recording.png"));
 
     var quietRecordingPanel = new DictationBubble();
