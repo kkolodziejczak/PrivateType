@@ -66,6 +66,7 @@ internal sealed class FakeRecognizer : IStreamingRecognizer
     public TaskCompletionSource PushStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
     public TaskCompletionSource CompleteStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
     public TaskCompletionSource? CompleteGate { get; set; }
+    public TimeSpan CompletionDelay { get; set; }
     public Exception? StartFailure { get; set; }
     private int activePushes;
 
@@ -101,6 +102,8 @@ internal sealed class FakeRecognizer : IStreamingRecognizer
         CompleteStarted.TrySetResult();
         if (CompleteGate is not null)
             await CompleteGate.Task.WaitAsync(cancellationToken);
+        if (CompletionDelay > TimeSpan.Zero)
+            await Task.Delay(CompletionDelay, cancellationToken);
 
         foreach (var update in CompletionUpdates)
             updates.Writer.TryWrite(update);
