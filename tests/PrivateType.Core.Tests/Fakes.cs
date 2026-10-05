@@ -61,6 +61,8 @@ internal sealed class FakeRecognizer : IStreamingRecognizer
     public bool Disposed { get; private set; }
     public TaskCompletionSource DisposedSignal { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
     public int MaximumConcurrentPushes { get; private set; }
+    public long ReceivedPcmBytes => Interlocked.Read(ref receivedPcmBytes);
+    private long receivedPcmBytes;
     public TaskCompletionSource PushStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
     public TaskCompletionSource CompleteStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
     public TaskCompletionSource? CompleteGate { get; set; }
@@ -79,6 +81,7 @@ internal sealed class FakeRecognizer : IStreamingRecognizer
 
     public async Task PushPcmAsync(ReadOnlyMemory<byte> pcm16KhzMono, CancellationToken cancellationToken)
     {
+        Interlocked.Add(ref receivedPcmBytes, pcm16KhzMono.Length);
         var concurrent = Interlocked.Increment(ref activePushes);
         MaximumConcurrentPushes = Math.Max(MaximumConcurrentPushes, concurrent);
         PushStarted.TrySetResult();

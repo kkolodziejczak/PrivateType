@@ -12,6 +12,7 @@ internal sealed class DictationApplication : IDisposable
 {
     private readonly EngineHost engine = new();
     private readonly DictationCues cues = new();
+    private TranscriptionTimeForecast transcriptionForecast = new();
     private readonly EngineLoadCoordinator engineLoads;
     private readonly HoldHotkeyHook hotkey = new();
     private readonly DictationBubble bubble = new();
@@ -44,6 +45,9 @@ internal sealed class DictationApplication : IDisposable
     private string? modelPath;
     private long heldGeneration;
     private bool shortcutHeld;
+    // Makes "is a new dictation held?" and "start the release cue" one step, so a cue is either
+    // stopped by the next hold before its microphone starts or never started at all.
+    private readonly object releaseCueGate = new();
     private int presentationVersion;
     private bool disposed;
 
@@ -399,6 +403,7 @@ internal sealed class DictationApplication : IDisposable
         }
 
         activeModel = model;
+        transcriptionForecast = new TranscriptionTimeForecast();
         modelPath = provisioner.ModelPath;
         modelIdleTimer.Stop();
         // A dictation in progress keeps the old engine; the next shortcut loads the new model.
@@ -699,6 +704,12 @@ internal sealed class DictationApplication : IDisposable
                 : null,
             keptTextHint: history.IsEnabled ? KeptTextHint : null);
         session.PresentationChanged += presentation => Present(localeCode, presentation);
+        if (activeModel.Style == RecognitionStyle.Offline)
+        {
+            var forecast = transcriptionForecast;
+            session.FinalizingStarted += recorded => AnnounceTranscribingIfLong(forecast, recorded);
+            session.FinalizingCompleted += forecast.Learn;
+        }
         session.AudioMeterChanged += PresentAudioMeter;
         // Keep the result only if no newer dictation has started since this one.
         session.Finalized += result => Wpf.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
@@ -710,6 +721,27 @@ internal sealed class DictationApplication : IDisposable
                 lastDictation.Replace(result);
         }));
         return session;
+    }
+
+    // Runs on the session's thread the moment the shortcut is released, so the cue is immediate.
+    // Short dictations are inserted almost at once and stay silent.
+    private void AnnounceTranscribingIfLong(TranscriptionTimeForecast forecast, TimeSpan recorded)
+    {
+        // Never speak into the microphone of a dictation that started meanwhile. A hold that begins
+        // after this check stops the cue before its own microphone starts.
+        bool announced;
+        lock (releaseCueGate)
+        {
+            announced = forecast.IsWorthAnnouncing(recorded) && !shortcutHeld;
+            if (announced)
+                PlayCue(() => cues.Announce(SpokenCue.Transcribing, settings));
+        }
+        RecordDiagnostic("cue.transcribing", details:
+        [
+            ("recordedSeconds", Math.Round(recorded.TotalSeconds, 1)),
+            ("predictedSeconds", Math.Round(forecast.Predict(recorded).TotalSeconds, 1)),
+            ("announced", announced)
+        ]);
     }
 
     internal const string KeptTextHint = $"Press {HistoryShortcut.Label} to paste it.";
@@ -827,13 +859,15 @@ internal sealed class DictationApplication : IDisposable
         // Discard the previous sentence before anything else happens for the new dictation.
         lastDictation.Clear();
         Interlocked.Increment(ref dictationSequence);
-        shortcutHeld = true;
+        lock (releaseCueGate)
+            shortcutHeld = true;
         var generation = ++heldGeneration;
         modelIdleTimer.Stop();
         // In toggle mode the key is up while dictating, so only hold mode needs the watchdog.
         if (!hotkey.ToggleMode)
             heldKeyWatchdog.Start();
         bubble.MoveToDictationScreen();
+        PlayCue(cues.KeepOutputAwake);
         if (!engineLoads.IsLoaded)
         {
             bubble.ShowModelLoading(hotkey.ToggleMode);
@@ -908,12 +942,21 @@ internal sealed class DictationApplication : IDisposable
     private async Task EndDictationAsync()
     {
         shortcutHeld = false;
-        heldGeneration++;
+        var generation = ++heldGeneration;
         heldKeyWatchdog.Stop();
         await sessions.ReleaseAsync();
         if (!engineLoads.IsLoaded)
             ShowReadyPanel();
         ScheduleModelUnload();
+        await LetOutputSleepWhenQuietAsync(generation);
+    }
+
+    // The released dictation is inserted by now; leave time for its cue to finish playing.
+    private async Task LetOutputSleepWhenQuietAsync(long generation)
+    {
+        await Task.Delay(TimeSpan.FromSeconds(3));
+        if (!shortcutHeld && generation == heldGeneration)
+            PlayCue(cues.LetOutputSleep);
     }
 
     private void ReleaseShortcutIfKeyIsUp(object? sender, EventArgs e)
@@ -975,8 +1018,6 @@ internal sealed class DictationApplication : IDisposable
                 break;
             case BubblePresentationKind.Finalizing:
                 bubble.ShowFinalizing();
-                if (activeModel.Style == RecognitionStyle.Offline)
-                    _ = AnnounceTranscribingWhenSlowAsync(version);
                 break;
             case BubblePresentationKind.Cancellation:
                 trayIcon.Icon = trayIcons.Ready;
@@ -994,17 +1035,6 @@ internal sealed class DictationApplication : IDisposable
                 _ = ReturnToReadyWhenCurrentAsync(version, cancellationRemaining > HideDelay ? cancellationRemaining : HideDelay);
                 break;
         }
-    }
-
-    // Quick dictations finish before this, so they stay silent.
-    internal static readonly TimeSpan TranscribingCueDelay = TimeSpan.FromMilliseconds(500);
-
-    private async Task AnnounceTranscribingWhenSlowAsync(int version)
-    {
-        await Task.Delay(TranscribingCueDelay);
-        // Never speak into the microphone of a dictation that started meanwhile.
-        if (version == presentationVersion && !shortcutHeld)
-            PlayCue(() => cues.Announce(SpokenCue.Transcribing, settings));
     }
 
     private static readonly TimeSpan HideDelay = TimeSpan.FromMilliseconds(700);

@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Threading.Channels;
 
 namespace PrivateType.Core;
@@ -29,6 +30,7 @@ public sealed class DictationSession : IAsyncDisposable
     private Task? updatePump;
     private Exception? failure;
     private double audioLevel;
+    private long recordedBytes;
     private bool started;
     private bool cleanedUp;
     private string phase = "created";
@@ -64,6 +66,17 @@ public sealed class DictationSession : IAsyncDisposable
     // Raised once with the recognized text, whether or not insertion succeeds. The quick-teach
     // buffer and the in-memory dictation history consume it; the session itself keeps no transcript.
     public event Action<FinalizedDictation>? Finalized;
+
+    // Raised once, the moment the shortcut is released: the microphone is no longer recorded, so a
+    // sound played from here cannot reach the dictation. Carries how long the user spoke.
+    public event Action<TimeSpan>? FinalizingStarted;
+
+    // Raised after a successful finalization with how long the user spoke and how long the text took.
+    public event Action<TimeSpan, TimeSpan>? FinalizingCompleted;
+
+    internal const int PcmBytesPerSecond = 16_000 * sizeof(short);
+
+    public TimeSpan RecordedDuration => TimeSpan.FromSeconds(Interlocked.Read(ref recordedBytes) / (double)PcmBytesPerSecond);
 
     public Task StartAsync(CancellationToken cancellationToken = default)
     {
@@ -108,9 +121,14 @@ public sealed class DictationSession : IAsyncDisposable
         if (!started || cleanedUp)
             return;
 
-        if (State == DictationState.Recording)
+        var finalizing = State == DictationState.Recording;
+        if (finalizing)
+        {
             Publish(DictationState.Finalizing);
+            FinalizingStarted?.Invoke(RecordedDuration);
+        }
 
+        var finalizingSince = Stopwatch.GetTimestamp();
         try
         {
             var deadline = DateTimeOffset.UtcNow + finalizationTimeout;
@@ -139,6 +157,8 @@ public sealed class DictationSession : IAsyncDisposable
         finally
         {
             await CleanupAsync();
+            if (finalizing && failure is null)
+                FinalizingCompleted?.Invoke(RecordedDuration, Stopwatch.GetElapsedTime(finalizingSince));
             Publish(failure is null ? DictationState.Ready : DictationState.Error, failure?.Message);
         }
     }
@@ -236,6 +256,7 @@ public sealed class DictationSession : IAsyncDisposable
         if (!ShouldQueuePcm(State))
             return;
 
+        Interlocked.Add(ref recordedBytes, pcm.Length);
         var meter = AudioSpectrumAnalyzer.Analyze(pcm.Span);
         Volatile.Write(ref audioLevel, meter.Level);
         AudioMeterChanged?.Invoke(meter);

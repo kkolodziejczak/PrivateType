@@ -102,8 +102,10 @@ you no longer need. The model in use cannot be deleted; switch first.
 | Download | About 708 MiB, OpenMDW-1.1 | About 681 MiB, CC-BY-4.0 |
 
 Parakeet writes the final text in one pass after you release the shortcut; the
-bubble shows **Transcribing…** until it is inserted, and PrivateType says
-"Transcribing" when that takes longer than half a second. A minute of speech takes a
+bubble shows **Transcribing…** until it is inserted. When you release the
+shortcut after a dictation long enough to take a second or more, PrivateType says
+"Transcribing" straight away; it learns your computer's speed from each dictation,
+in memory only. A minute of speech takes a
 few seconds on the recorded test machine. **Show a live preview with Parakeet**
 (on by default, in **Settings → Model**) re-transcribes what you have said so far
 about once a second, so you can stop and correct yourself early; it uses more

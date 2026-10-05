@@ -396,6 +396,47 @@ public sealed class DictationSessionTests
         Assert.False(coordinator.IsRecording);
     }
 
+    [Fact]
+    public async Task Reports_how_long_the_user_spoke_once_when_released_and_again_when_finished()
+    {
+        var capture = new FakeCapture();
+        await using var session = CreateSession(capture, new FakeRecognizer(), new FakeForegroundTarget(TargetEligibility.Eligible), new FakeInjector());
+        var started = new List<(TimeSpan Recorded, DictationState State)>();
+        var completed = new List<(TimeSpan Recorded, TimeSpan Took)>();
+        session.FinalizingStarted += recorded => started.Add((recorded, session.State));
+        session.FinalizingCompleted += (recorded, took) => completed.Add((recorded, took));
+
+        await session.StartAsync();
+        await capture.EmitAsync(new byte[DictationSession.PcmBytesPerSecond]);
+        await capture.EmitAsync(new byte[DictationSession.PcmBytesPerSecond / 2]);
+        await session.StopAsync();
+        await session.StopAsync();
+
+        var release = Assert.Single(started);
+        Assert.Equal(TimeSpan.FromSeconds(1.5), release.Recorded);
+        Assert.Equal(DictationState.Finalizing, release.State);
+        var finish = Assert.Single(completed);
+        Assert.Equal(TimeSpan.FromSeconds(1.5), finish.Recorded);
+        Assert.True(finish.Took >= TimeSpan.Zero);
+    }
+
+    [Fact]
+    public async Task Audio_captured_after_release_never_reaches_the_dictation()
+    {
+        var capture = new FakeCapture();
+        var recognizer = new FakeRecognizer();
+        await using var session = CreateSession(capture, recognizer, new FakeForegroundTarget(TargetEligibility.Eligible), new FakeInjector());
+        // The microphone is still subscribed here: this is where a release cue starts playing.
+        session.FinalizingStarted += _ => capture.EmitAsync(new byte[DictationSession.PcmBytesPerSecond]).GetAwaiter().GetResult();
+
+        await session.StartAsync();
+        await capture.EmitAsync(new byte[DictationSession.PcmBytesPerSecond]);
+        await session.StopAsync();
+
+        Assert.Equal(TimeSpan.FromSeconds(1), session.RecordedDuration);
+        Assert.Equal(DictationSession.PcmBytesPerSecond, recognizer.ReceivedPcmBytes);
+    }
+
     private static DictationSession CreateSession(
         FakeCapture capture,
         FakeRecognizer recognizer,

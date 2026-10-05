@@ -36,6 +36,7 @@ public interface IStreamingRecognizer : IAsyncDisposable
     IAsyncEnumerable<TranscriptUpdate> ReadUpdatesAsync(CancellationToken cancellationToken);
 }
 
+// Delivers 16 kHz, 16-bit mono PCM.
 public interface IAudioCapture : IAsyncDisposable
 {
     event Func<ReadOnlyMemory<byte>, ValueTask>? PcmAvailable;

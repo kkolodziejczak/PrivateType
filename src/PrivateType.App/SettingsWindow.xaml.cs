@@ -64,6 +64,14 @@ public partial class SettingsWindow : Window
         SpokenCueVoiceBox.ItemsSource = ChoiceOption.SpokenCueVoices;
         SpokenCueVoiceBox.SelectedValue = settings.SpokenCueVoice;
         UpdateSoundControls();
+        // Previews start from their first syllable, as they do while dictating.
+        try
+        {
+            soundPreview.KeepOutputAwake();
+        }
+        catch (Exception)
+        {
+        }
         Closed += (_, _) =>
         {
             models.CancelAll();
