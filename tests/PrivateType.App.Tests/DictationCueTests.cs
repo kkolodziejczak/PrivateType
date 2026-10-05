@@ -49,8 +49,10 @@ public sealed class DictationCueTests
     {
         var blip = ReleaseCue.Load(PortableSettings.Default with { ReadySoundVolume = 100 }, sayTranscribing: false);
 
-        var seconds = blip.Samples.Length / (double)(blip.WaveFormat.SampleRate * blip.WaveFormat.Channels);
-        Assert.InRange(seconds, 0.05, 0.1);
+        var rate = blip.WaveFormat.SampleRate * blip.WaveFormat.Channels;
+        var delay = (int)(rate * ReleaseCue.DelayAfterRelease.TotalSeconds);
+        Assert.All(blip.Samples[..delay], sample => Assert.Equal(0, sample));
+        Assert.InRange((blip.Samples.Length - delay) / (double)rate, 0.05, 0.1);
         Assert.InRange(blip.Samples.Max(Math.Abs), 0.4f, 0.5f);
     }
 
@@ -65,6 +67,7 @@ public sealed class DictationCueTests
 
         Assert.Equal(voice.WaveFormat, cue.WaveFormat);
         Assert.True(cue.Samples.Length > voice.Samples.Length + blip.Samples.Length);
+        Assert.Equal(blip.Samples[..^1].TakeWhile(sample => sample == 0).Count(), cue.Samples.TakeWhile(sample => sample == 0).Count());
         Assert.Equal(voice.Samples, cue.Samples[^voice.Samples.Length..]);
     }
 
@@ -75,7 +78,7 @@ public sealed class DictationCueTests
     {
         var cue = ReleaseCue.Load(PortableSettings.Default with { SpokenCueVoice = voice, ReadySoundVolume = volume }, sayTranscribing: true);
 
-        Assert.True(cue.Samples.Length / (double)cue.WaveFormat.SampleRate < 0.1 || silent);
+        Assert.True(cue.Samples.Length / (double)cue.WaveFormat.SampleRate < ReleaseCue.DelayAfterRelease.TotalSeconds + 0.1 || silent);
         Assert.Equal(silent, cue.Samples.All(sample => sample == 0));
     }
 }

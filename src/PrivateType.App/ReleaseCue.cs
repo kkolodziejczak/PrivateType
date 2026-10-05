@@ -11,6 +11,9 @@ internal static class ReleaseCue
     // Quieter than the ready sound: it confirms an action rather than asking for attention.
     internal const double BlipLoudness = 0.5;
     internal static readonly TimeSpan BlipLength = TimeSpan.FromMilliseconds(70);
+    // People release the shortcut while finishing their last word; a blip at that instant talks
+    // over their own voice. The clip starts with this silence instead.
+    internal static readonly TimeSpan DelayAfterRelease = TimeSpan.FromMilliseconds(300);
     private static readonly TimeSpan PauseBeforeVoice = TimeSpan.FromMilliseconds(120);
     private static readonly WaveFormat BlipOnlyFormat = WaveFormat.CreateIeeeFloatWaveFormat(24_000, 1);
 
@@ -19,13 +22,11 @@ internal static class ReleaseCue
         var voice = sayTranscribing ? SpokenCue.Load(SpokenCue.Transcribing, settings) : null;
         var format = voice?.WaveFormat ?? BlipOnlyFormat;
         var blip = ReadySoundAudio.Scale(Blip(format), (int)Math.Round(settings.ReadySoundVolume * BlipLoudness));
-        if (voice is null)
-            return blip;
-
-        var pause = (int)(format.SampleRate * PauseBeforeVoice.TotalSeconds) * format.Channels;
-        var samples = new float[blip.Samples.Length + pause + voice.Samples.Length];
-        blip.Samples.CopyTo(samples, 0);
-        voice.Samples.CopyTo(samples, blip.Samples.Length + pause);
+        var delay = Frames(format, DelayAfterRelease);
+        var pause = voice is null ? 0 : Frames(format, PauseBeforeVoice);
+        var samples = new float[delay + blip.Samples.Length + pause + (voice?.Samples.Length ?? 0)];
+        blip.Samples.CopyTo(samples, delay);
+        voice?.Samples.CopyTo(samples, delay + blip.Samples.Length + pause);
         return new ReadySoundClip(format, samples);
     }
 
@@ -46,4 +47,7 @@ internal static class ReleaseCue
         }
         return new ReadySoundClip(format, samples);
     }
+
+    private static int Frames(WaveFormat format, TimeSpan length) =>
+        (int)(format.SampleRate * length.TotalSeconds) * format.Channels;
 }
