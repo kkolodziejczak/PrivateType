@@ -20,4 +20,25 @@ public sealed class LocalDiagnosticsLogTests
         log.Clear();
         Assert.Empty(log.Snapshot());
     }
+
+    [Fact]
+    public void Keeps_the_timings_behind_the_transcribing_cue()
+    {
+        var log = new InMemoryDiagnostics();
+        log.Record(new DictationDiagnostic("application", DateTimeOffset.UtcNow, "cue.transcribing", new Dictionary<string, string>
+        {
+            ["recordedSeconds"] = "21.4",
+            ["predictedSeconds"] = "1.7",
+            ["announced"] = "True"
+        }));
+        log.Record(new DictationDiagnostic("application", DateTimeOffset.UtcNow, "transcription.timed", new Dictionary<string, string>
+        {
+            ["recordedSeconds"] = "21.4",
+            ["tookSeconds"] = "1.78"
+        }));
+
+        var entries = log.Snapshot();
+        Assert.Equal(["recordedSeconds", "tookSeconds"], entries[0].Details.Keys.Order());
+        Assert.Equal(["announced", "predictedSeconds", "recordedSeconds"], entries[1].Details.Keys.Order());
+    }
 }

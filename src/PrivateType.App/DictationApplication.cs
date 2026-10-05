@@ -708,7 +708,7 @@ internal sealed class DictationApplication : IDisposable
         {
             var forecast = transcriptionForecast;
             session.FinalizingStarted += recorded => AnnounceTranscribingIfLong(forecast, recorded);
-            session.FinalizingCompleted += forecast.Learn;
+            session.FinalizingCompleted += (recorded, took) => LearnTranscriptionTime(forecast, recorded, took);
         }
         session.AudioMeterChanged += PresentAudioMeter;
         // Keep the result only if no newer dictation has started since this one.
@@ -741,6 +741,16 @@ internal sealed class DictationApplication : IDisposable
             ("recordedSeconds", Math.Round(recorded.TotalSeconds, 1)),
             ("predictedSeconds", Math.Round(forecast.Predict(recorded).TotalSeconds, 1)),
             ("announced", announced)
+        ]);
+    }
+
+    private void LearnTranscriptionTime(TranscriptionTimeForecast forecast, TimeSpan recorded, TimeSpan took)
+    {
+        forecast.Learn(recorded, took);
+        RecordDiagnostic("transcription.timed", details:
+        [
+            ("recordedSeconds", Math.Round(recorded.TotalSeconds, 1)),
+            ("tookSeconds", Math.Round(took.TotalSeconds, 2))
         ]);
     }
 
