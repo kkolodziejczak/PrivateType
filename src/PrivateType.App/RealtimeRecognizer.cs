@@ -6,7 +6,7 @@ using PrivateType.Core;
 
 namespace PrivateType.App;
 
-internal sealed class RealtimeRecognizer(Uri endpoint) : IStreamingRecognizer
+internal sealed class RealtimeRecognizer(Func<Task<Uri>> engineEndpoint) : IStreamingRecognizer
 {
     private readonly ClientWebSocket socket = new();
     private readonly TaskCompletionSource completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -18,7 +18,7 @@ internal sealed class RealtimeRecognizer(Uri endpoint) : IStreamingRecognizer
     public async Task StartAsync(RecognitionRequest request, CancellationToken cancellationToken)
     {
         var update = SessionUpdate(request);
-        await socket.ConnectAsync(endpoint, cancellationToken);
+        await socket.ConnectAsync(await engineEndpoint(), cancellationToken);
         await SendTextAsync(update, cancellationToken);
     }
 

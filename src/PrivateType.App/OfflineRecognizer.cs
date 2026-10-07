@@ -11,8 +11,14 @@ namespace PrivateType.App;
 // transcribed in one request when the shortcut is released. Nothing is written to disk.
 // With a preview interval, the audio so far is also re-transcribed while the shortcut is
 // held and shown as provisional text, one request at a time, so mistakes show up early.
-internal sealed class OfflineRecognizer(Uri endpoint, TimeSpan? previewInterval = null) : IStreamingRecognizer
+// The engine cannot abandon a request, so a long preview still running at release would hold up
+// the final pass; restartEngine then swaps it for a fresh engine. engineEndpoint is asked before
+// every request, so it always reaches the engine that is running now.
+internal sealed class OfflineRecognizer(Func<Task<Uri>> engineEndpoint, TimeSpan? previewInterval = null, Func<Task>? restartEngine = null) : IStreamingRecognizer
 {
+    // Reloading the model takes about a second and a half, so a preview that finishes within a
+    // second is cheaper to wait for than a restart.
+    internal static readonly TimeSpan PreviewFinishGrace = TimeSpan.FromSeconds(1);
     private const int SampleRate = 16000;
     // Preview only once there is at least half a second of new speech to add.
     private const long MinimumNewPreviewBytes = SampleRate;
@@ -23,6 +29,7 @@ internal sealed class OfflineRecognizer(Uri endpoint, TimeSpan? previewInterval 
     private readonly Channel<TranscriptUpdate> updates = Channel.CreateUnbounded<TranscriptUpdate>(new UnboundedChannelOptions { SingleReader = true });
     private readonly CancellationTokenSource previewStop = new();
     private Task previewLoop = Task.CompletedTask;
+    private Task<string?> previewRequest = Task.FromResult<string?>(null);
     private long pcmBytes;
 
     // The model detects the language itself and has no vocabulary boosting, so the request
@@ -49,7 +56,7 @@ internal sealed class OfflineRecognizer(Uri endpoint, TimeSpan? previewInterval 
         try
         {
             await StopPreviewAsync();
-            var text = BufferedBytes == 0 ? string.Empty : await TranscribeAsync(cancellationToken);
+            var text = BufferedBytes == 0 ? string.Empty : await TranscribeFinalAsync(cancellationToken);
             updates.Writer.TryWrite(new TranscriptUpdate(text, true, "completed-0"));
             updates.Writer.TryComplete();
         }
@@ -92,7 +99,13 @@ internal sealed class OfflineRecognizer(Uri endpoint, TimeSpan? previewInterval 
                 if (bytes - previewedBytes < MinimumNewPreviewBytes)
                     continue;
 
-                var text = await TranscribeAsync(cancellationToken);
+                // Release stops waiting for the preview but leaves the request running, so the
+                // final pass can tell whether the engine is still busy with it.
+                previewRequest = PreviewTranscriptAsync();
+                var text = await previewRequest.WaitAsync(cancellationToken);
+                if (text is null)
+                    continue;
+
                 previewedBytes = bytes;
                 if (!cancellationToken.IsCancellationRequested)
                     updates.Writer.TryWrite(new TranscriptUpdate(text, false));
@@ -101,9 +114,18 @@ internal sealed class OfflineRecognizer(Uri endpoint, TimeSpan? previewInterval 
             {
                 return;
             }
-            catch (Exception exception) when (exception is HttpRequestException or InvalidOperationException or InvalidDataException or JsonException)
-            {
-            }
+        }
+    }
+
+    private async Task<string?> PreviewTranscriptAsync()
+    {
+        try
+        {
+            return await TranscribeAsync(CancellationToken.None);
+        }
+        catch (Exception exception) when (exception is HttpRequestException or InvalidOperationException or InvalidDataException or JsonException or OperationCanceledException)
+        {
+            return null;
         }
     }
 
@@ -111,6 +133,15 @@ internal sealed class OfflineRecognizer(Uri endpoint, TimeSpan? previewInterval 
     {
         previewStop.Cancel();
         await previewLoop;
+    }
+
+    private async Task<string> TranscribeFinalAsync(CancellationToken cancellationToken)
+    {
+        var preview = previewRequest;
+        if (restartEngine is not null && !preview.IsCompleted &&
+            await Task.WhenAny(preview, Task.Delay(PreviewFinishGrace)) != preview)
+            await restartEngine();
+        return await TranscribeAsync(cancellationToken);
     }
 
     private async Task<string> TranscribeAsync(CancellationToken cancellationToken)
@@ -127,7 +158,7 @@ internal sealed class OfflineRecognizer(Uri endpoint, TimeSpan? previewInterval 
             content.Add(new StringContent("json"), "response_format");
             content.Add(new StringContent("true"), "automatic_punctuation");
 
-            using var response = await client.PostAsync(endpoint, content, cancellationToken);
+            using var response = await client.PostAsync(await engineEndpoint(), content, cancellationToken);
             var body = await response.Content.ReadAsStringAsync(cancellationToken);
             if (!response.IsSuccessStatusCode)
                 throw new InvalidOperationException($"The local ASR server reported HTTP {(int)response.StatusCode}.");

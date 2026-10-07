@@ -18,6 +18,8 @@
   <SolidColorBrush x:Key="ColorAccent900" Color="#1C3148" />
   <SolidColorBrush x:Key="ColorDanger" Color="#C86472" />
   <SolidColorBrush x:Key="ColorDangerSurface" Color="#48232C" />
+  <SolidColorBrush x:Key="ColorSuccess" Color="#6CC28A" />
+  <SolidColorBrush x:Key="ColorWarning" Color="#E3A948" />
 
   <Style TargetType="Button">
     <Setter Property="Foreground" Value="{DynamicResource ColorText}" />

@@ -50,7 +50,7 @@ public sealed class OfflineRecognizerTests
     public async Task Posts_the_whole_hold_once_on_completion_and_yields_one_committed_update()
     {
         using var server = new OneShotServer("""{"text":"Hello world."}""");
-        await using var recognizer = new OfflineRecognizer(server.Endpoint);
+        await using var recognizer = new OfflineRecognizer(At(server.Endpoint));
         await recognizer.StartAsync(RecognitionRequest.WithoutVocabulary("en-US"), CancellationToken.None);
         var updates = CollectAsync(recognizer);
 
@@ -72,7 +72,7 @@ public sealed class OfflineRecognizerTests
     [Fact]
     public async Task Skips_the_request_for_an_empty_hold()
     {
-        await using var recognizer = new OfflineRecognizer(new Uri("http://127.0.0.1:9/v1/audio/transcriptions"));
+        await using var recognizer = new OfflineRecognizer(At(new Uri("http://127.0.0.1:9/v1/audio/transcriptions")));
         var updates = CollectAsync(recognizer);
 
         await recognizer.CompleteAsync(CancellationToken.None);
@@ -84,7 +84,7 @@ public sealed class OfflineRecognizerTests
     public async Task Surfaces_an_engine_error_to_both_completion_and_updates()
     {
         using var server = new OneShotServer("""{"error":{"message":"bad"}}""", status: "400 Bad Request");
-        await using var recognizer = new OfflineRecognizer(server.Endpoint);
+        await using var recognizer = new OfflineRecognizer(At(server.Endpoint));
         var updates = CollectAsync(recognizer);
         await recognizer.PushPcmAsync(new byte[] { 1, 2 }, CancellationToken.None);
 
@@ -96,7 +96,7 @@ public sealed class OfflineRecognizerTests
     public async Task Previews_the_audio_so_far_while_held_then_commits_one_final_pass()
     {
         using var server = new CountingServer();
-        await using var recognizer = new OfflineRecognizer(server.Endpoint, TimeSpan.FromMilliseconds(20));
+        await using var recognizer = new OfflineRecognizer(At(server.Endpoint), TimeSpan.FromMilliseconds(20));
         await recognizer.StartAsync(RecognitionRequest.WithoutVocabulary("pl-PL"), CancellationToken.None);
         var received = new List<TranscriptUpdate>();
         var twoPreviews = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -130,7 +130,7 @@ public sealed class OfflineRecognizerTests
     public async Task Skips_previews_until_half_a_second_of_new_audio_arrives()
     {
         using var server = new CountingServer();
-        await using var recognizer = new OfflineRecognizer(server.Endpoint, TimeSpan.FromMilliseconds(10));
+        await using var recognizer = new OfflineRecognizer(At(server.Endpoint), TimeSpan.FromMilliseconds(10));
         await recognizer.StartAsync(RecognitionRequest.WithoutVocabulary("pl-PL"), CancellationToken.None);
         var updates = CollectAsync(recognizer);
 
@@ -142,6 +142,58 @@ public sealed class OfflineRecognizerTests
         Assert.True(Assert.Single(await updates).IsCommitted);
         Assert.Equal(1, server.Count);
     }
+
+    [Fact]
+    public async Task Restarts_an_engine_still_busy_with_a_preview_and_sends_the_final_pass_to_the_new_one()
+    {
+        using var busy = new CountingServer(holdAnswers: new TaskCompletionSource().Task);
+        using var fresh = new CountingServer();
+        var running = busy.Endpoint;
+        var restarts = 0;
+        await using var recognizer = new OfflineRecognizer(() => Task.FromResult(running), TimeSpan.FromMilliseconds(10), () =>
+        {
+            restarts++;
+            running = fresh.Endpoint;
+            return Task.CompletedTask;
+        });
+        await recognizer.StartAsync(RecognitionRequest.WithoutVocabulary("pl-PL"), CancellationToken.None);
+        var updates = CollectAsync(recognizer);
+
+        await recognizer.PushPcmAsync(new byte[16000], CancellationToken.None);
+        await busy.Received.WaitAsync(TimeSpan.FromSeconds(5));
+        await recognizer.CompleteAsync(CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.Equal("request 1", Assert.Single(await updates).Text);
+        Assert.Equal(1, restarts);
+        Assert.Equal(16000 + 44, fresh.LastWavBytes);
+    }
+
+    [Fact]
+    public async Task Waits_for_a_preview_that_finishes_within_the_grace_instead_of_restarting()
+    {
+        var answer = new TaskCompletionSource();
+        using var server = new CountingServer(holdAnswers: answer.Task);
+        var restarts = 0;
+        await using var recognizer = new OfflineRecognizer(At(server.Endpoint), TimeSpan.FromMilliseconds(10), () =>
+        {
+            restarts++;
+            return Task.CompletedTask;
+        });
+        await recognizer.StartAsync(RecognitionRequest.WithoutVocabulary("pl-PL"), CancellationToken.None);
+        var updates = CollectAsync(recognizer);
+
+        await recognizer.PushPcmAsync(new byte[16000], CancellationToken.None);
+        await server.Received.WaitAsync(TimeSpan.FromSeconds(5));
+        var completion = recognizer.CompleteAsync(CancellationToken.None);
+        await Task.Delay(OfflineRecognizer.PreviewFinishGrace / 5);
+        answer.SetResult();
+        await completion.WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.Equal("request 2", Assert.Single(await updates).Text);
+        Assert.Equal(0, restarts);
+    }
+
+    private static Func<Task<Uri>> At(Uri endpoint) => () => Task.FromResult(endpoint);
 
     private static async Task<List<TranscriptUpdate>> CollectAsync(OfflineRecognizer recognizer)
     {
@@ -194,15 +246,19 @@ public sealed class OfflineRecognizerTests
     }
 }
 
-// Answers every request with "request N" and records the size of the uploaded WAV.
+// Answers every request with "request N" and records the size of the uploaded WAV. Like the
+// engine, it serves one request at a time; holdAnswers keeps it busy until that task completes.
 internal sealed class CountingServer : IDisposable
 {
     private readonly TcpListener listener = new(IPAddress.Loopback, 0);
     private readonly CancellationTokenSource stop = new();
+    private readonly TaskCompletionSource firstRequest = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private readonly Task? holdAnswers;
     private int count;
 
-    public CountingServer()
+    public CountingServer(Task? holdAnswers = null)
     {
+        this.holdAnswers = holdAnswers;
         listener.Start();
         Endpoint = new Uri($"http://127.0.0.1:{((IPEndPoint)listener.LocalEndpoint).Port}/v1/audio/transcriptions");
         _ = ServeAsync();
@@ -211,6 +267,7 @@ internal sealed class CountingServer : IDisposable
     public Uri Endpoint { get; }
     public int Count => Volatile.Read(ref count);
     public int LastWavBytes { get; private set; }
+    public Task Received => firstRequest.Task;
 
     public async Task WaitForRequestsAsync(int expected)
     {
@@ -242,6 +299,12 @@ internal sealed class CountingServer : IDisposable
                 var body = received.ToArray()[(headEnd + 4)..];
                 var riff = body.AsSpan().IndexOf("RIFF"u8);
                 LastWavBytes = 8 + BitConverter.ToInt32(body, riff + 4);
+                firstRequest.TrySetResult();
+                if (holdAnswers is not null)
+                {
+                    try { await holdAnswers.WaitAsync(stop.Token); }
+                    catch (OperationCanceledException) { return; }
+                }
                 var payload = Encoding.UTF8.GetBytes($"{{\"text\":\"request {Interlocked.Increment(ref count)}\"}}");
                 await stream.WriteAsync(Encoding.ASCII.GetBytes($"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {payload.Length}\r\nConnection: close\r\n\r\n"));
                 await stream.WriteAsync(payload);

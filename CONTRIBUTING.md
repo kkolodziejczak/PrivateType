@@ -22,7 +22,8 @@ to review and safest for a desktop speech-input tool.
 5. Do not add speech models, generated recordings, credentials, or private
    diagnostic data to the repository.
 
-The portable release workflow builds the pinned native engine, tests the .NET
-projects, creates the ZIP, and verifies its required payload. Changes to native
-dependencies, build flags, model handling, or notices require a fresh release
-license audit.
+The portable release workflow downloads NVIDIA's pinned NeMo-Speech.cpp release
+and checks its SHA-256 (`Get-NemoSpeechRuntime.ps1`), tests the .NET projects,
+creates the ZIP, and verifies its required payload. Run the same script once
+before running the app from a checkout. Changes to the pinned runtime, model
+handling, or notices require a fresh release license audit.

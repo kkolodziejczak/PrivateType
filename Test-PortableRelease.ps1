@@ -34,27 +34,27 @@ if (Test-Path -LiteralPath $WorkingDirectory) {
 $engineFiles = @(
     'nemo-speech.exe',
     'nemo_speech_asr.dll',
-    'nemo_speech_asr_c.dll',
     'ggml.dll',
     'ggml-base.dll',
     'ggml-cpu.dll',
-    'abseil_dll.dll',
-    'libprotobuf.dll'
+    'ggml-vulkan.dll'
 )
 
 $noticeFiles = @(
     'LICENSE',
     'licenses\THIRD-PARTY-NOTICES.txt',
     'licenses\PrivateType-MIT.txt',
-    'licenses\NeMo-Speech.cpp-APACHE-2.0.txt',
-    'licenses\NeMo-Speech.cpp-NOTICE.txt',
-    'licenses\NeMo-Speech.cpp-THIRD-PARTY-NOTICES.md',
-    'licenses\ggml-MIT.txt',
-    'licenses\cpp-httplib-MIT.txt',
-    'licenses\SentencePiece-APACHE-2.0.txt',
-    'licenses\Protobuf-BSD-3-Clause.txt',
-    'licenses\Abseil-APACHE-2.0.txt',
-    'licenses\utf8-range-MIT.txt',
+    'licenses\NeMo-Speech.cpp\LICENSE',
+    'licenses\NeMo-Speech.cpp\NOTICE',
+    'licenses\NeMo-Speech.cpp\THIRD_PARTY_NOTICES.md',
+    'licenses\NeMo-Speech.cpp\third_party\cpp-httplib\LICENSE',
+    'licenses\NeMo-Speech.cpp\third_party\ggml\LICENSE',
+    'licenses\NeMo-Speech.cpp\third_party\llama.cpp\LICENSE',
+    'licenses\NeMo-Speech.cpp\third_party\miniaudio\LICENSE',
+    'licenses\NeMo-Speech.cpp\third_party\vcpkg\abseil\LICENSE',
+    'licenses\NeMo-Speech.cpp\third_party\vcpkg\protobuf\LICENSE',
+    'licenses\NeMo-Speech.cpp\third_party\vcpkg\sentencepiece\LICENSE',
+    'licenses\NeMo-Speech.cpp\third_party\vcpkg\utf8-range\LICENSE',
     'licenses\NAudio-MIT.txt',
     'licenses\dotnet-LICENSE.txt',
     'licenses\dotnet-THIRD-PARTY-NOTICES.txt'

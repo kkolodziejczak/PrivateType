@@ -4,9 +4,11 @@ Research date: 2026-08-14. This is an engineering release checklist, not legal a
 
 ## Release decision summary
 
-The portable release builder bundles the app MIT license, the upstream
-NeMo-Speech.cpp `LICENSE`, `NOTICE`, and third-party notices, plus the audited
-ggml, cpp-httplib, vcpkg, NAudio, and .NET license materials. The release test
+The portable release builder bundles the app MIT license; NVIDIA's
+NeMo-Speech.cpp 0.2.0 `LICENSE`, `NOTICE`, third-party notices, and the
+component licenses NVIDIA ships with that release (ggml, llama.cpp,
+cpp-httplib, miniaudio, Abseil, Protocol Buffers, SentencePiece, utf8-range);
+and the NAudio and .NET license materials. The release test
 fails if any expected notice is missing. A final-artifact audit and clean-machine
 test remain required before public publication.
 
@@ -84,9 +86,10 @@ Choose one route before packaging:
 
 ## Evidence reviewed in this repository
 
-- `Build-PortableRelease.ps1` copies `nemo-speech.exe`, seven native DLLs, and
+- `Build-PortableRelease.ps1` copies NVIDIA's whole `bin` folder (the engine,
+  its DLLs, and the Microsoft Visual C++ runtime DLLs NVIDIA ships with it) and
   the release `licenses` bundle into the portable app folder.
 - `MODEL_ARTIFACT.md` pins the downloaded model revision and SHA-256.
-- The checked-out NeMo-Speech.cpp source includes `LICENSE`, `NOTICE`, and
-  `THIRD_PARTY_NOTICES.md`; those are the source-of-truth notice materials to
-  reconcile with the actual shipped build.
+- NVIDIA's release archive includes `share/licenses/nemo-speech` with
+  `LICENSE`, `NOTICE`, `THIRD_PARTY_NOTICES.md`, and per-component licenses;
+  those are the notice materials for the shipped binaries.

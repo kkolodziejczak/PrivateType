@@ -130,11 +130,12 @@ public sealed class WindowsBoundaryTests
     [Fact]
     public void Serves_the_engine_on_the_reserved_loopback_port_without_the_browser_playground()
     {
-        var arguments = EngineHost.ServeArguments(51234, @"C:\models\model.gguf");
+        var arguments = EngineHost.ServeArguments(51234, @"C:\models\model.gguf", "vulkan:1");
 
         Assert.Contains("--host 127.0.0.1 --port 51234", arguments);
         Assert.Contains("--no-ui", arguments);
         Assert.Contains(@"--asr-model ""C:\models\model.gguf""", arguments);
+        Assert.EndsWith("--device vulkan:1", arguments);
     }
 
     [Fact]

@@ -30,8 +30,7 @@ function Copy-ReleaseFile {
 function Add-ReleaseNotices {
     param(
         [Parameter(Mandatory)] [string] $PublishDirectory,
-        [Parameter(Mandatory)] [string] $EngineRoot,
-        [Parameter(Mandatory)] [string] $VcpkgRoot
+        [Parameter(Mandatory)] [string] $EngineLicenses
     )
 
     $licensesDirectory = Join-Path $PublishDirectory 'licenses'
@@ -40,15 +39,10 @@ function Add-ReleaseNotices {
 
     Copy-ReleaseFile (Join-Path $PSScriptRoot 'LICENSE') (Join-Path $PublishDirectory 'LICENSE')
     Copy-ReleaseFile (Join-Path $PSScriptRoot 'LICENSE') (Join-Path $licensesDirectory 'PrivateType-MIT.txt')
-    Copy-ReleaseFile (Join-Path $EngineRoot 'LICENSE') (Join-Path $licensesDirectory 'NeMo-Speech.cpp-APACHE-2.0.txt')
-    Copy-ReleaseFile (Join-Path $EngineRoot 'NOTICE') (Join-Path $licensesDirectory 'NeMo-Speech.cpp-NOTICE.txt')
-    Copy-ReleaseFile (Join-Path $EngineRoot 'THIRD_PARTY_NOTICES.md') (Join-Path $licensesDirectory 'NeMo-Speech.cpp-THIRD-PARTY-NOTICES.md')
-    Copy-ReleaseFile (Join-Path $EngineRoot 'ggml\LICENSE') (Join-Path $licensesDirectory 'ggml-MIT.txt')
-    Copy-ReleaseFile (Join-Path $EngineRoot 'third_party\cpp-httplib\LICENSE') (Join-Path $licensesDirectory 'cpp-httplib-MIT.txt')
-    Copy-ReleaseFile (Join-Path $VcpkgRoot 'installed\x64-windows\share\sentencepiece\copyright') (Join-Path $licensesDirectory 'SentencePiece-APACHE-2.0.txt')
-    Copy-ReleaseFile (Join-Path $VcpkgRoot 'installed\x64-windows\share\protobuf\copyright') (Join-Path $licensesDirectory 'Protobuf-BSD-3-Clause.txt')
-    Copy-ReleaseFile (Join-Path $VcpkgRoot 'installed\x64-windows\share\abseil\copyright') (Join-Path $licensesDirectory 'Abseil-APACHE-2.0.txt')
-    Copy-ReleaseFile (Join-Path $VcpkgRoot 'installed\x64-windows\share\utf8-range\copyright') (Join-Path $licensesDirectory 'utf8-range-MIT.txt')
+    # NVIDIA's release ships the license of every component inside its binaries; keep them as published.
+    foreach ($file in $requiredEngineNotices) {
+        Copy-ReleaseFile (Join-Path $EngineLicenses $file) (Join-Path $licensesDirectory "NeMo-Speech.cpp\$file")
+    }
     Copy-ReleaseFile (Join-Path $naudioPackageRoot 'naudio\2.2.1\license.txt') (Join-Path $licensesDirectory 'NAudio-MIT.txt')
     Copy-ReleaseFile (Join-Path $dotnetRoot 'LICENSE.txt') (Join-Path $licensesDirectory 'dotnet-LICENSE.txt')
     Copy-ReleaseFile (Join-Path $dotnetRoot 'ThirdPartyNotices.txt') (Join-Path $licensesDirectory 'dotnet-THIRD-PARTY-NOTICES.txt')
@@ -62,22 +56,21 @@ in PrivateType-MIT.txt. Components included in this portable release remain unde
 their own terms. This folder contains the full texts and notices used for the
 shipped build:
 
-* NeMo-Speech.cpp (pinned commit 1118951337094db3b362fbf1b27e871696f10590):
-  Apache-2.0 license, NVIDIA NOTICE, and upstream third-party notices.
-* ggml and cpp-httplib: MIT.
-* SentencePiece and Abseil: Apache-2.0.
-* Protocol Buffers: BSD 3-Clause.
-* utf8-range and NAudio 2.2.1: MIT.
+* NeMo-Speech.cpp 0.2.0, NVIDIA's unmodified Windows x64 Vulkan release
+  (nemo-speech-0.2.0-windows-x86_64-vulkan.zip, SHA-256
+  edf15a04ba98740aa0ab75ae4681ac7ad0a488b22b35ce2cbebd10590bb1c1e1):
+  Apache-2.0 license, NVIDIA NOTICE, and the licenses NVIDIA ships for ggml,
+  llama.cpp, cpp-httplib, miniaudio, Abseil, Protocol Buffers, SentencePiece,
+  and utf8-range, in the NeMo-Speech.cpp folder. The Microsoft Visual C++
+  runtime libraries in engine\bin are redistributed as part of that release.
+* NAudio 2.2.1: MIT.
 * The spoken cue recordings were generated with Kokoro-82M by hexgrad
   (Apache-2.0, https://huggingface.co/hexgrad/Kokoro-82M); no model is included.
 * Self-contained .NET runtime: .NET Library License and accompanying notices.
 
-PrivateType applies a Windows linker patch to the pinned NeMo-Speech.cpp source;
-the patch is available in the source repository at
-patches/nemo-speech-windows-sentencepiece-absl.patch.
-
-The NVIDIA Nemotron model is not included in this ZIP. It is downloaded separately
-by the user and is governed by its own OpenMDW-1.1 terms.
+The NVIDIA speech models are not included in this ZIP. They are downloaded
+separately by the user and are governed by their own terms: OpenMDW-1.1
+(Nemotron) and CC-BY-4.0 (Parakeet).
 '@ | Set-Content -LiteralPath (Join-Path $licensesDirectory 'THIRD-PARTY-NOTICES.txt') -Encoding utf8
 }
 
@@ -87,18 +80,31 @@ if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
 
 $appProject = Join-Path $PSScriptRoot 'src\PrivateType.App\PrivateType.App.csproj'
 $launcherProject = Join-Path $PSScriptRoot 'src\PrivateType.Launcher\PrivateType.Launcher.csproj'
-$engineRoot = Join-Path $PSScriptRoot '.engine\NeMo-Speech.cpp'
-$vcpkgRoot = Join-Path $PSScriptRoot '.engine\vcpkg'
-$runtimeSource = Join-Path $PSScriptRoot '.engine\build-cpu-realtime-manual\bin'
+# Run Get-NemoSpeechRuntime.ps1 first; it verifies and unpacks NVIDIA's pinned release here.
+$runtimeRoot = Join-Path $PSScriptRoot '.engine\runtime'
+$runtimeSource = Join-Path $runtimeRoot 'bin'
+$engineLicenses = Join-Path $runtimeRoot 'share\licenses\nemo-speech'
+# The whole bin folder is shipped; these are the files the app cannot run without.
 $requiredEngineFiles = @(
     'nemo-speech.exe',
     'nemo_speech_asr.dll',
-    'nemo_speech_asr_c.dll',
     'ggml.dll',
     'ggml-base.dll',
     'ggml-cpu.dll',
-    'abseil_dll.dll',
-    'libprotobuf.dll'
+    'ggml-vulkan.dll'
+)
+$requiredEngineNotices = @(
+    'LICENSE',
+    'NOTICE',
+    'THIRD_PARTY_NOTICES.md',
+    'third_party\cpp-httplib\LICENSE',
+    'third_party\ggml\LICENSE',
+    'third_party\llama.cpp\LICENSE',
+    'third_party\miniaudio\LICENSE',
+    'third_party\vcpkg\abseil\LICENSE',
+    'third_party\vcpkg\protobuf\LICENSE',
+    'third_party\vcpkg\sentencepiece\LICENSE',
+    'third_party\vcpkg\utf8-range\LICENSE'
 )
 
 $publishDirectory = Join-Path $OutputDirectory "PrivateType $Version"
@@ -139,10 +145,8 @@ try {
     Remove-Item -LiteralPath $launcherPublishDirectory -Recurse -Force
 
     New-Item -ItemType Directory -Force -Path $engineDestination | Out-Null
-    foreach ($file in $requiredEngineFiles) {
-        Copy-Item -LiteralPath (Join-Path $runtimeSource $file) -Destination $engineDestination
-    }
-    Add-ReleaseNotices -PublishDirectory $appPublishDirectory -EngineRoot $engineRoot -VcpkgRoot $vcpkgRoot
+    Copy-Item -Path (Join-Path $runtimeSource '*') -Destination $engineDestination
+    Add-ReleaseNotices -PublishDirectory $appPublishDirectory -EngineLicenses $engineLicenses
 
     @"
 PrivateType $Version

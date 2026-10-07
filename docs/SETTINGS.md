@@ -256,7 +256,9 @@ The line under Packs shows how many phrases the selected language uses.
 
 ## Model
 
-![Settings, Model tab](images/settings-model.png)
+![Settings, Model tab, top](images/settings-model-top.png)
+
+![Settings, Model tab, bottom](images/settings-model-bottom.png)
 
 PrivateType can use either of two local NVIDIA speech models.
 
@@ -282,6 +284,14 @@ did; switch in **Settings → Model**.
 said about once a second while you hold the shortcut, so you can spot mistakes
 early. It uses more CPU while you speak. The inserted text still comes from one
 pass on release. Turn it off on a slow computer.
+
+**Run model on** chooses where the model runs. **Automatic (fastest
+available)** (the default) uses a graphics card, then integrated graphics, when
+one has at least 1 GiB free; otherwise the processor. A graphics card is much
+faster but uses more battery, so choose **Processor only** to save battery.
+The line below shows the device in use. If a graphics card fails to start, it
+turns amber and PrivateType uses the processor until you restart it. A change
+applies the next time the model loads.
 
 **Recommended:** Parakeet, which finishes the whole sentence at once on release. Choose Nemotron for live words while you speak, vocabulary boosting, or Asian languages such as Japanese, Korean, and Chinese.
 

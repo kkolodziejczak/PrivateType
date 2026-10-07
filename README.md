@@ -86,6 +86,20 @@ other one, switch, or delete one later in **Settings → Model**.
 Choose Nemotron for live words while you speak, vocabulary boosting, or Asian
 languages.
 
+### Speed
+
+PrivateType runs the model on the fastest device it finds: a graphics card,
+then integrated graphics, then the processor. **Settings → Model → Run model
+on** shows which one it uses and lets you keep it on the processor to save
+battery. Measured with Parakeet on a laptop with an Intel Core i7-11850H
+(2026-10-07), 70 seconds of speech took:
+
+| Device | Time after release |
+| --- | --- |
+| NVIDIA GeForce MX450 graphics card | about 1.9 s |
+| Intel UHD integrated graphics | about 6.5 s |
+| Processor only | about 15 s |
+
 ### Vocabulary
 
 If PrivateType keeps getting a name or term wrong, teach it the right spelling.
@@ -100,8 +114,11 @@ language or for all of them. You can import and export phrase lists as packs.
 
 ## Requirements
 
-- Windows 10 or 11, 64-bit, with an x86-64 CPU. No GPU is needed.
-- 8 GB RAM recommended. The loaded model uses about 0.8–1.1 GiB.
+- Windows 10 or 11, 64-bit, with an x86-64 CPU. No GPU is needed, but a
+  graphics card or integrated graphics makes transcription several times
+  faster. PrivateType uses one automatically when it has at least 1 GiB free.
+- 8 GB RAM recommended. The loaded model uses about 0.8–1.4 GiB of memory, or
+  graphics memory instead when it runs on a graphics card.
 - About 1.2 GB of free disk space for the app, one model, and working room.
 - The [Microsoft Visual C++ x64 Redistributable](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist),
   if it isn't already installed.
@@ -141,6 +158,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md), and the
 roadmap in [TODO.md](TODO.md). Agents should follow [AGENTS.md](AGENTS.md).
 
 ```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\Get-NemoSpeechRuntime.ps1
 dotnet test .\tests\PrivateType.Core.Tests\PrivateType.Core.Tests.csproj
 dotnet test .\tests\PrivateType.App.Tests\PrivateType.App.Tests.csproj
 dotnet run --project .\tests\PrivateType.App.LayoutProbe\PrivateType.App.LayoutProbe.csproj

@@ -21,7 +21,7 @@ public partial class SettingsWindow : Window
     private KeyChord historyShortcut;
     private ShortcutRecorderHook? historyShortcutRecorder;
 
-    internal SettingsWindow(PortableSettings settings, IReadOnlyList<MicrophoneOption> microphones, IModelStore modelStore, bool openVocabulary = false, string? vocabularyScope = null, string? notice = null, string? activeModelId = null)
+    internal SettingsWindow(PortableSettings settings, IReadOnlyList<MicrophoneOption> microphones, IModelStore modelStore, bool openVocabulary = false, string? vocabularyScope = null, string? notice = null, string? activeModelId = null, ModelDeviceStatus? deviceStatus = null)
     {
         InitializeComponent();
         if (notice is not null)
@@ -29,6 +29,9 @@ public partial class SettingsWindow : Window
         models = new ModelLibraryEditor(modelStore, activeModelId ?? settings.SpeechModel, settings.SpeechModel);
         ModelPage.DataContext = models;
         OfflinePreviewCheckBox.IsChecked = settings.OfflinePreview;
+        ModelDeviceBox.ItemsSource = ChoiceOption.ModelDevices;
+        ModelDeviceBox.SelectedValue = settings.ModelDevice;
+        ShowDeviceStatus(deviceStatus);
         ConfirmModelDeletion = AskToDeleteModel;
         vocabulary = new VocabularyEditor(settings.Vocabulary, settings.VocabularyStrength, settings.VocabularyPacks, settings.VocabularyCorrections, settings.CorrectAfterDictation);
         if (VocabularyScopes.IsSupported(vocabularyScope))
@@ -88,6 +91,23 @@ public partial class SettingsWindow : Window
             soundPreview.Dispose();
             StopRecordingHistoryShortcut();
         };
+    }
+
+    // Without a status (no engine yet), the line is hidden rather than guessed.
+    private void ShowDeviceStatus(ModelDeviceStatus? status)
+    {
+        ModelDeviceStatusPanel.Visibility = status is null ? Visibility.Collapsed : Visibility.Visible;
+        if (status is null)
+            return;
+
+        ModelDeviceStatusText.Text = status.Text;
+        ModelDeviceStatusText.Opacity = status.State == ModelDeviceState.NotLoaded ? 0.6 : 1;
+        ModelDeviceStatusDot.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, status.State switch
+        {
+            ModelDeviceState.Running => "ColorSuccess",
+            ModelDeviceState.FellBack => "ColorWarning",
+            _ => "ColorNeutral400"
+        });
     }
 
     internal static string HeaderText(Version? version) => $"{ApplicationVersion.Label(version)} — settings";
@@ -612,7 +632,8 @@ public partial class SettingsWindow : Window
             CorrectAfterDictation = vocabulary.CorrectAfterDictation,
             ModelIdleTimeoutMinutes = IdleTimeoutBox.SelectedValue is int minutes ? minutes : 10,
             SpeechModel = models.SelectedId,
-            OfflinePreview = OfflinePreviewCheckBox.IsChecked == true
+            OfflinePreview = OfflinePreviewCheckBox.IsChecked == true,
+            ModelDevice = ModelDeviceBox.SelectedValue as string ?? PortableSettings.Default.ModelDevice
         };
         var validationError = PortableSettingsValidator.Validate(settings);
         if (validationError is not null)
@@ -662,6 +683,12 @@ public sealed record ChoiceOption(string Id, string Label)
     [
         new(DictationShortcutModes.Hold, "Hold to talk"),
         new(DictationShortcutModes.Toggle, "Press to start and stop")
+    ];
+
+    public static IReadOnlyList<ChoiceOption> ModelDevices { get; } =
+    [
+        new(PrivateType.Core.ModelDevices.Automatic, "Automatic (fastest available)"),
+        new(PrivateType.Core.ModelDevices.Processor, "Processor only")
     ];
 
     public static IReadOnlyList<ChoiceOption> InsertionModes { get; } =

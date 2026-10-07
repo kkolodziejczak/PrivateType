@@ -38,7 +38,7 @@ public sealed class InMemoryDiagnostics : IDictationDiagnostics
     {
         var details = diagnostic.Details
             .Where(pair => pair.Key is "language" or "phase" or "state" or "targetEligibility" or "characters" or "timeoutMilliseconds" or "minutes" or "source" or "foreground" or "reason" or "heldForeground"
-                or "recordedSeconds" or "predictedSeconds" or "tookSeconds" or "announced")
+                or "recordedSeconds" or "predictedSeconds" or "tookSeconds" or "announced" or "device")
             .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
         var severity = diagnostic.Error is not null ? DiagnosticSeverity.Error
             : diagnostic.EventName.Contains("skipped", StringComparison.Ordinal) || diagnostic.EventName.Contains("failed", StringComparison.Ordinal) ? DiagnosticSeverity.Warning

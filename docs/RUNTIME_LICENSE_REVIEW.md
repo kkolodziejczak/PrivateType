@@ -1,5 +1,12 @@
 # Runtime license review for a public portable release
 
+> **Superseded for releases after 1.4.0.** This review covers the CPU build
+> PrivateType compiled from NeMo-Speech.cpp source up to 1.4.0. Later releases
+> ship NVIDIA's unmodified prebuilt 0.2.0 Windows release instead, with the
+> license files NVIDIA includes; see [ENGINE_DECISION.md](../ENGINE_DECISION.md)
+> and [PUBLIC_RELEASE_OBLIGATIONS.md](PUBLIC_RELEASE_OBLIGATIONS.md). That
+> release has not had a review like this one yet.
+
 Research date: 2026-08-14
 Scope: the `win-x64` portable ZIP produced by the current builder, the native
 NeMo-Speech.cpp engine it is designed to copy, the managed application
@@ -106,7 +113,7 @@ inside another matching conditional. See the pinned upstream
 and
 [`src/asr/CMakeLists.txt`](https://github.com/NVIDIA/NeMo-Speech.cpp/blob/1118951337094db3b362fbf1b27e871696f10590/src/asr/CMakeLists.txt).
 
-The current tracked [`Build-NemoSpeechCpu.ps1`](../Build-NemoSpeechCpu.ps1)
+The current tracked [`Build-NemoSpeechCpu.ps1`](https://github.com/kkolodziejczak/PrivateType/blob/930aad4b76d6a5ac3c6efaf6852c063e6a6f6369/Build-NemoSpeechCpu.ps1)
 does not enable Flashlight. The generated cache confirms it is off. The
 generated `nemo_speech_asr.dll` link line contains no `kenlm.lib`, no KenLM
 object, and no flashlight-text library. Its direct PE dependencies likewise

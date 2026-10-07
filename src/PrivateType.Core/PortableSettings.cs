@@ -40,6 +40,8 @@ public sealed record PortableSettings(
     public string SpeechModel { get; init; } = SpeechModelCatalog.DefaultId;
     // For models that transcribe on release: re-transcribe while held to show a preview.
     public bool OfflinePreview { get; init; } = true;
+    // Automatic runs the model on a graphics card when one can hold it; processor keeps it on the CPU.
+    public string ModelDevice { get; init; } = ModelDevices.Automatic;
     // How long recent dictations stay in memory for the history shortcut. The text itself is never saved.
     public string DictationHistory { get; init; } = DictationHistoryRetentions.UntilExit;
     // Opt-in: lets pasted dictations appear in Windows clipboard history (Win+V).
@@ -67,6 +69,14 @@ public static class SpokenCueVoices
     public const string Male = "male";
 
     public static bool IsSupported(string? value) => value is Off or Female or Male;
+}
+
+public static class ModelDevices
+{
+    public const string Automatic = "automatic";
+    public const string Processor = "processor";
+
+    public static bool IsSupported(string? value) => value is Automatic or Processor;
 }
 
 public static class TextInsertionModes
@@ -131,6 +141,9 @@ public static class PortableSettingsValidator
         new("dictation history",
             settings => DictationHistoryRetentions.IsSupported(settings.DictationHistory) ? null : "Choose how long recent dictations are kept.",
             settings => settings with { DictationHistory = PortableSettings.Default.DictationHistory }),
+        new("model device",
+            settings => ModelDevices.IsSupported(settings.ModelDevice) ? null : "Choose where the speech model runs.",
+            settings => settings with { ModelDevice = PortableSettings.Default.ModelDevice }),
         new("spoken cue voice",
             settings => SpokenCueVoices.IsSupported(settings.SpokenCueVoice) ? null : "Choose a supported spoken cue voice.",
             settings => settings with { SpokenCueVoice = PortableSettings.Default.SpokenCueVoice }),

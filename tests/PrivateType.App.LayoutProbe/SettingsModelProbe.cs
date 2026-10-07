@@ -46,8 +46,9 @@ internal static class SettingsModelProbe
     {
         VerifyModelPage(outputDirectory);
         VerifySavedChoice();
+        VerifyDeviceStatus(outputDirectory);
         VerifySetupChoice(outputDirectory);
-        Console.WriteLine("PASS: Model page lists both models, downloads with progress and cancel, blocks saving mid-download, selects, protects the model in use from deletion, deletes with confirmation, and saves the choice; setup recommends Parakeet first, says when to choose Nemotron, and keeps per-model terms.");
+        Console.WriteLine("PASS: Model page lists both models, downloads with progress and cancel, blocks saving mid-download, selects, protects the model in use from deletion, deletes with confirmation, and saves the choice and device; shows where the model runs, its fallback, and the device it will use; setup recommends Parakeet first, says when to choose Nemotron, and keeps per-model terms.");
     }
 
     private static void VerifyModelPage(string outputDirectory)
@@ -128,6 +129,9 @@ internal static class SettingsModelProbe
                 var preview = (CheckBox)window.FindName("OfflinePreviewCheckBox");
                 Require(preview.IsChecked == true && preview.IsVisible, "The live preview option must be visible and on by default.");
                 preview.IsChecked = false;
+                var device = (ComboBox)window.FindName("ModelDeviceBox");
+                Require(device.IsVisible && device.SelectedValue as string == ModelDevices.Automatic, "Run model on must be visible and Automatic by default.");
+                device.SelectedValue = ModelDevices.Processor;
                 Click(window, (Button)window.FindName("SaveSettingsButton"));
             }
             catch (Exception exception)
@@ -141,6 +145,52 @@ internal static class SettingsModelProbe
             throw failure;
         Require(window.SavedSettings?.SpeechModel == SpeechModelCatalog.ParakeetId, "Saved settings must carry the chosen speech model.");
         Require(window.SavedSettings?.OfflinePreview == false, "Saved settings must carry the live preview choice.");
+        Require(window.SavedSettings?.ModelDevice == ModelDevices.Processor, "Saved settings must carry where the model runs.");
+    }
+
+    private static void VerifyDeviceStatus(string outputDirectory)
+    {
+        var graphicsCard = new EngineDevice("vulkan:1", "NVIDIA GeForce MX450", EngineDeviceKind.GraphicsCard);
+        (ModelDeviceStatus Status, string File, string Text)[] states =
+        [
+            (ModelDeviceStatus.Of(graphicsCard, fellBack: false, graphicsCard), "settings-model-device-running.png", "Now running on: NVIDIA GeForce MX450 graphics card"),
+            (ModelDeviceStatus.Of(EngineDevice.Processor, fellBack: true, EngineDevice.Processor), "settings-model-device-fallback.png", "Now running on: processor — the graphics card could not start"),
+            (ModelDeviceStatus.Of(null, fellBack: false, graphicsCard), "settings-model-device-not-loaded.png", "Not loaded — will use NVIDIA GeForce MX450 graphics card")
+        ];
+        foreach (var (status, file, text) in states)
+        {
+            var window = new SettingsWindow(PortableSettings.Default with { SpeechModel = SpeechModelCatalog.ParakeetId }, [new MicrophoneOption("default", "System default microphone")],
+                new ProbeModelStore(SpeechModelCatalog.ParakeetId), deviceStatus: status) { ShowInTaskbar = false };
+            window.ShowModelPage();
+            window.Show();
+            try
+            {
+                Flush(window);
+                var shown = (TextBlock)window.FindName("ModelDeviceStatusText");
+                Require(shown.IsVisible && shown.Text == text, $"The device status must read '{text}'; got '{shown.Text}'.");
+                RequireNoClipping(window);
+                ((ScrollViewer)window.FindName("SettingsScrollViewer")).ScrollToEnd();
+                Flush(window);
+                Capture(window, outputDirectory, file);
+            }
+            finally
+            {
+                window.Close();
+            }
+        }
+
+        var unknown = new SettingsWindow(PortableSettings.Default, [new MicrophoneOption("default", "System default microphone")], ProbeModelStore.Empty) { ShowInTaskbar = false };
+        unknown.ShowModelPage();
+        unknown.Show();
+        try
+        {
+            Flush(unknown);
+            Require(!((FrameworkElement)unknown.FindName("ModelDeviceStatusPanel")).IsVisible, "Without a status the line must be hidden, not guessed.");
+        }
+        finally
+        {
+            unknown.Close();
+        }
     }
 
     private static void VerifySetupChoice(string outputDirectory)

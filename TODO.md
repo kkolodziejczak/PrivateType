@@ -11,5 +11,4 @@
 - Add reviewed, public curated packs to [vocabulary-packs](vocabulary-packs/) (none ship yet).
 - Verify Settings and dialogs with Windows' "Make text bigger" accessibility setting.
 - Allow modifiers other than Ctrl+Shift for dictation shortcuts.
-- ASR compute threads are fixed at 4 inside the pinned engine; making them configurable requires an engine patch and a latency benchmark.
 - Sign release executables so Windows SmartScreen does not warn on first launch.

@@ -2,7 +2,7 @@
 
 ## What the ZIP contains
 
-`Build-PortableRelease.ps1` creates a versioned `win-x64` application folder and ZIP. The extracted folder keeps a prominent native `PrivateType.exe` launcher and a short start-here document at the top level. The self-contained .NET application, local NeMo-Speech CPU runtime, portable data, and notices live under `app`. The ZIP deliberately excludes the speech model.
+`Build-PortableRelease.ps1` creates a versioned `win-x64` application folder and ZIP. The extracted folder keeps a prominent native `PrivateType.exe` launcher and a short start-here document at the top level. The self-contained .NET application, NVIDIA's NeMo-Speech runtime (CPU and Vulkan), portable data, and notices live under `app`. The ZIP deliberately excludes the speech model.
 
 By default, the model is downloaded on first run into the current Windows user's
 `%LOCALAPPDATA%\PrivateType\models\<lowercase-sha256>` shared cache. Once
@@ -43,13 +43,14 @@ downloads its pinned model again when needed.
 
 - Models: `nvidia/nemotron-3.5-asr-streaming-0.6b` (default), Q8_0 GGUF, 742,090,464 bytes, and `nvidia/parakeet-tdt-0.6b-v3`, Q8_0 GGUF, 713,975,456 bytes; see [MODEL_ARTIFACT.md](MODEL_ARTIFACT.md).
 - Model licenses: OpenMDW-1.1 (Nemotron) and CC-BY-4.0 (Parakeet). Models are downloaded by the user and are not redistributed in the ZIP.
-- Runtime: NeMo-Speech.cpp, Apache-2.0. See [ENGINE_DECISION.md](ENGINE_DECISION.md) for the pinned engine/model decision and measurements.
+- Runtime: NVIDIA's unmodified NeMo-Speech.cpp 0.2.0 Windows release, Apache-2.0, with the licenses NVIDIA ships for its bundled components. See [ENGINE_DECISION.md](ENGINE_DECISION.md) for the pinned runtime, device choice, and measurements.
 
 ## Release verification
 
-Build from a checkout containing the verified local engine runtime:
+Download and verify the pinned runtime, then build:
 
 ```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\Get-NemoSpeechRuntime.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\Build-PortableRelease.ps1 -Version 1.0.6
 ```
 

@@ -18,7 +18,8 @@ internal static class DocsScreenshotProbe
         Directory.CreateDirectory(docsDirectory);
         Render(PortableSettings.Default, page: null, docsDirectory, "settings-general.png");
         Render(VocabularySample, page: "VocabularyTab", docsDirectory, "settings-vocabulary.png");
-        Render(PortableSettings.Default, page: "ModelTab", docsDirectory, "settings-model.png");
+        var graphicsCard = new EngineDevice("vulkan:1", "NVIDIA GeForce MX450", EngineDeviceKind.GraphicsCard);
+        Render(PortableSettings.Default, page: "ModelTab", docsDirectory, "settings-model.png", ModelDeviceStatus.Of(graphicsCard, fellBack: false, graphicsCard));
         Console.WriteLine($"Rendered settings documentation pages: {docsDirectory}");
     }
 
@@ -42,12 +43,13 @@ internal static class DocsScreenshotProbe
         ]
     };
 
-    private static void Render(PortableSettings settings, string? page, string directory, string name)
+    private static void Render(PortableSettings settings, string? page, string directory, string name, ModelDeviceStatus? deviceStatus = null)
     {
         var window = new SettingsWindow(
             settings,
             [new MicrophoneOption("default", "System default microphone")],
-            new ProbeModelStore(SpeechModelCatalog.DefaultId))
+            new ProbeModelStore(SpeechModelCatalog.DefaultId),
+            deviceStatus: deviceStatus)
         {
             ShowInTaskbar = false,
             SizeToContent = SizeToContent.Manual,

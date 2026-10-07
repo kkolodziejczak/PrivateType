@@ -10,7 +10,7 @@ namespace PrivateType.App;
 
 internal sealed class DictationApplication : IDisposable
 {
-    private readonly EngineHost engine = new();
+    private readonly EngineHost engine;
     private readonly DictationCues cues = new();
     private TranscriptionTimeForecast transcriptionForecast = new();
     private readonly EngineLoadCoordinator engineLoads;
@@ -54,7 +54,8 @@ internal sealed class DictationApplication : IDisposable
     public DictationApplication()
     {
         models = new SpeechModelLibrary(downloader);
-        engineLoads = new EngineLoadCoordinator(LoadEngineAsync, () => engine.IsReady && engine.LoadedModelPath == modelPath);
+        engine = new EngineHost((eventName, error, details) => RecordDiagnostic(eventName, error, details));
+        engineLoads = new EngineLoadCoordinator(LoadEngineAsync, () => engine.IsReady && engine.LoadedModelPath == modelPath && engine.LoadedDevicePreference == settings.ModelDevice);
         sessions = new DictationSessionCoordinator(CreateSession);
         trayIcon = new Forms.NotifyIcon
         {
@@ -634,7 +635,8 @@ internal sealed class DictationApplication : IDisposable
 
     private (SettingsWindow Window, bool? Result) ShowSettingsWindow(PortableSettings shown, bool openVocabulary, string? vocabularyScope, string? notice)
     {
-        var window = new SettingsWindow(shown, MicrophoneCatalog.Enumerate(), new LibraryModelStore(models), openVocabulary, vocabularyScope, notice, activeModelId: settings.SpeechModel);
+        var deviceStatus = ModelDeviceStatus.Of(engine.IsRunning ? engine.Device : null, engine.FellBack, engine.PredictDevice(settings.ModelDevice));
+        var window = new SettingsWindow(shown, MicrophoneCatalog.Enumerate(), new LibraryModelStore(models), openVocabulary, vocabularyScope, notice, activeModelId: settings.SpeechModel, deviceStatus: deviceStatus);
         window.Loaded += (_, _) => BringToForeground(window);
         window.DiagnosticsRequested += () => ShowDiagnostics(window);
         window.LicensesRequested += () => new OpenSourceLicensesWindow { Owner = window }.ShowDialog();
@@ -770,8 +772,8 @@ internal sealed class DictationApplication : IDisposable
         var session = new DictationSession(
             new DefaultMicrophoneCapture(settings.MicrophoneId),
             activeModel.Style == RecognitionStyle.Offline
-                ? new OfflineRecognizer(engine.TranscriptionEndpoint, settings.OfflinePreview ? OfflinePreviewInterval : null)
-                : new RealtimeRecognizer(engine.RealtimeEndpoint),
+                ? new OfflineRecognizer(engine.TranscriptionEndpointAsync, settings.OfflinePreview ? OfflinePreviewInterval : null, RestartBusyEngineAsync)
+                : new RealtimeRecognizer(engine.RealtimeEndpointAsync),
             new ForegroundTargetGuard(new Win32ForegroundTarget()),
             CreateInjector(),
             new RecognitionRequest(localeCode, VocabularyComposer.Compose(settings.Vocabulary, settings.VocabularyPacks, localeCode), settings.VocabularyStrength),
@@ -1016,6 +1018,26 @@ internal sealed class DictationApplication : IDisposable
             throw new InvalidOperationException("The local speech model changed while it was loading.");
     }
 
+    // Called when a long preview still occupies the engine at release: the engine cannot abandon
+    // it, and on the processor reloading the model is quicker than waiting. On a graphics device
+    // previews finish quickly and a reload costs more, so the final pass simply queues. Runs on
+    // the UI thread, so a dictation started meanwhile shares this load instead of starting a
+    // second engine.
+    private async Task RestartBusyEngineAsync()
+    {
+        // Shutdown waits for this dictation on the UI thread; let it queue behind the preview.
+        if (disposed || engine.Device?.Kind != EngineDeviceKind.Processor || Wpf.Application.Current is not { } application)
+            return;
+
+        var started = Stopwatch.GetTimestamp();
+        await application.Dispatcher.InvokeAsync(async () =>
+        {
+            engine.Stop();
+            await EnsureEngineLoadedAsync();
+            RecordDiagnostic("engine.restarted", details: [("tookSeconds", Math.Round(Stopwatch.GetElapsedTime(started).TotalSeconds, 2))]);
+        }).Task.Unwrap();
+    }
+
     private async Task LoadEngineAsync()
     {
         // Restarting the engine for another model must not cut off a dictation that is still finalizing.
@@ -1025,7 +1047,7 @@ internal sealed class DictationApplication : IDisposable
         RecordDiagnostic("model.loading");
         statusItem.Text = "Loading local model";
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(25));
-        await engine.StartAsync(path, timeout.Token);
+        await engine.StartAsync(path, settings.ModelDevice, timeout.Token);
         statusItem.Text = "Dictation ready";
         trayIcon.Text = $"PrivateType — {statusItem.Text}";
         RecordDiagnostic("model.loaded");
