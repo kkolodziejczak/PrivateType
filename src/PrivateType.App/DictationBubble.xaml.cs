@@ -73,8 +73,7 @@ public partial class DictationBubble : Window
             Show();
         if (WindowState != WindowState.Normal)
             WindowState = WindowState.Normal;
-        Topmost = false;
-        Topmost = true;
+        RaiseAboveOtherWindows();
         if (IsOffEveryScreen())
             ApplyPosition(settings);
         else
@@ -120,7 +119,20 @@ public partial class DictationBubble : Window
 
     // Shows the bubble where the text will go: the monitor of the window being dictated into.
     // The pointer's monitor is the fallback when no such window is active.
-    public void MoveToDictationScreen() => MoveToScreen(DictationScreen());
+    public void MoveToDictationScreen()
+    {
+        MoveToScreen(DictationScreen());
+        RaiseAboveOtherWindows();
+    }
+
+    // Windows can leave a topmost window behind ordinary ones, so re-enter the topmost band
+    // instead of trusting the Topmost flag.
+    private void RaiseAboveOtherWindows()
+    {
+        var handle = new WindowInteropHelper(this).Handle;
+        if (handle != nint.Zero)
+            NativeMethods.SetWindowPos(handle, NativeMethods.HwndTopmost, 0, 0, 0, 0, NativeMethods.SwpNoMove | NativeMethods.SwpNoSize | NativeMethods.SwpNoActivate);
+    }
 
     internal void MoveToScreen(Forms.Screen targetScreen)
     {
@@ -677,13 +689,11 @@ public partial class DictationBubble : Window
     internal static double BoundedTop(double top, double workAreaTop, double workAreaBottom, double height) =>
         Math.Clamp(top, workAreaTop, Math.Max(workAreaTop, workAreaBottom - height));
 
-    // Work areas are in device pixels; compare the window in the same space.
     private bool IsOffEveryScreen()
     {
-        var dpi = VisualTreeHelper.GetDpi(this);
-        var width = (ActualWidth > 0 ? ActualWidth : Width) * dpi.DpiScaleX;
-        var height = (ActualHeight > 0 ? ActualHeight : Height) * dpi.DpiScaleY;
-        return !IntersectsAnyWorkArea(Left * dpi.DpiScaleX, Top * dpi.DpiScaleY, width, height, Forms.Screen.AllScreens.Select(WorkAreaFor));
+        var width = ActualWidth > 0 ? ActualWidth : Width;
+        var height = ActualHeight > 0 ? ActualHeight : Height;
+        return !IntersectsAnyWorkArea(Left, Top, width, height, Forms.Screen.AllScreens.Select(WorkAreaFor));
     }
 
     internal static bool IntersectsAnyWorkArea(double left, double top, double width, double height, IEnumerable<DisplayWorkArea> workAreas)
@@ -715,11 +725,16 @@ public partial class DictationBubble : Window
 
     private static Forms.Screen PrimaryScreen() => Forms.Screen.PrimaryScreen ?? Forms.Screen.AllScreens[0];
 
-    private static DisplayWorkArea WorkAreaFor(Forms.Screen screen)
+    // Screens report device pixels while Left and Top are DIPs. PrivateType is system DPI aware,
+    // so one scale converts every screen.
+    private DisplayWorkArea WorkAreaFor(Forms.Screen screen)
     {
-        var workArea = screen.WorkingArea;
-        return new DisplayWorkArea(workArea.Left, workArea.Top, workArea.Width, workArea.Height);
+        var dpi = VisualTreeHelper.GetDpi(this);
+        return WorkAreaInDips(screen.WorkingArea, dpi.DpiScaleX, dpi.DpiScaleY);
     }
+
+    internal static DisplayWorkArea WorkAreaInDips(System.Drawing.Rectangle pixels, double dpiScaleX, double dpiScaleY) =>
+        new(pixels.Left / dpiScaleX, pixels.Top / dpiScaleY, pixels.Width / dpiScaleX, pixels.Height / dpiScaleY);
 
     internal readonly record struct PointInt(int X, int Y);
 

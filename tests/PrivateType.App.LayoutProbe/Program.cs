@@ -289,8 +289,9 @@ static void VerifyTranscriptPreviewClearsTaskbar(Forms.Screen screen, string pre
     const double bottomClearance = 8;
     var panel = new DictationBubble();
     panel.ShowReady(PortableSettings.Default, modelLoaded: true);
-    panel.Left = screen.WorkingArea.Left + 16;
-    panel.Top = screen.WorkingArea.Bottom - panel.ActualHeight;
+    var workArea = WorkAreaInDips(panel, screen);
+    panel.Left = workArea.Left + 16;
+    panel.Top = workArea.Bottom - panel.ActualHeight;
     panel.UpdateLayout();
     panel.ShowRecording("en-US");
     FlushRender(panel);
@@ -303,7 +304,7 @@ static void VerifyTranscriptPreviewClearsTaskbar(Forms.Screen screen, string pre
     var leftAfterPreview = panel.Left;
     panel.Close();
 
-    var maximumBottom = screen.WorkingArea.Bottom - bottomClearance;
+    var maximumBottom = workArea.Bottom - bottomClearance;
     if (actualBottom > maximumBottom + 1)
         throw new InvalidOperationException($"Transcript preview ended at {actualBottom:F1} on {screen.DeviceName}; expected at or above {maximumBottom:F1}.");
     if (Math.Abs(leftAfterPreview - leftBeforePreview) > 1)
@@ -315,6 +316,19 @@ static void FlushRender(Window window)
     window.Dispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
     window.UpdateLayout();
 }
+
+// The bubble's Left and Top are DIPs while screens report device pixels.
+static DictationBubble.DisplayWorkArea WorkAreaInDips(Window window, Forms.Screen screen)
+{
+    var dpi = System.Windows.Media.VisualTreeHelper.GetDpi(window);
+    return DictationBubble.WorkAreaInDips(screen.WorkingArea, dpi.DpiScaleX, dpi.DpiScaleY);
+}
+
+static bool IsFullyInside(Window panel, DictationBubble.DisplayWorkArea workArea) =>
+    panel.Left >= workArea.Left &&
+    panel.Top >= workArea.Top &&
+    panel.Left + panel.ActualWidth <= workArea.Right &&
+    panel.Top + panel.ActualHeight <= workArea.Bottom;
 
 static void VerifyStartupVersionPromptChoice(bool useCurrent)
 {
@@ -396,18 +410,15 @@ static void VerifyTargetMonitorPlacementThrough(
 {
     var panel = new DictationBubble();
     panel.ShowReady(PortableSettings.Default, modelLoaded: true);
-    panel.Left = sourceScreen.WorkingArea.Left;
-    panel.Top = sourceScreen.WorkingArea.Top;
+    var sourceWorkArea = WorkAreaInDips(panel, sourceScreen);
+    panel.Left = sourceWorkArea.Left;
+    panel.Top = sourceWorkArea.Top;
     panel.UpdateLayout();
     panel.MoveToScreen(targetScreen);
     showState(panel);
     panel.UpdateLayout();
 
-    var fullyInsideTarget =
-        panel.Left >= targetScreen.WorkingArea.Left &&
-        panel.Top >= targetScreen.WorkingArea.Top &&
-        panel.Left + panel.ActualWidth <= targetScreen.WorkingArea.Right &&
-        panel.Top + panel.ActualHeight <= targetScreen.WorkingArea.Bottom;
+    var fullyInsideTarget = IsFullyInside(panel, WorkAreaInDips(panel, targetScreen));
     panel.Close();
 
     if (!fullyInsideTarget)
@@ -448,18 +459,14 @@ static void VerifyTargetMonitorRecoveryThrough(
 {
     var panel = new DictationBubble();
     panel.ShowReady(PortableSettings.Default, modelLoaded: false);
-    panel.Left = targetScreen.WorkingArea.Right + 1000;
-    panel.Top = targetScreen.WorkingArea.Bottom + 1000;
+    var targetWorkArea = WorkAreaInDips(panel, targetScreen);
+    panel.Left = targetWorkArea.Right + 1000;
+    panel.Top = targetWorkArea.Bottom + 1000;
     panel.UpdateLayout();
 
     panel.MoveToScreen(targetScreen);
     panel.UpdateLayout();
-    var fullyInsideTarget =
-        panel.Left >= targetScreen.WorkingArea.Left &&
-        panel.Top >= targetScreen.WorkingArea.Top &&
-        panel.Left + panel.ActualWidth <= targetScreen.WorkingArea.Right &&
-        panel.Top + panel.ActualHeight <= targetScreen.WorkingArea.Bottom;
-    if (!fullyInsideTarget)
+    if (!IsFullyInside(panel, targetWorkArea))
     {
         panel.Close();
         throw new InvalidOperationException($"Bubble remained outside the target monitor before entering {state} after its previous monitor disappeared.");

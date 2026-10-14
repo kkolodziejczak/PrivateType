@@ -100,6 +100,14 @@ public sealed class WindowsBoundaryTests
     }
 
     [Fact]
+    public void Places_the_bubble_against_work_areas_measured_in_the_same_units_as_its_position()
+    {
+        var workArea = DictationBubble.WorkAreaInDips(new System.Drawing.Rectangle(-1920, 0, 1920, 1032), 1.5, 1.5);
+
+        Assert.Equal(new DictationBubble.DisplayWorkArea(-1280, 0, 1280, 688), workArea);
+    }
+
+    [Fact]
     public void Keeps_the_bubble_aligned_with_the_pointer_at_scaled_display_dpi()
     {
         var offset = DictationBubble.CursorDeltaInDips(300, 450, 450, 525, 1.5, 1.5);
