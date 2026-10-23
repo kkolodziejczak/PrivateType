@@ -31,6 +31,9 @@ public sealed class DictationSession : IAsyncDisposable
     private Exception? failure;
     private double audioLevel;
     private long recordedBytes;
+    // True from the moment the microphone starts until it has stopped, so audio still in flight
+    // when the shortcut is released belongs to the dictation.
+    private volatile bool capturing;
     private bool started;
     private bool cleanedUp;
     private string phase = "created";
@@ -67,8 +70,8 @@ public sealed class DictationSession : IAsyncDisposable
     // buffer and the in-memory dictation history consume it; the session itself keeps no transcript.
     public event Action<FinalizedDictation>? Finalized;
 
-    // Raised once, the moment the shortcut is released: the microphone is no longer recorded, so a
-    // sound played from here cannot reach the dictation. Carries how long the user spoke.
+    // Raised once after release, as soon as the microphone has stopped, so a sound played from here
+    // cannot reach the dictation. Carries how long the user spoke.
     public event Action<TimeSpan>? FinalizingStarted;
 
     // Raised after a successful finalization with how long the user spoke and how long the text took.
@@ -100,6 +103,7 @@ public sealed class DictationSession : IAsyncDisposable
             pcmPump = PumpPcmAsync();
             updatePump = PumpUpdatesAsync();
             phase = "capture.start";
+            capturing = true;
             await capture.StartAsync(cancellationToken);
             phase = "recording";
             Publish(DictationState.Recording);
@@ -123,10 +127,7 @@ public sealed class DictationSession : IAsyncDisposable
 
         var finalizing = State == DictationState.Recording;
         if (finalizing)
-        {
             Publish(DictationState.Finalizing);
-            FinalizingStarted?.Invoke(RecordedDuration);
-        }
 
         var finalizingSince = Stopwatch.GetTimestamp();
         try
@@ -135,7 +136,10 @@ public sealed class DictationSession : IAsyncDisposable
             Diagnose("session.finalizing", ("timeoutMilliseconds", finalizationTimeout.TotalMilliseconds));
             phase = "capture.stop";
             await capture.StopAsync(CancellationToken.None);
+            capturing = false;
             pcmFrames.Writer.TryComplete();
+            if (finalizing && failure is null)
+                FinalizingStarted?.Invoke(RecordedDuration);
             phase = "pcm.drain";
             await AwaitPumpBeforeDeadlineAsync(pcmPump, deadline);
 
@@ -253,7 +257,7 @@ public sealed class DictationSession : IAsyncDisposable
 
     private async ValueTask QueuePcmAsync(ReadOnlyMemory<byte> pcm)
     {
-        if (!ShouldQueuePcm(State))
+        if (!capturing)
             return;
 
         Interlocked.Add(ref recordedBytes, pcm.Length);
@@ -264,15 +268,10 @@ public sealed class DictationSession : IAsyncDisposable
         {
             await pcmFrames.Writer.WriteAsync(pcm, cancellation.Token);
         }
-        catch (ChannelClosedException) when (IsExpectedClosedPcmWrite(State, cancellation.IsCancellationRequested))
+        catch (ChannelClosedException) when (!capturing || cancellation.IsCancellationRequested)
         {
         }
     }
-
-    internal static bool ShouldQueuePcm(DictationState state) => state == DictationState.Recording;
-
-    internal static bool IsExpectedClosedPcmWrite(DictationState state, bool cancellationRequested) =>
-        state != DictationState.Recording || cancellationRequested;
 
     private async Task PumpPcmAsync()
     {
@@ -352,6 +351,7 @@ public sealed class DictationSession : IAsyncDisposable
             return;
 
         Diagnose("session.failed", exception, ("phase", phase), ("state", State));
+        capturing = false;
         cancellation.Cancel();
         pcmFrames.Writer.TryComplete(exception);
         Publish(DictationState.Error, message: exception.Message);
@@ -365,6 +365,7 @@ public sealed class DictationSession : IAsyncDisposable
             return;
 
         cleanedUp = true;
+        capturing = false;
         capture.PcmAvailable -= QueuePcmAsync;
         capture.Faulted -= ReportFailure;
         pcmFrames.Writer.TryComplete();

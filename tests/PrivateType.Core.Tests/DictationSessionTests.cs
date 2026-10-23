@@ -152,12 +152,21 @@ public sealed class DictationSessionTests
     }
 
     [Fact]
-    public void Ignores_late_pcm_callbacks_after_the_session_starts_finalizing()
+    public async Task Keeps_audio_the_microphone_delivers_while_it_stops_after_release()
     {
-        Assert.False(DictationSession.ShouldQueuePcm(DictationState.Finalizing));
-        Assert.True(DictationSession.IsExpectedClosedPcmWrite(DictationState.Finalizing, cancellationRequested: false));
-        Assert.True(DictationSession.IsExpectedClosedPcmWrite(DictationState.Recording, cancellationRequested: true));
-        Assert.False(DictationSession.IsExpectedClosedPcmWrite(DictationState.Recording, cancellationRequested: false));
+        var capture = new FakeCapture { DeliveredWhileStopping = new byte[DictationSession.PcmBytesPerSecond / 2] };
+        var recognizer = new FakeRecognizer();
+        await using var session = CreateSession(capture, recognizer, new FakeForegroundTarget(TargetEligibility.Eligible), new FakeInjector());
+        var stoppedBeforeCue = false;
+        session.FinalizingStarted += _ => stoppedBeforeCue = capture.Stopped;
+
+        await session.StartAsync();
+        await capture.EmitAsync(new byte[DictationSession.PcmBytesPerSecond]);
+        await session.StopAsync();
+
+        Assert.Equal(TimeSpan.FromSeconds(1.5), session.RecordedDuration);
+        Assert.Equal(DictationSession.PcmBytesPerSecond * 3 / 2, recognizer.ReceivedPcmBytes);
+        Assert.True(stoppedBeforeCue);
     }
 
     [Fact]
@@ -426,7 +435,7 @@ public sealed class DictationSessionTests
         var capture = new FakeCapture();
         var recognizer = new FakeRecognizer();
         await using var session = CreateSession(capture, recognizer, new FakeForegroundTarget(TargetEligibility.Eligible), new FakeInjector());
-        // The microphone is still subscribed here: this is where a release cue starts playing.
+        // The release cue starts playing here; the session must not take any more audio.
         session.FinalizingStarted += _ => capture.EmitAsync(new byte[DictationSession.PcmBytesPerSecond]).GetAwaiter().GetResult();
 
         await session.StartAsync();

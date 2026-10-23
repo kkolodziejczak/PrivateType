@@ -772,7 +772,8 @@ internal sealed class DictationApplication : IDisposable
         var session = new DictationSession(
             new DefaultMicrophoneCapture(settings.MicrophoneId),
             activeModel.Style == RecognitionStyle.Offline
-                ? new OfflineRecognizer(engine.TranscriptionEndpointAsync, settings.OfflinePreview ? OfflinePreviewInterval : null, RestartBusyEngineAsync)
+                ? new OfflineRecognizer(engine.TranscriptionEndpointAsync, settings.OfflinePreview ? OfflinePreviewInterval : null, RestartBusyEngineAsync,
+                    (eventName, details) => RecordDiagnostic(eventName, details: details))
                 : new RealtimeRecognizer(engine.RealtimeEndpointAsync),
             new ForegroundTargetGuard(new Win32ForegroundTarget()),
             CreateInjector(),
@@ -802,7 +803,7 @@ internal sealed class DictationApplication : IDisposable
         return session;
     }
 
-    // Runs on the session's thread the moment the shortcut is released, so the cue is immediate.
+    // Runs on the session's thread as soon as the microphone stops after release.
     // Every release says "microphone off"; only a dictation long enough to wait for adds "Transcribing".
     private void PlayReleaseCue(TranscriptionTimeForecast? forecast, TimeSpan recorded)
     {

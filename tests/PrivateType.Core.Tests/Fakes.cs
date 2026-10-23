@@ -26,10 +26,14 @@ internal sealed class FakeCapture : IAudioCapture
         Started = true;
     }
 
-    public Task StopAsync(CancellationToken cancellationToken)
+    // Audio a real microphone still delivers while it stops.
+    public byte[]? DeliveredWhileStopping { get; set; }
+
+    public async Task StopAsync(CancellationToken cancellationToken)
     {
+        if (!Stopped && DeliveredWhileStopping is { } pcm)
+            await EmitAsync(pcm);
         Stopped = true;
-        return Task.CompletedTask;
     }
 
     public async Task EmitAsync(params byte[] pcm)

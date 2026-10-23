@@ -41,13 +41,34 @@ internal sealed class DefaultMicrophoneCapture : IAudioCapture
     public async Task StopAsync(CancellationToken cancellationToken)
     {
         stopping = true;
-        if (input.CaptureState == CaptureState.Stopped)
+        if (input.CaptureState != CaptureState.Stopped)
+        {
+            input.StopRecording();
+            try
+            {
+                await stopped.Task.WaitAsync(StopTimeout, cancellationToken);
+            }
+            catch (TimeoutException)
+            {
+                // The capture thread may still be running, so the partial frame is not touched.
+                return;
+            }
+        }
+        await DeliverPartialFrameAsync(cancellationToken);
+    }
+
+    // The last words end in a frame shorter than 100 ms; deliver it rather than drop it, but never
+    // let a stalled recognizer hold up the stop.
+    private async Task DeliverPartialFrameAsync(CancellationToken cancellationToken)
+    {
+        if (pendingBytes == 0 || PcmAvailable is not { } deliver)
             return;
 
-        input.StopRecording();
+        var tail = pending.AsSpan(0, pendingBytes).ToArray();
+        pendingBytes = 0;
         try
         {
-            await stopped.Task.WaitAsync(StopTimeout, cancellationToken);
+            await deliver(tail).AsTask().WaitAsync(StopTimeout, cancellationToken);
         }
         catch (TimeoutException)
         {

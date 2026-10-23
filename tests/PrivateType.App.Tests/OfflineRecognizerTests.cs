@@ -33,8 +33,103 @@ public sealed class OfflineRecognizerTests
     [Fact]
     public void Reads_the_transcript_from_the_engine_json_response()
     {
-        Assert.Equal("Zażółć gęślą jaźń.", OfflineRecognizer.ParseTranscript("""{"text":"Zażółć gęślą jaźń."}"""));
+        Assert.Equal(new EngineTranscript("Zażółć gęślą jaźń.", null), OfflineRecognizer.ParseTranscript("""{"text":"Zażółć gęślą jaźń."}"""));
         Assert.Throws<InvalidDataException>(() => OfflineRecognizer.ParseTranscript("""{"error":{"message":"x"}}"""));
+    }
+
+    [Fact]
+    public void Reads_where_the_last_word_ends_from_word_timings()
+    {
+        var transcript = OfflineRecognizer.ParseTranscript("""{"text":"Hello world.","words":[{"word":"Hello","start":0,"end":0.4},{"word":"world.","start":0.5,"end":1.25}]}""");
+
+        Assert.Equal(new EngineTranscript("Hello world.", 1.25), transcript);
+        Assert.Null(OfflineRecognizer.ParseTranscript("""{"text":"","words":[]}""").LastWordEnd);
+        Assert.Null(OfflineRecognizer.ParseTranscript("""{"text":"a","words":[null,1,{"word":"a"}]}""").LastWordEnd);
+    }
+
+    [Fact]
+    public void Previews_only_the_latest_speech_of_a_long_dictation()
+    {
+        Assert.Equal(0, OfflineRecognizer.PreviewStart(OfflineRecognizer.PreviewWindowBytes / 2));
+        Assert.Equal(64_000, OfflineRecognizer.PreviewStart(OfflineRecognizer.PreviewWindowBytes + 64_000));
+    }
+
+    [Fact]
+    public async Task Transcribes_again_the_speech_after_the_last_recognized_word_and_appends_it()
+    {
+        // One quiet second, five seconds of voice, then a quiet second; the model stops after two seconds.
+        using var server = new CountingServer(respond: request => request == 1
+            ? """{"text":"First part.","words":[{"word":"First","start":1.0,"end":1.5},{"word":"part.","start":1.6,"end":2.0}]}"""
+            : """{"text":"Second part.","words":[{"word":"Second","start":0.2,"end":3.0},{"word":"part.","start":3.1,"end":3.9}]}""");
+        var diagnostics = new List<(string Name, (string Name, object? Value)[] Details)>();
+        await using var recognizer = new OfflineRecognizer(At(server.Endpoint), record: (name, details) => diagnostics.Add((name, details)));
+        var updates = CollectAsync(recognizer);
+
+        for (var frame = 0; frame < 10; frame++)
+            await recognizer.PushPcmAsync(Pcm(amplitude: 0), CancellationToken.None);
+        for (var frame = 0; frame < 50; frame++)
+            await recognizer.PushPcmAsync(Pcm(amplitude: 8_000), CancellationToken.None);
+        for (var frame = 0; frame < 10; frame++)
+            await recognizer.PushPcmAsync(Pcm(amplitude: 0), CancellationToken.None);
+        await recognizer.CompleteAsync(CancellationToken.None);
+
+        Assert.Equal("First part. Second part.", Assert.Single(await updates).Text);
+        Assert.Equal(2, server.Count);
+        Assert.Equal((7 * 32_000) - 64_000 + 44, server.LastWavBytes);
+        var coverage = Assert.Single(diagnostics, entry => entry.Name == "transcription.coverage").Details.ToDictionary(pair => pair.Name, pair => pair.Value);
+        Assert.Equal(5.0, coverage["voicedSeconds"]);
+        Assert.Equal(6.0, coverage["lastVoicedSeconds"]);
+        Assert.Equal(5.9, coverage["lastWordSeconds"]);
+        Assert.Equal(12, coverage["recoveredCharacters"]);
+    }
+
+    [Theory]
+    // A broken recovery keeps the text already recognized.
+    [InlineData("not json", "First part.")]
+    // Recovered text without word timings is kept, and recovery stops there.
+    [InlineData("""{"text":"Second part.","words":[]}""", "First part. Second part.")]
+    public async Task Recovery_never_loses_text_already_recognized(string tailAnswer, string expected)
+    {
+        using var server = new CountingServer(respond: request => request == 1
+            ? """{"text":"First part.","words":[{"word":"part.","start":1.6,"end":2.0}]}"""
+            : tailAnswer);
+        await using var recognizer = new OfflineRecognizer(At(server.Endpoint));
+        var updates = CollectAsync(recognizer);
+
+        for (var frame = 0; frame < 10; frame++)
+            await recognizer.PushPcmAsync(Pcm(amplitude: 0), CancellationToken.None);
+        for (var frame = 0; frame < 50; frame++)
+            await recognizer.PushPcmAsync(Pcm(amplitude: 8_000), CancellationToken.None);
+        await recognizer.CompleteAsync(CancellationToken.None);
+
+        Assert.Equal(expected, Assert.Single(await updates).Text);
+        Assert.Equal(2, server.Count);
+    }
+
+    [Fact]
+    public async Task Sends_one_pass_when_the_text_reaches_the_end_of_the_voice()
+    {
+        using var server = new CountingServer(respond: _ => """{"text":"All of it.","words":[{"word":"it.","start":5.0,"end":5.8}]}""");
+        await using var recognizer = new OfflineRecognizer(At(server.Endpoint));
+        var updates = CollectAsync(recognizer);
+
+        for (var frame = 0; frame < 10; frame++)
+            await recognizer.PushPcmAsync(Pcm(amplitude: 0), CancellationToken.None);
+        for (var frame = 0; frame < 50; frame++)
+            await recognizer.PushPcmAsync(Pcm(amplitude: 8_000), CancellationToken.None);
+        await recognizer.CompleteAsync(CancellationToken.None);
+
+        Assert.Equal("All of it.", Assert.Single(await updates).Text);
+        Assert.Equal(1, server.Count);
+    }
+
+    // 100 ms of a square wave at the given amplitude.
+    private static byte[] Pcm(short amplitude)
+    {
+        var pcm = new byte[3_200];
+        for (var sample = 0; sample < pcm.Length / 2; sample++)
+            BitConverter.TryWriteBytes(pcm.AsSpan(sample * 2), sample % 2 == 0 ? amplitude : (short)-amplitude);
+        return pcm;
     }
 
     [Fact]
@@ -246,19 +341,21 @@ public sealed class OfflineRecognizerTests
     }
 }
 
-// Answers every request with "request N" and records the size of the uploaded WAV. Like the
-// engine, it serves one request at a time; holdAnswers keeps it busy until that task completes.
+// Answers every request with "request N", or with respond(N), and records the size of the uploaded
+// WAV. Like the engine, it serves one request at a time; holdAnswers keeps it busy until that task completes.
 internal sealed class CountingServer : IDisposable
 {
     private readonly TcpListener listener = new(IPAddress.Loopback, 0);
     private readonly CancellationTokenSource stop = new();
     private readonly TaskCompletionSource firstRequest = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly Task? holdAnswers;
+    private readonly Func<int, string> respond;
     private int count;
 
-    public CountingServer(Task? holdAnswers = null)
+    public CountingServer(Task? holdAnswers = null, Func<int, string>? respond = null)
     {
         this.holdAnswers = holdAnswers;
+        this.respond = respond ?? (request => $"{{\"text\":\"request {request}\"}}");
         listener.Start();
         Endpoint = new Uri($"http://127.0.0.1:{((IPEndPoint)listener.LocalEndpoint).Port}/v1/audio/transcriptions");
         _ = ServeAsync();
@@ -305,7 +402,7 @@ internal sealed class CountingServer : IDisposable
                     try { await holdAnswers.WaitAsync(stop.Token); }
                     catch (OperationCanceledException) { return; }
                 }
-                var payload = Encoding.UTF8.GetBytes($"{{\"text\":\"request {Interlocked.Increment(ref count)}\"}}");
+                var payload = Encoding.UTF8.GetBytes(respond(Interlocked.Increment(ref count)));
                 await stream.WriteAsync(Encoding.ASCII.GetBytes($"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {payload.Length}\r\nConnection: close\r\n\r\n"));
                 await stream.WriteAsync(payload);
             }
