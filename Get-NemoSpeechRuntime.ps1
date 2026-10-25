@@ -15,8 +15,9 @@ $archiveSha256 = 'edf15a04ba98740aa0ab75ae4681ac7ad0a488b22b35ce2cbebd10590bb1c1
 $engineRoot = Join-Path $PSScriptRoot '.engine'
 $runtimeDirectory = Join-Path $engineRoot 'runtime'
 $marker = Join-Path $runtimeDirectory 'SOURCE-SHA256.txt'
+$executable = Join-Path $runtimeDirectory 'bin\nemo-speech.exe'
 
-if ((Test-Path -LiteralPath $marker) -and (Get-Content -LiteralPath $marker -Raw).Trim() -eq $archiveSha256) {
+if ((Test-Path -LiteralPath $executable) -and (Test-Path -LiteralPath $marker) -and (Get-Content -LiteralPath $marker -Raw).Trim() -eq $archiveSha256) {
     Write-Host "NeMo-Speech.cpp $version is already in $runtimeDirectory"
     return
 }
@@ -49,7 +50,7 @@ try {
     Move-Item -LiteralPath $unpacked -Destination $runtimeDirectory
     Set-Content -LiteralPath $marker -Value $archiveSha256 -NoNewline
 
-    & (Join-Path $runtimeDirectory 'bin\nemo-speech.exe') --version
+    & $executable --version
     if ($LASTEXITCODE -ne 0) {
         throw "The downloaded runtime did not start (exit code $LASTEXITCODE)."
     }
