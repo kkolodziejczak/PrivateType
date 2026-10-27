@@ -12,3 +12,10 @@
 - Verify Settings and dialogs with Windows' "Make text bigger" accessibility setting.
 - Allow modifiers other than Ctrl+Shift for dictation shortcuts.
 - Sign release executables so Windows SmartScreen does not warn on first launch.
+
+## Open work (2026-10-27)
+
+- Release 1.5.0 waits on three decisions: which third-party engine files to redistribute, the
+  engine fix for the release build, and the tag. Session: "Investigate Truncated Speech
+  Transcription".
+- Branch `t3code/transcription-history` is superseded by `e2d2f5b` on master; delete it.
