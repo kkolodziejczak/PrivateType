@@ -41,6 +41,7 @@ public partial class DictationBubble : Window
     private int dragStartCursorX, dragStartCursorY;
     private double dragStartLeft, dragStartTop;
     private double dragDpiScaleX = 1, dragDpiScaleY = 1;
+    private MonitorSpace? dragMonitorSpace;
     private readonly NativeMethods.MouseHookProc mouseHookProc;
     private nint mouseHook;
 
@@ -506,7 +507,10 @@ public partial class DictationBubble : Window
                 return NativeMethods.CallNextHookEx(mouseHook, code, wParam, lParam);
             case DragHookAction.Start:
             {
-                var p = CursorFromHook(lParam);
+                // One mapping for the whole drag, so the bubble follows the pointer smoothly
+                // even when it crosses onto a monitor scaled differently.
+                dragMonitorSpace = MonitorSpaceOf(new WindowInteropHelper(this).Handle);
+                var p = MapToWindowSpace(CursorFromHook(lParam), dragMonitorSpace);
                 dragStartCursorX = p.X;
                 dragStartCursorY = p.Y;
                 dragStartLeft = Left;
@@ -525,7 +529,7 @@ public partial class DictationBubble : Window
                 break;
             case DragHookAction.Move:
             {
-                var p = CursorFromHook(lParam);
+                var p = MapToWindowSpace(CursorFromHook(lParam), dragMonitorSpace);
                 var offset = CursorDeltaInDips(
                     dragStartCursorX,
                     dragStartCursorY,
@@ -553,10 +557,11 @@ public partial class DictationBubble : Window
     private bool IsCursorOverMenu(nint lParam)
     {
         var menu = Menu;
-        if (!menu.IsOpen || PresentationSource.FromVisual(menu) is null || menu.ActualWidth <= 0 || menu.ActualHeight <= 0)
+        if (!menu.IsOpen || PresentationSource.FromVisual(menu) is not HwndSource popup || menu.ActualWidth <= 0 || menu.ActualHeight <= 0)
             return false;
 
-        var cursor = CursorFromHook(lParam);
+        // The menu is its own window and can sit on another monitor than the bubble.
+        var cursor = CursorInWindowSpace(lParam, popup.Handle);
         var local = menu.PointFromScreen(new System.Windows.Point(cursor.X, cursor.Y));
         return local.X >= 0 && local.X < menu.ActualWidth && local.Y >= 0 && local.Y < menu.ActualHeight;
     }
@@ -580,14 +585,60 @@ public partial class DictationBubble : Window
         double dpiScaleY) =>
         new((currentX - startX) / dpiScaleX, (currentY - startY) / dpiScaleY);
 
-    private static NativeMethods.NativePoint CursorFromHook(nint lParam) =>
-        Marshal.PtrToStructure<NativeMethods.NativePoint>(lParam);
-
-    private bool IsCursorOverIcon(nint lParam)
+    // The hook reports physical pixels, but this system-DPI-aware app measures the screen in the
+    // system scale, so on a monitor scaled differently the two disagree. Windows scales each window
+    // by the monitor it is on, so a point is mapped through that window's monitor.
+    private static PointInt CursorFromHook(nint lParam)
     {
-        var cursor = CursorFromHook(lParam);
-        return IsScreenPointOverIcon(new PointInt(cursor.X, cursor.Y));
+        var physical = Marshal.PtrToStructure<NativeMethods.NativePoint>(lParam);
+        return new PointInt(physical.X, physical.Y);
     }
+
+    private static PointInt CursorInWindowSpace(nint lParam, nint window) =>
+        MapToWindowSpace(CursorFromHook(lParam), MonitorSpaceOf(window));
+
+    // The window's monitor, seen once in physical pixels and once in this app's space.
+    private static MonitorSpace? MonitorSpaceOf(nint window)
+    {
+        var monitor = NativeMethods.MonitorFromWindow(window, NativeMethods.MonitorDefaultToNearest);
+        var physical = new NativeMethods.MonitorInfo { Size = Marshal.SizeOf<NativeMethods.MonitorInfo>() };
+        var windowSpace = physical;
+        var previousContext = NativeMethods.SetThreadDpiAwarenessContext(NativeMethods.DpiAwarenessContextPerMonitorAwareV2);
+        if (previousContext == nint.Zero)
+            return null;
+
+        bool measuredPhysical;
+        try
+        {
+            measuredPhysical = NativeMethods.GetMonitorInfoW(monitor, ref physical);
+        }
+        finally
+        {
+            NativeMethods.SetThreadDpiAwarenessContext(previousContext);
+        }
+
+        return measuredPhysical && NativeMethods.GetMonitorInfoW(monitor, ref windowSpace)
+            ? new MonitorSpace(physical.Monitor, windowSpace.Monitor)
+            : null;
+    }
+
+    private static PointInt MapToWindowSpace(PointInt physical, MonitorSpace? space) =>
+        space is { } monitor ? MapToWindowSpace(physical, monitor.Physical, monitor.WindowSpace) : physical;
+
+    internal static PointInt MapToWindowSpace(PointInt physical, NativeMethods.NativeRect physicalMonitor, NativeMethods.NativeRect windowSpaceMonitor) =>
+        new(
+            MapAxis(physical.X, physicalMonitor.Left, physicalMonitor.Right, windowSpaceMonitor.Left, windowSpaceMonitor.Right),
+            MapAxis(physical.Y, physicalMonitor.Top, physicalMonitor.Bottom, windowSpaceMonitor.Top, windowSpaceMonitor.Bottom));
+
+    private static int MapAxis(int value, int physicalStart, int physicalEnd, int windowStart, int windowEnd) =>
+        physicalEnd == physicalStart
+            ? value
+            : windowStart + (int)Math.Floor((double)(value - physicalStart) * (windowEnd - windowStart) / (physicalEnd - physicalStart));
+
+    private bool IsCursorOverIcon(nint lParam) =>
+        IsScreenPointOverIcon(CursorInWindowSpace(lParam, new WindowInteropHelper(this).Handle));
+
+    private readonly record struct MonitorSpace(NativeMethods.NativeRect Physical, NativeMethods.NativeRect WindowSpace);
 
     private void OpenSettings(object sender, RoutedEventArgs e) => SettingsRequested?.Invoke();
 

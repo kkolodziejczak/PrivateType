@@ -116,6 +116,30 @@ public sealed class WindowsBoundaryTests
         Assert.Equal(50, offset.Y);
     }
 
+    // A 125% monitor right of a 100% primary: the hook reports physical pixels, the bubble lives
+    // in the system-DPI space where that monitor is 1536x864.
+    [Theory]
+    [InlineData(1920, 0, 1920, 0)]
+    [InlineData(2800, 900, 2624, 720)]
+    [InlineData(3839, 1079, 3455, 863)]
+    public void Maps_hook_pixels_on_a_differently_scaled_monitor_into_the_bubbles_coordinates(int physicalX, int physicalY, int expectedX, int expectedY)
+    {
+        var point = DictationBubble.MapToWindowSpace(
+            new DictationBubble.PointInt(physicalX, physicalY),
+            new NativeMethods.NativeRect { Left = 1920, Top = 0, Right = 3840, Bottom = 1080 },
+            new NativeMethods.NativeRect { Left = 1920, Top = 0, Right = 3456, Bottom = 864 });
+
+        Assert.Equal(new DictationBubble.PointInt(expectedX, expectedY), point);
+    }
+
+    [Fact]
+    public void Leaves_hook_pixels_unchanged_on_a_monitor_at_the_system_scale()
+    {
+        var monitor = new NativeMethods.NativeRect { Left = 0, Top = 0, Right = 1920, Bottom = 1080 };
+
+        Assert.Equal(new DictationBubble.PointInt(700, 1000), DictationBubble.MapToWindowSpace(new DictationBubble.PointInt(700, 1000), monitor, monitor));
+    }
+
     [Fact]
     public void Decodes_negative_screen_coordinates_for_monitors_left_or_above_the_primary_display()
     {

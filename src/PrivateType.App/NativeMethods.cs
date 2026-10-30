@@ -78,6 +78,22 @@ internal static class NativeMethods
     [return: MarshalAs(UnmanagedType.Bool)]
     internal static extern bool GetWindowRect(nint window, out NativeRect rect);
 
+    internal const nint DpiAwarenessContextPerMonitorAwareV2 = -4;
+    internal const uint MonitorDefaultToNearest = 2;
+
+    [DllImport("user32.dll")]
+    internal static extern nint SetThreadDpiAwarenessContext(nint context);
+
+    [DllImport("user32.dll")]
+    internal static extern nint MonitorFromWindow(nint window, uint flags);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static extern bool GetMonitorInfoW(nint monitor, ref MonitorInfo info);
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct MonitorInfo { public int Size; public NativeRect Monitor; public NativeRect WorkArea; public uint Flags; }
+
     [StructLayout(LayoutKind.Sequential)]
     internal struct NativeRect { public int Left; public int Top; public int Right; public int Bottom; }
 

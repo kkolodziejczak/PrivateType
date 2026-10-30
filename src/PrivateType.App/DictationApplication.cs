@@ -462,17 +462,50 @@ internal sealed class DictationApplication : IDisposable
             return;
 
         ShowReadyPanel();
-        try
+        await LoadModelInStandbyAsync();
+    }
+
+    private const int StandbyLoadAttempts = 3;
+    private static readonly TimeSpan StandbyLoadRetryDelay = TimeSpan.FromSeconds(30);
+    // Bumped by each standby load, so a model switch replaces the retries of the one before.
+    private int standbyLoadRun;
+
+    // Loads the model before the first shortcut needs it. Right after sign-in other apps compete for
+    // the disk and processor, so the engine can miss its start deadline; PrivateType keeps running and
+    // tries again, and a shortcut held meanwhile loads the model itself.
+    private async Task LoadModelInStandbyAsync()
+    {
+        var run = ++standbyLoadRun;
+        for (var attempt = 1; ; attempt++)
         {
-            await EnsureEngineLoadedAsync();
-            ShowReadyPanel();
-            ScheduleModelUnload();
-        }
-        catch (Exception exception)
-        {
-            RecordDiagnostic("model.load.failed", exception);
-            statusItem.Text = "Model could not load";
-            trayIcon.ShowBalloonTip(5000, "PrivateType", $"The local model could not load: {exception.Message}", Forms.ToolTipIcon.Error);
+            try
+            {
+                await EnsureEngineLoadedAsync();
+                // A dictation that shared this load owns the bubble now.
+                if (!shortcutHeld)
+                    ShowReadyPanel();
+                ScheduleModelUnload();
+                return;
+            }
+            catch (Exception exception)
+            {
+                // Shutdown stops the engine mid-load, and a model switch starts its own retries;
+                // neither is a failure for this run to report.
+                if (disposed || run != standbyLoadRun)
+                    return;
+                RecordDiagnostic("model.load.failed", exception, [("attempt", attempt)]);
+                statusItem.Text = "Model could not load";
+                trayIcon.Text = $"PrivateType — {statusItem.Text}";
+                if (attempt == StandbyLoadAttempts)
+                {
+                    trayIcon.ShowBalloonTip(5000, "PrivateType", $"The local model could not load: {exception.Message} The next shortcut tries again.", Forms.ToolTipIcon.Error);
+                    return;
+                }
+            }
+
+            await Task.Delay(StandbyLoadRetryDelay);
+            if (disposed || shortcutHeld || engineLoads.IsLoaded || run != standbyLoadRun)
+                return;
         }
     }
 
@@ -507,9 +540,7 @@ internal sealed class DictationApplication : IDisposable
         }
 
         RecordDiagnostic("model.standby");
-        await EnsureEngineLoadedAsync();
-        ShowReadyPanel();
-        ScheduleModelUnload();
+        await LoadModelInStandbyAsync();
     }
 
     private static string DescribeReady(HotkeyAvailability availability)
