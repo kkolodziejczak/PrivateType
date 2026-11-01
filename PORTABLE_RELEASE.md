@@ -44,6 +44,7 @@ downloads its pinned model again when needed.
 - Models: `nvidia/nemotron-3.5-asr-streaming-0.6b` (default), Q8_0 GGUF, 742,090,464 bytes, and `nvidia/parakeet-tdt-0.6b-v3`, Q8_0 GGUF, 713,975,456 bytes; see [MODEL_ARTIFACT.md](MODEL_ARTIFACT.md).
 - Model licenses: OpenMDW-1.1 (Nemotron) and CC-BY-4.0 (Parakeet). Models are downloaded by the user and are not redistributed in the ZIP.
 - Runtime: NVIDIA's unmodified NeMo-Speech.cpp 0.2.0 Windows release, Apache-2.0, with the licenses NVIDIA ships for its bundled components. See [ENGINE_DECISION.md](ENGINE_DECISION.md) for the pinned runtime, device choice, and measurements.
+- The ZIP does not include `vulkan-1.dll`, which the engine needs at load time. It normally comes with graphics drivers. A build machine without it fails at `Get-NemoSpeechRuntime.ps1`; the release workflow adds a pinned copy to its runner's `PATH`.
 
 ## Release verification
 

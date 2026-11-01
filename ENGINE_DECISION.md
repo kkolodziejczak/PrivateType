@@ -8,6 +8,8 @@ PrivateType uses NVIDIA NeMo-Speech.cpp with the `nvidia/nemotron-3.5-asr-stream
 
 Since the release after 1.4.0, PrivateType ships NVIDIA's own prebuilt NeMo-Speech.cpp 0.2.0 Windows release, `nemo-speech-0.2.0-windows-x86_64-vulkan.zip` (SHA-256 `edf15a04ba98740aa0ab75ae4681ac7ad0a488b22b35ce2cbebd10590bb1c1e1`), unmodified. [Get-NemoSpeechRuntime.ps1](Get-NemoSpeechRuntime.ps1) downloads it, checks the hash, and unpacks it; the release workflow runs it instead of building from source. The portable ZIP contains that runtime but never the speech model.
 
+The engine links `vulkan-1.dll` at load time, even for processor use, and NVIDIA's release does not include it. It normally comes with graphics drivers, so PrivateType relies on the computer having it and does not ship it; a computer without it cannot start the engine. The release workflow, whose runner has no graphics drivers, adds a pinned copy of the loader to its own `PATH` outside `.engine`.
+
 Up to 1.4.0, the workflow built revision `1118951337094db3b362fbf1b27e871696f10590` from source for the CPU only, with a Windows SentencePiece linker patch. That build used four compute threads and had no graphics backend.
 
 ## Device choice

@@ -122,6 +122,9 @@ language or for all of them. You can import and export phrase lists as packs.
 - About 1.2 GB of free disk space for the app, one model, and working room.
 - The [Microsoft Visual C++ x64 Redistributable](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist),
   if it isn't already installed.
+- Up-to-date graphics drivers, even if you don't have a separate graphics card.
+  The speech engine needs the Vulkan file they install (`vulkan-1.dll`), so it
+  won't start on a computer without it, which can include virtual machines.
 
 ## Privacy
 
@@ -141,7 +144,7 @@ language or for all of them. You can import and export phrase lists as packs.
 | First dictation shows **Loading local model…** | Keep holding the shortcut until it is ready. |
 | Text was not inserted | Password fields, apps running as administrator, remote desktops, and games are not supported. Paste the text from **Win+Shift+V** instead. |
 | Recognition is weak | Choose the right microphone in Settings and speak close to it. Add tricky words to Vocabulary. |
-| App won't start the speech engine | Install the Microsoft Visual C++ x64 Redistributable and start PrivateType again. |
+| App won't start the speech engine | Install the Microsoft Visual C++ x64 Redistributable and update your graphics drivers, then start PrivateType again. |
 
 Still stuck? Open **Settings → Diagnostics…** and
 [open an issue](https://github.com/kkolodziejczak/privatetype/issues). Please

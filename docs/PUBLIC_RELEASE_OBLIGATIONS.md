@@ -89,6 +89,9 @@ Choose one route before packaging:
 - `Build-PortableRelease.ps1` copies NVIDIA's whole `bin` folder (the engine,
   its DLLs, and the Microsoft Visual C++ runtime DLLs NVIDIA ships with it) and
   the release `licenses` bundle into the portable app folder.
+- The release does not redistribute `vulkan-1.dll`. The engine loads the copy
+  installed with the computer's graphics drivers; the release workflow's pinned
+  copy stays on its runner, so it adds no notice obligation.
 - `MODEL_ARTIFACT.md` pins the downloaded model revision and SHA-256.
 - NVIDIA's release archive includes `share/licenses/nemo-speech` with
   `LICENSE`, `NOTICE`, `THIRD_PARTY_NOTICES.md`, and per-component licenses;
