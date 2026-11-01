@@ -4,8 +4,8 @@
 > PrivateType compiled from NeMo-Speech.cpp source up to 1.4.0. Later releases
 > ship NVIDIA's unmodified prebuilt 0.2.0 Windows release instead, with the
 > license files NVIDIA includes; see [ENGINE_DECISION.md](../ENGINE_DECISION.md)
-> and [PUBLIC_RELEASE_OBLIGATIONS.md](PUBLIC_RELEASE_OBLIGATIONS.md). That
-> release has not had a review like this one yet.
+> and [PUBLIC_RELEASE_OBLIGATIONS.md](PUBLIC_RELEASE_OBLIGATIONS.md), which
+> records the KenLM check for that release.
 
 Research date: 2026-08-14
 Scope: the `win-x64` portable ZIP produced by the current builder, the native

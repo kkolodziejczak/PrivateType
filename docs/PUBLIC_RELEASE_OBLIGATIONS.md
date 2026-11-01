@@ -53,7 +53,13 @@ Before publishing:
 
 1. Audit the exact native DLLs and executable copied by `Build-PortableRelease.ps1`, including their link configuration.
 2. Include the upstream `LICENSE`, `NOTICE`, and a complete, readable third-party-notice/license bundle covering every distributed component.
-3. Obtain a legal review of the exact KenLM/LGPL footprint and any other copyleft component in the shipped binary set.
+3. Re-check the KenLM/LGPL footprint whenever the pinned runtime changes. For NeMo-Speech.cpp 0.2.0 the owner decided on 2026-11-01 that no legal review is needed, because KenLM is not in the shipped binaries:
+   - `nemo-speech --json doctor` reports `"flashlight": false`, and `nemo_speech_asr.dll` contains the error `flashlight decoder requires NEMO_SPEECH_WITH_FLASHLIGHT=ON`. KenLM is only used by that decoder.
+   - A text scan of every shipped DLL and the executable found no KenLM symbols. The only mention of the name is a help line in `nemo-speech.exe`.
+   - `engine\bin` has no KenLM DLL, and NVIDIA's release ships no KenLM or Flashlight license file.
+   - KenLM is the only LGPL or GPL entry in NVIDIA's `THIRD_PARTY_NOTICES.md`, which lists every build option. That relies on NVIDIA's list being complete.
+
+   This is an engineering check, not legal advice.
 
 ## Windows distribution and signing
 
