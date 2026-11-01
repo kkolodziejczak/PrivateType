@@ -13,3 +13,5 @@
 - Verify Settings and dialogs with Windows' "Make text bigger" accessibility setting.
 - Allow modifiers other than Ctrl+Shift for dictation shortcuts.
 - Sign release executables so Windows SmartScreen does not warn on first launch.
+- Fall back to the processor when the engine exits or times out starting on a graphics card. Today only a failed warm-up falls back, so every retry picks the same card again.
+- Mention graphics drivers in the setup window's "could not start" message, which only suggests the Visual C++ Redistributable.

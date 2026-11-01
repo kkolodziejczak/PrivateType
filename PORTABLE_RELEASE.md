@@ -67,4 +67,4 @@ Pushing a version tag such as `v1.0.6` requires a matching `.github/release-note
 
 ## Recorded package evidence
 
-On 2026-10-06, the release workflow produced a 202,151,244-byte application folder and an 81,900,274-byte ZIP for 1.4.0 (.NET 10). The excluded models are 742,090,464 bytes (Nemotron) and 713,975,456 bytes (Parakeet). Re-record these values whenever the runtime or publish output changes.
+On 2026-11-01, a manual run of the release workflow produced a 240,893,644-byte application folder and a 96,274,639-byte ZIP from the 1.5.1 sources (.NET 10). The excluded models are 742,090,464 bytes (Nemotron) and 713,975,456 bytes (Parakeet). Re-record these values whenever the runtime or publish output changes.

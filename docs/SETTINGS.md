@@ -289,8 +289,8 @@ pass on release. Turn it off on a slow computer.
 available)** (the default) uses a graphics card, then integrated graphics, when
 one has at least 1 GiB free; otherwise the processor. A graphics card is much
 faster but uses more battery, so choose **Processor only** to save battery.
-The line below shows the device in use. If a graphics card fails to start, it
-turns amber and PrivateType uses the processor until you restart it. A change
+The line below shows the device in use. If a graphics card fails while the
+model warms up, it turns amber and PrivateType uses the processor until you restart it. A change
 applies the next time the model loads.
 
 **Recommended:** Parakeet, which finishes the whole sentence at once on release. Choose Nemotron for live words while you speak, vocabulary boosting, or Asian languages such as Japanese, Korean, and Chinese.
