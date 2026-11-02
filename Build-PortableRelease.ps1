@@ -43,6 +43,7 @@ function Add-ReleaseNotices {
     foreach ($file in $requiredEngineNotices) {
         Copy-ReleaseFile (Join-Path $EngineLicenses $file) (Join-Path $licensesDirectory "NeMo-Speech.cpp\$file")
     }
+    Copy-ReleaseFile $loaderLicense (Join-Path $licensesDirectory 'VulkanRT-License.txt')
     Copy-ReleaseFile (Join-Path $naudioPackageRoot 'naudio\2.2.1\license.txt') (Join-Path $licensesDirectory 'NAudio-MIT.txt')
     Copy-ReleaseFile (Join-Path $dotnetRoot 'LICENSE.txt') (Join-Path $licensesDirectory 'dotnet-LICENSE.txt')
     Copy-ReleaseFile (Join-Path $dotnetRoot 'ThirdPartyNotices.txt') (Join-Path $licensesDirectory 'dotnet-THIRD-PARTY-NOTICES.txt')
@@ -63,6 +64,10 @@ shipped build:
   llama.cpp, cpp-httplib, miniaudio, Abseil, Protocol Buffers, SentencePiece,
   and utf8-range, in the NeMo-Speech.cpp folder. The Microsoft Visual C++
   runtime libraries in engine\bin are redistributed as part of that release.
+* Vulkan loader 1.4.328.1 (engine\bin\vulkan-1.dll), unmodified, from LunarG's
+  VulkanRT-X64-1.4.328.1-Components.zip (SHA-256
+  293efbb2c11e60429df7770f40e3c5c811a7fa42af81de0cc41e8718ddb2b373): MIT and
+  Apache-2.0, in VulkanRT-License.txt.
 * NAudio 2.2.1: MIT.
 * The spoken cue recordings were generated with Kokoro-82M by hexgrad
   (Apache-2.0, https://huggingface.co/hexgrad/Kokoro-82M); no model is included.
@@ -80,10 +85,11 @@ if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
 
 $appProject = Join-Path $PSScriptRoot 'src\PrivateType.App\PrivateType.App.csproj'
 $launcherProject = Join-Path $PSScriptRoot 'src\PrivateType.Launcher\PrivateType.Launcher.csproj'
-# Run Get-NemoSpeechRuntime.ps1 first; it verifies and unpacks NVIDIA's pinned release here.
+# Run Get-NemoSpeechRuntime.ps1 first; it verifies and unpacks NVIDIA's pinned release and the Vulkan loader here.
 $runtimeRoot = Join-Path $PSScriptRoot '.engine\runtime'
 $runtimeSource = Join-Path $runtimeRoot 'bin'
 $engineLicenses = Join-Path $runtimeRoot 'share\licenses\nemo-speech'
+$loaderLicense = Join-Path $runtimeRoot 'share\licenses\vulkan-runtime\VulkanRT-License.txt'
 # The whole bin folder is shipped; these are the files the app cannot run without.
 $requiredEngineFiles = @(
     'nemo-speech.exe',
@@ -91,7 +97,8 @@ $requiredEngineFiles = @(
     'ggml.dll',
     'ggml-base.dll',
     'ggml-cpu.dll',
-    'ggml-vulkan.dll'
+    'ggml-vulkan.dll',
+    'vulkan-1.dll'
 )
 $requiredEngineNotices = @(
     'LICENSE',

@@ -8,7 +8,7 @@ The portable release builder bundles the app MIT license; NVIDIA's
 NeMo-Speech.cpp 0.2.0 `LICENSE`, `NOTICE`, third-party notices, and the
 component licenses NVIDIA ships with that release (ggml, llama.cpp,
 cpp-httplib, miniaudio, Abseil, Protocol Buffers, SentencePiece, utf8-range);
-and the NAudio and .NET license materials. The release test
+the Vulkan loader license; and the NAudio and .NET license materials. The release test
 fails if any expected notice is missing. A final-artifact audit and clean-machine
 test remain required before public publication.
 
@@ -95,9 +95,10 @@ Choose one route before packaging:
 - `Build-PortableRelease.ps1` copies NVIDIA's whole `bin` folder (the engine,
   its DLLs, and the Microsoft Visual C++ runtime DLLs NVIDIA ships with it) and
   the release `licenses` bundle into the portable app folder.
-- The release does not redistribute `vulkan-1.dll`. The engine loads the copy
-  installed with the computer's graphics drivers; the release workflow's pinned
-  copy stays on its runner, so it adds no notice obligation.
+- The release redistributes LunarG's unmodified `vulkan-1.dll` 1.4.328.1 beside
+  the engine. Its `VulkanRT-License.txt` (MIT and Apache-2.0, no copyleft) is
+  bundled as `licenses\VulkanRT-License.txt`, named in the third-party notices,
+  and checked by the release test.
 - `MODEL_ARTIFACT.md` pins the downloaded model revision and SHA-256.
 - NVIDIA's release archive includes `share/licenses/nemo-speech` with
   `LICENSE`, `NOTICE`, `THIRD_PARTY_NOTICES.md`, and per-component licenses;

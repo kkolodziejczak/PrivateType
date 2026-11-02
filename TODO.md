@@ -6,7 +6,6 @@
 - Run a bounded whisper.cpp Polish/English streaming-quality spike before considering an engine/model replacement.
 - Investigate platform-native macOS and explicitly named Linux hosts after Windows v1.0.0; .NET MAUI does not provide Linux desktop parity for this app.
 - Ship a single self-unpacking `.exe` next to the ZIP, built on the existing launcher: double-click once, it unpacks per user and starts. The engine needs real files, and the model remains a separate download.
-- Ship `vulkan-1.dll` beside the engine, so computers without graphics drivers can start it on the processor. Add its license to the notices.
 - Design a manual update window and workflow; automatic updates are out of scope for v1.0.0.
 - Add a private note-taker mode: when dictation starts without an eligible target window, let the user explicitly save the transcript as a local note instead of inserting it into another app. Define how notes are opened, organized, and deleted without weakening PrivateType's privacy guarantees.
 - Add reviewed, public curated packs to [vocabulary-packs](vocabulary-packs/) (none ship yet).
@@ -14,4 +13,3 @@
 - Allow modifiers other than Ctrl+Shift for dictation shortcuts.
 - Sign release executables so Windows SmartScreen does not warn on first launch.
 - Fall back to the processor when the engine exits or times out starting on a graphics card. Today only a failed warm-up falls back, so every retry picks the same card again.
-- Mention graphics drivers in the setup window's "could not start" message, which only suggests the Visual C++ Redistributable.

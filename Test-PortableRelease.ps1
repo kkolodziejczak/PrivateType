@@ -37,7 +37,8 @@ $engineFiles = @(
     'ggml.dll',
     'ggml-base.dll',
     'ggml-cpu.dll',
-    'ggml-vulkan.dll'
+    'ggml-vulkan.dll',
+    'vulkan-1.dll'
 )
 
 $noticeFiles = @(
@@ -55,6 +56,7 @@ $noticeFiles = @(
     'licenses\NeMo-Speech.cpp\third_party\vcpkg\protobuf\LICENSE',
     'licenses\NeMo-Speech.cpp\third_party\vcpkg\sentencepiece\LICENSE',
     'licenses\NeMo-Speech.cpp\third_party\vcpkg\utf8-range\LICENSE',
+    'licenses\VulkanRT-License.txt',
     'licenses\NAudio-MIT.txt',
     'licenses\dotnet-LICENSE.txt',
     'licenses\dotnet-THIRD-PARTY-NOTICES.txt'
@@ -118,7 +120,15 @@ try {
         throw 'Relocated portable archive unexpectedly contains a downloaded model.'
     }
 
-    Write-Host "PASS: clean unpack and whole-folder relocation validated: $relocatedDirectory"
+    # The engine must start from the ZIP alone, even on a computer without graphics drivers. The
+    # device check exits non-zero when it finds no graphics device, so only its list counts.
+    $doctor = & (Join-Path $relocatedDirectory 'app\engine\bin\nemo-speech.exe') --json doctor | Out-String | ConvertFrom-Json
+    $global:LASTEXITCODE = 0
+    if (!($doctor.devices | Where-Object type -EQ 'cpu')) {
+        throw 'The packaged engine did not start and list the processor.'
+    }
+
+    Write-Host "PASS: clean unpack, whole-folder relocation, and engine start validated: $relocatedDirectory"
 }
 finally {
     if (Test-Path -LiteralPath $WorkingDirectory) {
