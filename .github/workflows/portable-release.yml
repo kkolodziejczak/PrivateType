@@ -19,21 +19,6 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
-      # The engine links vulkan-1.dll, which normally comes with graphics drivers, so this runner
-      # has none. It stays outside .engine, so the release does not ship it.
-      - name: Add pinned Vulkan loader to the runner
-        shell: pwsh
-        run: |
-          $name = 'VulkanRT-X64-1.4.328.1-Components'
-          $archive = "$env:RUNNER_TEMP/$name.zip"
-          Invoke-WebRequest "https://sdk.lunarg.com/sdk/download/1.4.328.1/windows/$name.zip" -OutFile $archive
-          $actual = (Get-FileHash $archive -Algorithm SHA256).Hash.ToLowerInvariant()
-          if ($actual -ne '293efbb2c11e60429df7770f40e3c5c811a7fa42af81de0cc41e8718ddb2b373') {
-            throw "Vulkan loader does not match its pinned SHA-256 (got $actual)."
-          }
-          Expand-Archive $archive -DestinationPath $env:RUNNER_TEMP
-          "$env:RUNNER_TEMP\$name\x64" >> $env:GITHUB_PATH
-
       - name: Download pinned NeMo-Speech.cpp runtime
         shell: pwsh
         run: ./Get-NemoSpeechRuntime.ps1
