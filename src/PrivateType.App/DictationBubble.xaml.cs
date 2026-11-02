@@ -39,7 +39,6 @@ public partial class DictationBubble : Window
     private bool recordingVisualsActive;
     private bool dragActive;
     private PointInt dragGrabOffset;
-    private IReadOnlyList<MonitorSpace> dragMonitors = [];
     private readonly NativeMethods.MouseHookProc mouseHookProc;
     private nint mouseHook;
 
@@ -556,7 +555,6 @@ public partial class DictationBubble : Window
         var cursor = CursorInWindowSpace(lParam, handle);
         NativeMethods.GetWindowRect(handle, out var window);
         dragGrabOffset = new PointInt(cursor.X - window.Left, cursor.Y - window.Top);
-        dragMonitors = MeasureMonitorSpaces();
         dragActive = true;
     }
 
@@ -569,16 +567,36 @@ public partial class DictationBubble : Window
         var cursor = CursorFromHook(lParam);
         NativeMethods.GetWindowRect(handle, out var start);
         var physicalStart = PhysicalBounds(handle);
-        if (PlaceGrabbedSpotUnder(handle, cursor, MonitorSpaceOf(NativeMethods.MonitorFromWindow(handle, NativeMethods.MonitorDefaultToNearest)))
-            || dragMonitors.Any(monitor => PlaceGrabbedSpotUnder(handle, cursor, monitor)))
+        if (PlaceGrabbedSpotUnder(handle, cursor, MonitorSpaceOf(NativeMethods.MonitorFromWindow(handle, NativeMethods.MonitorDefaultToNearest))))
+            return;
+
+        var monitors = MeasureMonitorSpaces();
+        if (monitors.Any(monitor => PlaceGrabbedSpotUnder(handle, cursor, monitor)))
             return;
 
         // With an off-center grab, a few pixels at the border have no answer: the bubble belongs on
-        // each monitor at the other monitor's size. Wait where it was until the cursor is past them,
-        // but never let go of a cursor that has left the bubble.
-        if (cursor.X >= physicalStart.Left && cursor.X < physicalStart.Right && cursor.Y >= physicalStart.Top && cursor.Y < physicalStart.Bottom)
+        // each monitor at the other monitor's size. A failed try can leave it anywhere, even off every
+        // screen, so wait where it was until the cursor is past them.
+        if (IsInside(physicalStart, cursor))
+        {
             MoveWindowOrigin(handle, start.Left, start.Top);
+            return;
+        }
+
+        // A fast cursor can land there from outside the bubble. Centered on the cursor, the bubble
+        // belongs to the cursor's monitor at either size, so that placement has an answer.
+        var center = new PointInt((start.Right - start.Left) / 2, (start.Bottom - start.Top) / 2);
+        foreach (var monitor in monitors.OrderByDescending(monitor => IsInside(monitor.Physical, cursor)))
+        {
+            var mapped = MapToWindowSpace(cursor, monitor);
+            MoveWindowOrigin(handle, mapped.X - center.X, mapped.Y - center.Y);
+            if (IsInside(PhysicalBounds(handle), cursor))
+                return;
+        }
     }
+
+    private static bool IsInside(NativeMethods.NativeRect bounds, PointInt point) =>
+        point.X >= bounds.Left && point.X < bounds.Right && point.Y >= bounds.Top && point.Y < bounds.Bottom;
 
     private bool PlaceGrabbedSpotUnder(nint handle, PointInt cursor, MonitorSpace? monitor)
     {

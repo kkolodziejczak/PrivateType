@@ -26,12 +26,65 @@ internal static class BubbleDragProbe
         foreach (var followsTargetCenter in new[] { true, false })
         foreach (var startsAtTop in new[] { false, true })
         foreach (var pixelsPerStep in new[] { 1, 37 })
-            VerifyDrag(source, target, grabFraction, followsTargetCenter, startsAtTop, pixelsPerStep);
+        foreach (var regrabsAtBorder in pixelsPerStep == 1 ? new[] { false, true } : [false])
+            VerifyDrag(source, target, grabFraction, followsTargetCenter, startsAtTop, pixelsPerStep, regrabsAtBorder);
+
+        foreach (var source in screens)
+        foreach (var target in screens.Where(screen => screen != source))
+        foreach (var grabFraction in new[] { 0.3, 0.5, 0.7 })
+        foreach (var startsAtTop in new[] { false, true })
+            VerifyJumpsAcrossBorder(source, target, grabFraction, startsAtTop);
+    }
+
+    // A fast mouse lands anywhere near the border from outside the bubble. The bubble may leave the
+    // grabbed spot for a moment there, but it must stay under the pointer and keep a saved position.
+    private static void VerifyJumpsAcrossBorder(Forms.Screen source, Forms.Screen target, double grabFraction, bool startsAtTop)
+    {
+        const int JumpPixels = 40;
+        const int BorderZonePixels = 60;
+        var bubble = new DictationBubble();
+        bubble.ShowReady(PortableSettings.Default, modelLoaded: true);
+        var handle = new WindowInteropHelper(bubble).Handle;
+        bubble.MoveToScreen(target);
+        bubble.UpdateLayout();
+        var targetMonitor = PhysicalMonitorOf(handle);
+        bubble.MoveToScreen(source);
+        if (startsAtTop)
+            bubble.Top = source.WorkingArea.Top / System.Windows.Media.VisualTreeHelper.GetDpi(bubble).DpiScaleY;
+        bubble.UpdateLayout();
+
+        var start = PhysicalRect(handle);
+        var startX = start.Left + (int)((start.Right - start.Left) * grabFraction);
+        var startY = (start.Top + start.Bottom) / 2;
+        var endX = (targetMonitor.Left + targetMonitor.Right) / 2;
+        Inject(bubble, NativeMethods.WmLButtonDown, startX, startY);
+
+        var direction = Math.Sign(endX - startX);
+        var border = direction > 0 ? targetMonitor.Left : targetMonitor.Right;
+        var jumps = 0;
+        for (var x = border - BorderZonePixels; x <= border + BorderZonePixels; x++)
+        foreach (var from in new[] { x - direction * JumpPixels, x + direction * JumpPixels })
+        {
+            Inject(bubble, NativeMethods.WmMouseMove, from, startY);
+            Inject(bubble, NativeMethods.WmMouseMove, x, startY);
+            jumps++;
+            var rect = PhysicalRect(handle);
+            if (x < rect.Left || x >= rect.Right || startY < rect.Top || startY >= rect.Bottom)
+            {
+                bubble.Close();
+                throw new InvalidOperationException($"A jump from {from} to {x},{startY} left the bubble at {rect.Left},{rect.Top} ({rect.Right - rect.Left} wide), away from the pointer, grabbed at {grabFraction:P0}.");
+            }
+        }
+
+        Inject(bubble, NativeMethods.WmLButtonUp, border, startY);
+        bubble.Close();
+        Console.WriteLine($"PASS: The bubble stayed under the pointer through {jumps} jumps across the border from {source.DeviceName}, grabbed at {grabFraction:P0}, from the {(startsAtTop ? "top" : "bottom")}.");
     }
 
     // One pixel per step finds narrow bands at the monitor border; a fast mouse jumps across them.
     // Near the top of the screen the monitors' coordinates almost agree, hiding a wrong placement.
-    private static void VerifyDrag(Forms.Screen source, Forms.Screen target, double grabFraction, bool followsTargetCenter, bool startsAtTop, int pixelsPerStep)
+    // Regrabbing drops the bubble and picks it up again at every position straddling the border.
+    private static void VerifyDrag(Forms.Screen source, Forms.Screen target, double grabFraction, bool followsTargetCenter, bool startsAtTop, int pixelsPerStep, bool regrabsAtBorder)
     {
         var bubble = new DictationBubble();
         bubble.ShowReady(PortableSettings.Default, modelLoaded: true);
@@ -61,6 +114,8 @@ internal static class BubbleDragProbe
         var worstAt = (X: startX, Y: startY);
         var smallestWidth = start.Right - start.Left;
         var largestWidth = smallestWidth;
+        var heldX = grabFraction;
+        var heldY = 0.5;
         for (var step = 1; step <= steps; step++)
         {
             var x = startX + (endX - startX) * step / steps;
@@ -69,11 +124,29 @@ internal static class BubbleDragProbe
             var rect = PhysicalRect(handle);
             smallestWidth = Math.Min(smallestWidth, rect.Right - rect.Left);
             largestWidth = Math.Max(largestWidth, rect.Right - rect.Left);
-            var drift = GrabDrift(rect, x, y, grabFraction);
+            var drift = GrabDrift(rect, x, y, heldX, heldY);
             if (drift > worstDrift)
             {
                 worstDrift = drift;
                 worstAt = (x, y);
+            }
+
+            // Picking it up takes hold of whatever spot is now under the pointer. Waiting at the border
+            // walks that spot a little with every regrab, so stop before it reaches the icon's edge.
+            var spotX = (x - rect.Left) / (double)(rect.Right - rect.Left);
+            var spotY = (y - rect.Top) / (double)(rect.Bottom - rect.Top);
+            if (regrabsAtBorder && spotX is > 0.3 and < 0.7 && spotY is > 0.3 and < 0.7
+                && rect.Left < targetMonitor.Right && rect.Right > targetMonitor.Left && (rect.Left < targetMonitor.Left || rect.Right > targetMonitor.Right))
+            {
+                Inject(bubble, NativeMethods.WmLButtonUp, x, y);
+                if (Inject(bubble, NativeMethods.WmLButtonDown, x, y) != 1)
+                {
+                    bubble.Close();
+                    throw new InvalidOperationException($"The bubble dropped at {rect.Left},{rect.Top} ({rect.Right - rect.Left} wide) on the monitor border could not be picked up again at {x},{y}.");
+                }
+
+                heldX = spotX;
+                heldY = spotY;
             }
         }
 
@@ -86,7 +159,7 @@ internal static class BubbleDragProbe
         if (positionOutOfStep > 1)
             throw new InvalidOperationException($"The bubble's Left and Top are {positionOutOfStep:F0} pixels from its real window after a drag, so its saved position would be wrong.");
 
-        var route = $"{source.DeviceName} to {target.DeviceName}, grabbed at {grabFraction:P0}, {(followsTargetCenter ? "diagonal" : "level")} from the {(startsAtTop ? "top" : "bottom")}, {pixelsPerStep}px per step";
+        var route = $"{source.DeviceName} to {target.DeviceName}, grabbed at {grabFraction:P0}, {(followsTargetCenter ? "diagonal" : "level")} from the {(startsAtTop ? "top" : "bottom")}, {pixelsPerStep}px per step{(regrabsAtBorder ? ", regrabbed at the border" : "")}";
         // An off-center grab waits at the border for as long as the two sizes disagree about the monitor.
         var allowedDrift = RoundingPixels + (largestWidth - smallestWidth) * Math.Abs(grabFraction - 0.5);
         if (worstDrift > allowedDrift)
@@ -97,10 +170,10 @@ internal static class BubbleDragProbe
 
     // How far the spot the user grabbed has moved from the pointer. The window's physical size
     // changes with the monitor it is on, so the spot is a fraction of its current size.
-    private static double GrabDrift(NativeMethods.NativeRect window, int cursorX, int cursorY, double grabFraction)
+    private static double GrabDrift(NativeMethods.NativeRect window, int cursorX, int cursorY, double heldX, double heldY)
     {
-        var grabbedX = window.Left + (window.Right - window.Left) * grabFraction;
-        var grabbedY = window.Top + (window.Bottom - window.Top) * 0.5;
+        var grabbedX = window.Left + (window.Right - window.Left) * heldX;
+        var grabbedY = window.Top + (window.Bottom - window.Top) * heldY;
         return Math.Max(Math.Abs(grabbedX - cursorX), Math.Abs(grabbedY - cursorY));
     }
 
