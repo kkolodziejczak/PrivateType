@@ -52,6 +52,7 @@ static void RenderWindows(bool monitorPlacementOnly)
     if (monitorPlacementOnly)
     {
         VerifyTargetMonitorPlacement();
+        BubbleDragProbe.Run();
         return;
     }
 
@@ -152,6 +153,7 @@ static void RenderWindows(bool monitorPlacementOnly)
     Render(errorPanel, Path.Combine(outputDirectory, "status-panel-error.png"));
 
     VerifyTargetMonitorPlacement();
+    BubbleDragProbe.Run();
     VerifyTranscriptPreviewClearsTaskbars();
 
     Console.WriteLine($"PASS: Win32 x64 INPUT layout is {inputSize} bytes.");

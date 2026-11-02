@@ -38,10 +38,8 @@ public partial class DictationBubble : Window
     private bool recordingIndicatorVisible;
     private bool recordingVisualsActive;
     private bool dragActive;
-    private int dragStartCursorX, dragStartCursorY;
-    private double dragStartLeft, dragStartTop;
-    private double dragDpiScaleX = 1, dragDpiScaleY = 1;
-    private MonitorSpace? dragMonitorSpace;
+    private PointInt dragGrabOffset;
+    private IReadOnlyList<MonitorSpace> dragMonitors = [];
     private readonly NativeMethods.MouseHookProc mouseHookProc;
     private nint mouseHook;
 
@@ -488,7 +486,7 @@ public partial class DictationBubble : Window
         base.OnClosed(e);
     }
 
-    private nint OnMouseHook(int code, nint wParam, nint lParam)
+    internal nint OnMouseHook(int code, nint wParam, nint lParam)
     {
         if (code < 0)
             return NativeMethods.CallNextHookEx(mouseHook, code, wParam, lParam);
@@ -506,21 +504,8 @@ public partial class DictationBubble : Window
             case DragHookAction.Start when active || !IsCursorOverIcon(lParam):
                 return NativeMethods.CallNextHookEx(mouseHook, code, wParam, lParam);
             case DragHookAction.Start:
-            {
-                // One mapping for the whole drag, so the bubble follows the pointer smoothly
-                // even when it crosses onto a monitor scaled differently.
-                dragMonitorSpace = MonitorSpaceOf(new WindowInteropHelper(this).Handle);
-                var p = MapToWindowSpace(CursorFromHook(lParam), dragMonitorSpace);
-                dragStartCursorX = p.X;
-                dragStartCursorY = p.Y;
-                dragStartLeft = Left;
-                dragStartTop = Top;
-                var dpi = VisualTreeHelper.GetDpi(this);
-                dragDpiScaleX = dpi.DpiScaleX;
-                dragDpiScaleY = dpi.DpiScaleY;
-                dragActive = true;
+                StartDrag(lParam);
                 return 1;
-            }
             case DragHookAction.Recover:
                 // The button-up never reached the hook; a new press ends the stale drag
                 // and passes through untouched.
@@ -528,19 +513,8 @@ public partial class DictationBubble : Window
                 ReportPosition();
                 break;
             case DragHookAction.Move:
-            {
-                var p = MapToWindowSpace(CursorFromHook(lParam), dragMonitorSpace);
-                var offset = CursorDeltaInDips(
-                    dragStartCursorX,
-                    dragStartCursorY,
-                    p.X,
-                    p.Y,
-                    dragDpiScaleX,
-                    dragDpiScaleY);
-                Left = dragStartLeft + offset.X;
-                Top = dragStartTop + offset.Y;
+                MoveDrag(lParam);
                 break;
-            }
             case DragHookAction.End:
                 dragActive = false;
                 ReportPosition();
@@ -576,14 +550,70 @@ public partial class DictationBubble : Window
             _ => DragHookAction.None
         };
 
-    internal static Vector CursorDeltaInDips(
-        int startX,
-        int startY,
-        int currentX,
-        int currentY,
-        double dpiScaleX,
-        double dpiScaleY) =>
-        new((currentX - startX) / dpiScaleX, (currentY - startY) / dpiScaleY);
+    private void StartDrag(nint lParam)
+    {
+        var handle = new WindowInteropHelper(this).Handle;
+        var cursor = CursorInWindowSpace(lParam, handle);
+        NativeMethods.GetWindowRect(handle, out var window);
+        dragGrabOffset = new PointInt(cursor.X - window.Left, cursor.Y - window.Top);
+        dragMonitors = MeasureMonitorSpaces();
+        dragActive = true;
+    }
+
+    // This app's coordinates do not line up across monitors scaled differently, and Windows alone
+    // decides which monitor scales the bubble, sometimes by its previous one and sometimes reporting
+    // another. So a placement is judged by where the bubble landed, starting with its reported monitor.
+    private void MoveDrag(nint lParam)
+    {
+        var handle = new WindowInteropHelper(this).Handle;
+        var cursor = CursorFromHook(lParam);
+        NativeMethods.GetWindowRect(handle, out var start);
+        var physicalStart = PhysicalBounds(handle);
+        if (PlaceGrabbedSpotUnder(handle, cursor, MonitorSpaceOf(NativeMethods.MonitorFromWindow(handle, NativeMethods.MonitorDefaultToNearest)))
+            || dragMonitors.Any(monitor => PlaceGrabbedSpotUnder(handle, cursor, monitor)))
+            return;
+
+        // With an off-center grab, a few pixels at the border have no answer: the bubble belongs on
+        // each monitor at the other monitor's size. Wait where it was until the cursor is past them,
+        // but never let go of a cursor that has left the bubble.
+        if (cursor.X >= physicalStart.Left && cursor.X < physicalStart.Right && cursor.Y >= physicalStart.Top && cursor.Y < physicalStart.Bottom)
+            MoveWindowOrigin(handle, start.Left, start.Top);
+    }
+
+    private bool PlaceGrabbedSpotUnder(nint handle, PointInt cursor, MonitorSpace? monitor)
+    {
+        var mapped = MapToWindowSpace(cursor, monitor);
+        MoveWindowOrigin(handle, mapped.X - dragGrabOffset.X, mapped.Y - dragGrabOffset.Y);
+        NativeMethods.GetWindowRect(handle, out var windowSpace);
+        return HoldsGrabbedSpot(cursor, dragGrabOffset, PhysicalBounds(handle), windowSpace);
+    }
+
+    private static void MoveWindowOrigin(nint handle, int x, int y) =>
+        NativeMethods.SetWindowPos(handle, nint.Zero, x, y, 0, 0, NativeMethods.SwpNoSize | NativeMethods.SwpNoZOrder | NativeMethods.SwpNoActivate);
+
+    private static NativeMethods.NativeRect PhysicalBounds(nint handle)
+    {
+        var previousContext = NativeMethods.SetThreadDpiAwarenessContext(NativeMethods.DpiAwarenessContextPerMonitorAwareV2);
+        try
+        {
+            NativeMethods.GetWindowRect(handle, out var bounds);
+            return bounds;
+        }
+        finally
+        {
+            NativeMethods.SetThreadDpiAwarenessContext(previousContext);
+        }
+    }
+
+    // The offset is in this app's coordinates, so it is scaled by the bubble's physical size on its
+    // current monitor. The tolerance covers one whole coordinate rounded on each side of the mapping.
+    internal static bool HoldsGrabbedSpot(PointInt cursor, PointInt grabOffset, NativeMethods.NativeRect physical, NativeMethods.NativeRect windowSpace)
+    {
+        var scaleX = (physical.Right - physical.Left) / (double)(windowSpace.Right - windowSpace.Left);
+        var scaleY = (physical.Bottom - physical.Top) / (double)(windowSpace.Bottom - windowSpace.Top);
+        return Math.Abs(physical.Left + (grabOffset.X * scaleX) - cursor.X) <= 1 + (2 * scaleX)
+            && Math.Abs(physical.Top + (grabOffset.Y * scaleY) - cursor.Y) <= 1 + (2 * scaleY);
+    }
 
     // The hook reports physical pixels, but this system-DPI-aware app measures the screen in the
     // system scale, so on a monitor scaled differently the two disagree. Windows scales each window
@@ -595,12 +625,22 @@ public partial class DictationBubble : Window
     }
 
     private static PointInt CursorInWindowSpace(nint lParam, nint window) =>
-        MapToWindowSpace(CursorFromHook(lParam), MonitorSpaceOf(window));
+        MapToWindowSpace(CursorFromHook(lParam), MonitorSpaceOf(NativeMethods.MonitorFromWindow(window, NativeMethods.MonitorDefaultToNearest)));
 
-    // The window's monitor, seen once in physical pixels and once in this app's space.
-    private static MonitorSpace? MonitorSpaceOf(nint window)
+    private static List<MonitorSpace> MeasureMonitorSpaces()
     {
-        var monitor = NativeMethods.MonitorFromWindow(window, NativeMethods.MonitorDefaultToNearest);
+        var monitors = new List<nint>();
+        NativeMethods.EnumDisplayMonitors(nint.Zero, nint.Zero, (monitor, _, _, _) =>
+        {
+            monitors.Add(monitor);
+            return true;
+        }, nint.Zero);
+        return monitors.Select(MonitorSpaceOf).OfType<MonitorSpace>().ToList();
+    }
+
+    // A monitor, seen once in physical pixels and once in this app's space.
+    private static MonitorSpace? MonitorSpaceOf(nint monitor)
+    {
         var physical = new NativeMethods.MonitorInfo { Size = Marshal.SizeOf<NativeMethods.MonitorInfo>() };
         var windowSpace = physical;
         var previousContext = NativeMethods.SetThreadDpiAwarenessContext(NativeMethods.DpiAwarenessContextPerMonitorAwareV2);

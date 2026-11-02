@@ -107,13 +107,22 @@ public sealed class WindowsBoundaryTests
         Assert.Equal(new DictationBubble.DisplayWorkArea(-1280, 0, 1280, 688), workArea);
     }
 
-    [Fact]
-    public void Keeps_the_bubble_aligned_with_the_pointer_at_scaled_display_dpi()
+    // Measured placements of a 64-pixel bubble held 45,32 from its corner on a 100% primary with a
+    // 125% monitor to its right. At 125% the bubble is 80 physical pixels, so the offset scales too.
+    [Theory]
+    [InlineData(1935, 949, 1880, 909, 80, true)] // Scaled on the 125% monitor, spot under the cursor.
+    [InlineData(1931, 949, 1887, 917, 64, true)] // At full size on the 100% monitor.
+    [InlineData(1934, 949, 1887, 727, 64, false)] // Placed for 125% but Windows moved it to 100%.
+    [InlineData(1934, 949, 1882, 1146, 80, false)] // Placed for 100% but Windows kept it at 125%.
+    public void Recognizes_whether_a_placed_bubble_still_holds_the_grabbed_spot(int cursorX, int cursorY, int left, int top, int physicalSize, bool expected)
     {
-        var offset = DictationBubble.CursorDeltaInDips(300, 450, 450, 525, 1.5, 1.5);
+        var holds = DictationBubble.HoldsGrabbedSpot(
+            new DictationBubble.PointInt(cursorX, cursorY),
+            new DictationBubble.PointInt(45, 32),
+            new NativeMethods.NativeRect { Left = left, Top = top, Right = left + physicalSize, Bottom = top + physicalSize },
+            new NativeMethods.NativeRect { Left = 0, Top = 0, Right = 64, Bottom = 64 });
 
-        Assert.Equal(100, offset.X);
-        Assert.Equal(50, offset.Y);
+        Assert.Equal(expected, holds);
     }
 
     // A 125% monitor right of a 100% primary: the hook reports physical pixels, the bubble lives
