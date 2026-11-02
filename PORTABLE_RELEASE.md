@@ -25,9 +25,9 @@ initial verified model download, move the whole folder, including `app/models/`
 and `app/data/`, to retain the downloaded model and settings. In the default
 shared mode, settings live in `%LOCALAPPDATA%\PrivateType\settings.json` and
 the model in the per-user cache, so every copy shares them and the folder can
-be moved freely. Existing v1.0.2 or other release folders are not scanned or
-migrated, so they remain independent rollback copies until you remove them
-manually.
+be moved freely. A new copy with no settings offers to import them from an
+earlier copy it finds, only with your consent. Earlier folders stay in place as
+independent rollback copies until you remove them manually.
 
 After closing every PrivateType version, shared model directories can be removed
 from `%LOCALAPPDATA%\PrivateType\models` to reclaim space. A cache-aware version
@@ -35,13 +35,13 @@ downloads its pinned model again when needed.
 
 ## Privacy and supported targets
 
-- Audio and recognition stay on the computer. The recognizer is a child process bound to `127.0.0.1`; there is no account, telemetry, transcript history, or cloud fallback.
-- The application does not retain audio or inserted transcripts. Its settings file (`%LOCALAPPDATA%\PrivateType\settings.json`, or `app/data/settings.json` for a portable copy) stores preferences and vocabulary, never audio or dictated text.
+- Audio and recognition stay on the computer. The recognizer is a child process bound to `127.0.0.1`; there is no account, telemetry, or cloud fallback.
+- The application never writes audio or dictated text to disk. Recent dictations stay in memory only and can be turned off in Settings. Its settings file (`%LOCALAPPDATA%\PrivateType\settings.json`, or `app/data/settings.json` for a portable copy) stores preferences and vocabulary, never audio or dictated text.
 - Unicode insertion is supported for ordinary desktop text fields. Elevated applications, secure/password fields, remote desktops, games, and applications that reject synthetic input are intentionally unsupported. The application cancels instead of redirecting text after a foreground-target change.
 
 ## Model and runtime notices
 
-- Models: `nvidia/nemotron-3.5-asr-streaming-0.6b` (default), Q8_0 GGUF, 742,090,464 bytes, and `nvidia/parakeet-tdt-0.6b-v3`, Q8_0 GGUF, 713,975,456 bytes; see [MODEL_ARTIFACT.md](MODEL_ARTIFACT.md).
+- Models: `nvidia/parakeet-tdt-0.6b-v3` (recommended for new installs), Q8_0 GGUF, 713,975,456 bytes, and `nvidia/nemotron-3.5-asr-streaming-0.6b`, Q8_0 GGUF, 742,090,464 bytes; see [MODEL_ARTIFACT.md](MODEL_ARTIFACT.md).
 - Model licenses: OpenMDW-1.1 (Nemotron) and CC-BY-4.0 (Parakeet). Models are downloaded by the user and are not redistributed in the ZIP.
 - Runtime: NVIDIA's unmodified NeMo-Speech.cpp 0.2.0 Windows release, Apache-2.0, with the licenses NVIDIA ships for its bundled components. See [ENGINE_DECISION.md](ENGINE_DECISION.md) for the pinned runtime, device choice, and measurements.
 - Vulkan loader: LunarG's unmodified `vulkan-1.dll` 1.4.328.1, MIT and Apache-2.0, beside the engine. The engine cannot start without it, even on the processor, and NVIDIA's release leaves it out.
@@ -67,4 +67,4 @@ Pushing a version tag such as `v1.0.6` requires a matching `.github/release-note
 
 ## Recorded package evidence
 
-On 2026-11-01, a manual run of the release workflow produced a 240,893,644-byte application folder and a 96,274,639-byte ZIP from the 1.5.1 sources (.NET 10). The excluded models are 742,090,464 bytes (Nemotron) and 713,975,456 bytes (Parakeet). Re-record these values whenever the runtime or publish output changes.
+On 2026-11-02, a manual run of the release workflow produced a 242,530,596-byte application folder and a 96,739,709-byte ZIP from the 1.5.2 sources (.NET 10). The excluded models are 742,090,464 bytes (Nemotron) and 713,975,456 bytes (Parakeet). Re-record these values whenever the runtime or publish output changes.

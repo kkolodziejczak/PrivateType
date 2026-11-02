@@ -30,7 +30,7 @@ On the processor, a preview still running at release used to hold up the final p
 ## Evidence
 
 - The pinned model passed its expected 742,090,464-byte and SHA-256 verification.
-- The runtime exposes Polish, English, and automatic language prompts and runs on CPU only.
+- The runtime exposes Polish, English, and automatic language prompts.
 - English and Polish fixtures produced provisional and finalized realtime events through the same protocol used by the app.
 - The ready local runtime used about 935 MiB of working set on the recorded test machine (model revision `ea30d66`, 2026-09-28).
 - A manual Polish microphone test was accepted for continuous phrases. Isolated words and pauses remain a known recognition-quality limitation.
