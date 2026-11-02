@@ -122,7 +122,8 @@ try {
 
     # The engine must start from the ZIP alone, even on a computer without graphics drivers. The
     # device check exits non-zero when it finds no graphics device, so only its list counts.
-    $doctor = & (Join-Path $relocatedDirectory 'app\engine\bin\nemo-speech.exe') --json doctor | Out-String | ConvertFrom-Json
+    $PSNativeCommandUseErrorActionPreference = $false
+    $doctor =& (Join-Path $relocatedDirectory 'app\engine\bin\nemo-speech.exe') --json doctor | Out-String | ConvertFrom-Json
     $global:LASTEXITCODE = 0
     if (!($doctor.devices | Where-Object type -EQ 'cpu')) {
         throw 'The packaged engine did not start and list the processor.'

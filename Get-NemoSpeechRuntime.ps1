@@ -25,8 +25,10 @@ $runtimeDirectory = Join-Path $engineRoot 'runtime'
 $marker = Join-Path $runtimeDirectory 'SOURCE-SHA256.txt'
 $sourceHashes = "$archiveSha256 $loaderSha256"
 $executable = Join-Path $runtimeDirectory 'bin\nemo-speech.exe'
+$loader = Join-Path $runtimeDirectory 'bin\vulkan-1.dll'
+$loaderLicense = Join-Path $runtimeDirectory 'share\licenses\vulkan-runtime\VulkanRT-License.txt'
 
-if ((Test-Path -LiteralPath $executable) -and (Test-Path -LiteralPath $marker) -and (Get-Content -LiteralPath $marker -Raw).Trim() -eq $sourceHashes) {
+if ((Test-Path -LiteralPath $executable) -and (Test-Path -LiteralPath $loader) -and (Test-Path -LiteralPath $loaderLicense) -and (Test-Path -LiteralPath $marker) -and (Get-Content -LiteralPath $marker -Raw).Trim() -eq $sourceHashes) {
     Write-Host "NeMo-Speech.cpp $version is already in $runtimeDirectory"
     return
 }
