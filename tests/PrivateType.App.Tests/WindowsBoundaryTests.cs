@@ -452,6 +452,20 @@ public sealed class WindowsBoundaryTests
     }
 
     [Theory]
+    [InlineData(true, true, true, true)]
+    [InlineData(true, true, false, false)]
+    [InlineData(false, true, true, false)]
+    [InlineData(true, false, true, false)]
+    public void Removes_the_old_startup_entry_only_from_a_release_copy_that_has_the_current_one(
+        bool hasPrivateTypeRegistration,
+        bool hasLegacyRegistration,
+        bool currentIsRelease,
+        bool expected)
+    {
+        Assert.Equal(expected, StartupOwnershipPolicy.RemovesLegacy(hasPrivateTypeRegistration, hasLegacyRegistration, currentIsRelease));
+    }
+
+    [Theory]
     [InlineData(false, false, "NoChange")]
     [InlineData(true, true, "NoChange")]
     [InlineData(false, true, "ClaimCurrent")]

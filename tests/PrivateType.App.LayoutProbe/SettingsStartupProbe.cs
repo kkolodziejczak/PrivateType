@@ -1,5 +1,6 @@
 using System.IO;
 using System.Windows;
+using System.Windows.Automation;
 using System.Windows.Automation.Peers;
 using System.Windows.Automation.Provider;
 using System.Windows.Controls;
@@ -49,6 +50,7 @@ internal static class SettingsStartupProbe
             var checkBox = Find<CheckBox>(window, "StartWithWindowsCheckBox");
             var hint = Find<TextBlock>(window, "StartWithWindowsHint");
             Require(!checkBox.IsEnabled, "A build from source cannot change the startup choice.");
+            RequireAssistiveToggleRefused(checkBox);
             Require(checkBox.IsChecked == startWithWindows, "The checkbox still shows whether a copy starts with Windows.");
             Require(checkBox.Opacity < 1, "The unavailable checkbox looks unavailable.");
             Require(hint.IsVisible && hint.Text == SourceBuildHint, "The hint says why the checkbox is unavailable.");
@@ -64,6 +66,21 @@ internal static class SettingsStartupProbe
         {
             window.Close();
         }
+    }
+
+    private static void RequireAssistiveToggleRefused(CheckBox checkBox)
+    {
+        var before = checkBox.IsChecked;
+        var toggle = (IToggleProvider)new CheckBoxAutomationPeer(checkBox).GetPattern(PatternInterface.Toggle);
+        try
+        {
+            toggle.Toggle();
+        }
+        catch (ElementNotEnabledException)
+        {
+        }
+
+        Require(checkBox.IsChecked == before, "Assistive technology cannot change the unavailable checkbox.");
     }
 
     private static void VerifySourceBuildSaveKeepsChoice()

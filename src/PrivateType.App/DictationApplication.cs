@@ -246,7 +246,7 @@ internal sealed class DictationApplication : IDisposable
             if (!registration.HasPrivateTypeRegistration && !registration.HasLegacyRegistration)
                 return loadedSettings with { StartWithWindows = false };
 
-            if (registration.HasPrivateTypeRegistration && registration.HasLegacyRegistration)
+            if (StartupOwnershipPolicy.RemovesLegacy(registration.HasPrivateTypeRegistration, registration.HasLegacyRegistration, EngineHost.IsReleaseCopy))
             {
                 windowsStartup.RemoveLegacy();
                 registration = registration with { LegacyCommand = null };
