@@ -21,10 +21,11 @@
   </ItemGroup>
   <!-- .engine is untracked, so a fresh checkout or worktree has none; an app built without it cannot load the model.
        The script does nothing when the pinned engine is already there. A configured engine root replaces the
-       checkout's engine, so nothing is fetched for it. -->
+       checkout's engine, so nothing is fetched for it. A build started from PowerShell 7 passes on a module
+       path that hides Get-FileHash from Windows PowerShell, so the script starts with the default path. -->
   <Target Name="FetchEngineRuntime"
           BeforeTargets="BeforeBuild"
           Condition="'$(PRIVATETYPE_ENGINE_ROOT)' == '' And '$(LIVE_DICTATION_ENGINE_ROOT)' == ''">
-    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildThisFileDirectory)..\..\Get-NemoSpeechRuntime.ps1&quot;" Timeout="600000" />
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildThisFileDirectory)..\..\Get-NemoSpeechRuntime.ps1&quot;" Timeout="600000" EnvironmentVariables="PSModulePath=" />
   </Target>
 </Project>
