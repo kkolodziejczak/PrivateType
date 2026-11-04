@@ -25,6 +25,6 @@
   <Target Name="FetchEngineRuntime"
           BeforeTargets="BeforeBuild"
           Condition="'$(PRIVATETYPE_ENGINE_ROOT)' == '' And '$(LIVE_DICTATION_ENGINE_ROOT)' == ''">
-    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildThisFileDirectory)..\..\Get-NemoSpeechRuntime.ps1&quot;" />
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildThisFileDirectory)..\..\Get-NemoSpeechRuntime.ps1&quot;" Timeout="600000" />
   </Target>
 </Project>

@@ -250,7 +250,7 @@ public sealed class WindowsBoundaryTests
         Assert.Equal(expected, EngineHost.ClassifyPrerequisites(executableExists, versionProbeSucceeded).ToString());
     }
 
-    // The build fetches the engine, so a fresh checkout or worktree can never produce an app without it.
+    // The build fetches the engine, so a fresh checkout or worktree has one without a manual step.
     [Fact]
     public void A_build_from_a_checkout_has_a_working_engine()
     {
@@ -272,6 +272,7 @@ public sealed class WindowsBoundaryTests
     public async Task Names_the_engine_when_the_engine_is_missing()
     {
         var emptyEngineRoot = Directory.CreateTempSubdirectory("privatetype-no-engine-").FullName;
+        var configuredEngineRoot = Environment.GetEnvironmentVariable("PRIVATETYPE_ENGINE_ROOT");
         Environment.SetEnvironmentVariable("PRIVATETYPE_ENGINE_ROOT", emptyEngineRoot);
         try
         {
@@ -284,7 +285,7 @@ public sealed class WindowsBoundaryTests
         }
         finally
         {
-            Environment.SetEnvironmentVariable("PRIVATETYPE_ENGINE_ROOT", null);
+            Environment.SetEnvironmentVariable("PRIVATETYPE_ENGINE_ROOT", configuredEngineRoot);
             Directory.Delete(emptyEngineRoot, recursive: true);
         }
     }

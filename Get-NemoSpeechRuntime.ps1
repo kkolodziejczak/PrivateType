@@ -30,6 +30,19 @@ $executable = Join-Path $runtimeDirectory 'bin\nemo-speech.exe'
 $loader = Join-Path $runtimeDirectory 'bin\vulkan-1.dll'
 $loaderLicense = Join-Path $runtimeDirectory 'share\licenses\vulkan-runtime\VulkanRT-License.txt'
 
+# Every build runs this script, and builds can overlap. Windows drops the lock when this process ends.
+New-Item -ItemType Directory -Force -Path $engineRoot | Out-Null
+$lockPath = Join-Path $engineRoot 'fetch.lock'
+while ($true) {
+    try {
+        $lock = [System.IO.File]::Open($lockPath, 'OpenOrCreate', 'ReadWrite', 'None')
+        break
+    }
+    catch [System.IO.IOException] {
+        Start-Sleep -Seconds 1
+    }
+}
+
 if ((Test-Path -LiteralPath $executable) -and (Test-Path -LiteralPath $loader) -and (Test-Path -LiteralPath $loaderLicense) -and (Test-Path -LiteralPath $marker) -and (Get-Content -LiteralPath $marker -Raw).Trim() -eq $sourceHashes) {
     Write-Host "NeMo-Speech.cpp $version is already in $runtimeDirectory"
     return
@@ -51,8 +64,7 @@ function Save-PinnedArchive {
     }
 }
 
-New-Item -ItemType Directory -Force -Path $engineRoot | Out-Null
-$archivePath = Join-Path $engineRoot $archiveName
+$archivePath =Join-Path $engineRoot $archiveName
 $loaderPath = Join-Path $engineRoot "$loaderName.zip"
 $extractDirectory = Join-Path $engineRoot 'runtime-extract'
 

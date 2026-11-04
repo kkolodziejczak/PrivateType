@@ -14,7 +14,7 @@ namespace PrivateType.App;
 // graphics are not tried again until the app restarts.
 internal sealed class EngineHost(Action<string, Exception?, (string Name, object? Value)[]?> record) : IDisposable
 {
-    internal const string MissingEngineMessage = "This copy of PrivateType does not include the speech engine. Extract the complete portable ZIP again.";
+    internal const string MissingEngineMessage = "This copy of PrivateType does not include the speech engine. Extract the complete portable ZIP again, or rebuild if you run it from source.";
     internal const string MissingModelMessage = "The verified speech model file is missing. Restart PrivateType to download it again.";
     private static readonly TimeSpan WarmUpTimeout = TimeSpan.FromSeconds(60);
     private readonly EngineProcessJob engineJob = new();
