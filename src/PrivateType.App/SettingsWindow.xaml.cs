@@ -21,7 +21,7 @@ public partial class SettingsWindow : Window
     private KeyChord historyShortcut;
     private ShortcutRecorderHook? historyShortcutRecorder;
 
-    internal SettingsWindow(PortableSettings settings, IReadOnlyList<MicrophoneOption> microphones, IModelStore modelStore, bool openVocabulary = false, string? vocabularyScope = null, string? notice = null, string? activeModelId = null, ModelDeviceStatus? deviceStatus = null)
+    internal SettingsWindow(PortableSettings settings, IReadOnlyList<MicrophoneOption> microphones, IModelStore modelStore, bool openVocabulary = false, string? vocabularyScope = null, string? notice = null, string? activeModelId = null, ModelDeviceStatus? deviceStatus = null, bool canChangeStartup = true)
     {
         InitializeComponent();
         if (notice is not null)
@@ -56,6 +56,8 @@ public partial class SettingsWindow : Window
         bindings = new(settings.Shortcuts.Select(binding => new ShortcutBindingEditor(binding, supportedLanguages)));
         BindingsList.ItemsSource = bindings;
         StartWithWindowsCheckBox.IsChecked = settings.StartWithWindows;
+        StartWithWindowsCheckBox.IsEnabled = canChangeStartup;
+        StartWithWindowsHint.Visibility = canChangeStartup ? Visibility.Collapsed : Visibility.Visible;
         ShortcutModeBox.ItemsSource = ChoiceOption.ShortcutModes;
         ShortcutModeBox.SelectedValue = settings.ShortcutMode;
         InsertionModeBox.ItemsSource = ChoiceOption.InsertionModes;

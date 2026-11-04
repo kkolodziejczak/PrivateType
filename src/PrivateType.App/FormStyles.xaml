@@ -106,6 +106,9 @@
             <Trigger Property="IsKeyboardFocused" Value="True">
               <Setter TargetName="CheckBoxBorder" Property="BorderBrush" Value="{DynamicResource ColorAccent300}" />
             </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+              <Setter Property="Opacity" Value="0.45" />
+            </Trigger>
           </ControlTemplate.Triggers>
         </ControlTemplate>
       </Setter.Value>
