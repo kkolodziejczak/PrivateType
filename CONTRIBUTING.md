@@ -29,5 +29,5 @@ same script, so the first build of a checkout needs internet access. Changes to
 the pinned runtime, model handling, or notices require a fresh release license
 audit. A build from a checkout never takes over an existing **Start PrivateType
 with Windows** entry on its own, because it can disappear with its worktree; only
-a portable release does. Changing that setting in a checkout build still applies
-to that build.
+a portable release does. Settings also shows that option greyed out in a checkout
+build, so it cannot change it by hand.

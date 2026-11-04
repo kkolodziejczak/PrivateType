@@ -62,6 +62,7 @@ static void RenderWindows(bool monitorPlacementOnly)
             [new MicrophoneOption("default", "System default microphone")], ProbeModelStore.Empty),
         Path.Combine(outputDirectory, "settings.png"),
         VerifySettingsVersion);
+    SettingsStartupProbe.Run(outputDirectory);
     SettingsSoundProbe.Run(outputDirectory);
     SettingsLanguageProbe.Run(outputDirectory);
     SettingsVocabularyProbe.Run(outputDirectory);

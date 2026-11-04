@@ -209,17 +209,7 @@
               <TextBlock x:Name="HistoryHint" Margin="0,8,0,0" Foreground="{DynamicResource ColorText}" Opacity="0.55" FontSize="12" TextWrapping="Wrap" />
               <CheckBox x:Name="ClipboardHistoryCheckBox" Margin="0,14,0,0"
                         Content="Show pasted dictations in Win+V clipboard history"
-                        AutomationProperties.Name="Show pasted dictations in Windows clipboard history" Checked="HistoryOptionChanged" Unchecked="HistoryOptionChanged">
-                <CheckBox.Style>
-                  <Style TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
-                    <Style.Triggers>
-                      <Trigger Property="IsEnabled" Value="False">
-                        <Setter Property="Opacity" Value="0.45" />
-                      </Trigger>
-                    </Style.Triggers>
-                  </Style>
-                </CheckBox.Style>
-              </CheckBox>
+                        AutomationProperties.Name="Show pasted dictations in Windows clipboard history" Checked="HistoryOptionChanged" Unchecked="HistoryOptionChanged" />
               <TextBlock x:Name="ClipboardHistoryHint" Margin="24,6,0,0" Foreground="{DynamicResource ColorText}" Opacity="0.55" FontSize="12" TextWrapping="Wrap" />
             </StackPanel>
           </Grid>
@@ -236,6 +226,8 @@
             </StackPanel>
             <StackPanel Grid.Column="2">
               <CheckBox x:Name="StartWithWindowsCheckBox" Content="Start PrivateType with Windows" AutomationProperties.Name="Start PrivateType with Windows" />
+              <TextBlock x:Name="StartWithWindowsHint" Margin="32,6,0,0" Foreground="{DynamicResource ColorText}" Opacity="0.55" FontSize="12" TextWrapping="Wrap" Visibility="Collapsed"
+                         Text="Only a copy from the portable ZIP can change this. This one was built from source." />
               <Grid Margin="0,12,0,0">
                 <Grid.ColumnDefinitions>
                   <ColumnDefinition Width="*" />
