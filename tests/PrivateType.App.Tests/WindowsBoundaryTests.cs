@@ -250,6 +250,45 @@ public sealed class WindowsBoundaryTests
         Assert.Equal(expected, EngineHost.ClassifyPrerequisites(executableExists, versionProbeSucceeded).ToString());
     }
 
+    // The build fetches the engine, so a fresh checkout or worktree can never produce an app without it.
+    [Fact]
+    public void A_build_from_a_checkout_has_a_working_engine()
+    {
+        Assert.Equal(EnginePrerequisiteStatus.Ready, EngineHost.VerifyPrerequisites());
+    }
+
+    [Fact]
+    public async Task Names_the_model_when_only_the_model_file_is_missing()
+    {
+        using var host = new EngineHost((_, _, _) => { });
+
+        var failure = await Assert.ThrowsAsync<FileNotFoundException>(
+            () => host.StartAsync(Path.Combine(Path.GetTempPath(), Path.GetRandomFileName()), "auto", CancellationToken.None));
+
+        Assert.Equal(EngineHost.MissingModelMessage, failure.Message);
+    }
+
+    [Fact]
+    public async Task Names_the_engine_when_the_engine_is_missing()
+    {
+        var emptyEngineRoot = Directory.CreateTempSubdirectory("privatetype-no-engine-").FullName;
+        Environment.SetEnvironmentVariable("PRIVATETYPE_ENGINE_ROOT", emptyEngineRoot);
+        try
+        {
+            using var host = new EngineHost((_, _, _) => { });
+
+            var failure = await Assert.ThrowsAsync<FileNotFoundException>(
+                () => host.StartAsync(Path.Combine(emptyEngineRoot, "model.gguf"), "auto", CancellationToken.None));
+
+            Assert.Equal(EngineHost.MissingEngineMessage, failure.Message);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("PRIVATETYPE_ENGINE_ROOT", null);
+            Directory.Delete(emptyEngineRoot, recursive: true);
+        }
+    }
+
     [Fact]
     public void Recommends_Visual_Cpp_only_when_the_engine_exists_but_cannot_start()
     {
@@ -307,6 +346,7 @@ public sealed class WindowsBoundaryTests
                 hasLegacyRegistration: false,
                 registeredExecutablePath: null,
                 registeredVersion: null,
+                currentIsRelease: true,
                 currentExecutablePath: "C:\\Apps\\PrivateType\\PrivateType.exe",
                 currentVersion: new Version(2, 0)));
     }
@@ -321,6 +361,7 @@ public sealed class WindowsBoundaryTests
                 hasLegacyRegistration: true,
                 registeredExecutablePath: "C:\\Apps\\LiveDictation\\LiveDictation.App.exe",
                 registeredVersion: null,
+                currentIsRelease: true,
                 currentExecutablePath: "C:\\Apps\\PrivateType\\PrivateType.exe",
                 currentVersion: new Version(1, 0)));
     }
@@ -341,8 +382,27 @@ public sealed class WindowsBoundaryTests
                 hasLegacyRegistration: false,
                 registeredExecutablePath: "C:\\Apps\\PrivateType-v1\\PrivateType.exe",
                 registeredVersion: new Version(registeredMajor, registeredMinor),
+                currentIsRelease: true,
                 currentExecutablePath: "C:\\Apps\\PrivateType-v2\\PrivateType.exe",
                 currentVersion: new Version(currentMajor, currentMinor)));
+    }
+
+    // A build in a worktree disappears with the worktree, and must not replace the copy Windows starts.
+    [Theory]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public void Never_lets_a_build_from_a_checkout_take_over_windows_startup(bool hasPrivateTypeRegistration, bool hasLegacyRegistration)
+    {
+        Assert.Equal(
+            StartupOwnershipDecision.KeepRegistered,
+            StartupOwnershipPolicy.Decide(
+                hasPrivateTypeRegistration,
+                hasLegacyRegistration,
+                registeredExecutablePath: "C:\\Apps\\PrivateType-1.5.1\\app\\PrivateType.exe",
+                registeredVersion: new Version(1, 5, 1),
+                currentIsRelease: false,
+                currentExecutablePath: "C:\\worktree\\bin\\Debug\\PrivateType.exe",
+                currentVersion: new Version(2, 0)));
     }
 
     [Fact]
@@ -355,6 +415,7 @@ public sealed class WindowsBoundaryTests
                 hasLegacyRegistration: false,
                 registeredExecutablePath: "C:\\Apps\\PrivateType-v2\\PrivateType.exe",
                 registeredVersion: new Version(2, 0),
+                currentIsRelease: true,
                 currentExecutablePath: "C:\\Apps\\PrivateType-v1\\PrivateType.exe",
                 currentVersion: new Version(1, 5)));
     }
@@ -369,6 +430,7 @@ public sealed class WindowsBoundaryTests
                 hasLegacyRegistration: false,
                 registeredExecutablePath: "C:\\Apps\\PrivateType-unknown\\PrivateType.exe",
                 registeredVersion: null,
+                currentIsRelease: true,
                 currentExecutablePath: "C:\\Apps\\PrivateType-local\\PrivateType.exe",
                 currentVersion: new Version(1, 0)));
     }
@@ -383,6 +445,7 @@ public sealed class WindowsBoundaryTests
                 hasLegacyRegistration: false,
                 registeredExecutablePath: "C:\\Apps\\PrivateType\\PrivateType.exe",
                 registeredVersion: null,
+                currentIsRelease: true,
                 currentExecutablePath: "c:\\apps\\privatetype\\PrivateType.exe",
                 currentVersion: null));
     }

@@ -19,4 +19,12 @@
     <EmbeddedResource Include="Assets\ModelReady.wav" LogicalName="PrivateType.ModelReady.wav" />
     <EmbeddedResource Include="Assets\Cues\*.wav" LogicalName="PrivateType.Cues.%(Filename)%(Extension)" />
   </ItemGroup>
+  <!-- .engine is untracked, so a fresh checkout or worktree has none; an app built without it cannot load the model.
+       The script does nothing when the pinned engine is already there. A configured engine root replaces the
+       checkout's engine, so nothing is fetched for it. -->
+  <Target Name="FetchEngineRuntime"
+          BeforeTargets="BeforeBuild"
+          Condition="'$(PRIVATETYPE_ENGINE_ROOT)' == '' And '$(LIVE_DICTATION_ENGINE_ROOT)' == ''">
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildThisFileDirectory)..\..\Get-NemoSpeechRuntime.ps1&quot;" />
+  </Target>
 </Project>

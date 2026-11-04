@@ -9,6 +9,8 @@ param()
 # the processor.
 
 $ErrorActionPreference = 'Stop'
+# Windows PowerShell downloads many times slower while drawing a progress bar.
+$ProgressPreference = 'SilentlyContinue'
 
 $version = '0.2.0'
 $archiveName = "nemo-speech-$version-windows-x86_64-vulkan.zip"

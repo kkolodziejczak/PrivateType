@@ -157,8 +157,9 @@ PrivateType is [MIT licensed](LICENSE). Third-party notices are in
 See [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md), and the
 roadmap in [TODO.md](TODO.md). Agents should follow [AGENTS.md](AGENTS.md).
 
+The first build of a checkout downloads the pinned speech engine into `.engine`.
+
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\Get-NemoSpeechRuntime.ps1
 dotnet test .\tests\PrivateType.Core.Tests\PrivateType.Core.Tests.csproj
 dotnet test .\tests\PrivateType.App.Tests\PrivateType.App.Tests.csproj
 dotnet run --project .\tests\PrivateType.App.LayoutProbe\PrivateType.App.LayoutProbe.csproj
