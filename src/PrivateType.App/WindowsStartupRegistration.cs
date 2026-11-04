@@ -26,11 +26,16 @@ internal static class StartupOwnershipPolicy
         bool hasLegacyRegistration,
         string? registeredExecutablePath,
         Version? registeredVersion,
+        bool currentIsRelease,
         string currentExecutablePath,
         Version? currentVersion)
     {
         if (!hasPrivateTypeRegistration && !hasLegacyRegistration)
             return StartupOwnershipDecision.LeaveDisabled;
+
+        // A build from a checkout is temporary, so it never replaces the copy Windows starts.
+        if (!currentIsRelease)
+            return StartupOwnershipDecision.KeepRegistered;
 
         if (hasPrivateTypeRegistration
             && string.Equals(registeredExecutablePath, currentExecutablePath, StringComparison.OrdinalIgnoreCase))

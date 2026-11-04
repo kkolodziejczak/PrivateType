@@ -260,6 +260,7 @@ internal sealed class DictationApplication : IDisposable
                 registration.HasLegacyRegistration,
                 registeredTarget.ExecutablePath,
                 registeredTarget.Version,
+                EngineHost.IsReleaseCopy,
                 currentExecutablePath,
                 currentVersion);
 

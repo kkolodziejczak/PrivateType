@@ -24,6 +24,9 @@ to review and safest for a desktop speech-input tool.
 
 The portable release workflow downloads NVIDIA's pinned NeMo-Speech.cpp release
 and checks its SHA-256 (`Get-NemoSpeechRuntime.ps1`), tests the .NET projects,
-creates the ZIP, and verifies its required payload. Run the same script once
-before running the app from a checkout. Changes to the pinned runtime, model
-handling, or notices require a fresh release license audit.
+creates the ZIP, and verifies its required payload. Building the app runs the
+same script, so the first build of a checkout needs internet access. Changes to
+the pinned runtime, model handling, or notices require a fresh release license
+audit. A build from a checkout never takes over an existing **Start PrivateType
+with Windows** entry, because it can disappear with its worktree; only a portable
+release does.

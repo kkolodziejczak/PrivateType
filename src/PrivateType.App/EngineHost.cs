@@ -14,6 +14,8 @@ namespace PrivateType.App;
 // graphics are not tried again until the app restarts.
 internal sealed class EngineHost(Action<string, Exception?, (string Name, object? Value)[]?> record) : IDisposable
 {
+    internal const string MissingEngineMessage = "This copy of PrivateType does not include the speech engine. Extract the complete portable ZIP again.";
+    internal const string MissingModelMessage = "The verified speech model file is missing. Restart PrivateType to download it again.";
     private static readonly TimeSpan WarmUpTimeout = TimeSpan.FromSeconds(60);
     private readonly EngineProcessJob engineJob = new();
     private readonly object sync = new();
@@ -44,6 +46,11 @@ internal sealed class EngineHost(Action<string, Exception?, (string Name, object
     public bool IsRunning => process is { HasExited: false };
 
     public bool IsReady => IsRunning && ready;
+
+    private static string PortableRuntimePath => Path.Combine(AppContext.BaseDirectory, "engine", "bin", "nemo-speech.exe");
+
+    // Only the portable release keeps the engine next to the app; a build from a checkout does not.
+    internal static bool IsReleaseCopy => File.Exists(PortableRuntimePath);
 
     internal static EnginePrerequisiteStatus VerifyPrerequisites()
     {
@@ -96,8 +103,10 @@ internal sealed class EngineHost(Action<string, Exception?, (string Name, object
         Stop();
 
         var runtime = FindRuntime();
-        if (!File.Exists(runtime.ExecutablePath) || !File.Exists(modelPath))
-            throw new FileNotFoundException("The local NeMo-Speech runtime or verified pinned model is missing.");
+        if (!File.Exists(runtime.ExecutablePath))
+            throw new FileNotFoundException(MissingEngineMessage, runtime.ExecutablePath);
+        if (!File.Exists(modelPath))
+            throw new FileNotFoundException(MissingModelMessage, modelPath);
 
         var device = graphicsFailed ? EngineDevice.Processor : EngineDevices.Choose(ReadDevices(runtime), devicePreference);
         await LaunchAsync(runtime, modelPath, device, cancellationToken);
@@ -315,12 +324,11 @@ internal sealed class EngineHost(Action<string, Exception?, (string Name, object
     }
 
     // The portable release keeps the engine next to the app; a checkout uses the runtime that
-    // Get-NemoSpeechRuntime.ps1 unpacks into .engine\runtime.
+    // the app's build unpacks into .engine\runtime.
     private static EngineRuntime FindRuntime()
     {
-        var portableRuntime = Path.Combine(AppContext.BaseDirectory, "engine", "bin", "nemo-speech.exe");
-        if (File.Exists(portableRuntime))
-            return new EngineRuntime(portableRuntime, Path.GetDirectoryName(portableRuntime)!);
+        if (IsReleaseCopy)
+            return new EngineRuntime(PortableRuntimePath, Path.GetDirectoryName(PortableRuntimePath)!);
 
         var configured = Environment.GetEnvironmentVariable("PRIVATETYPE_ENGINE_ROOT")
             ?? Environment.GetEnvironmentVariable("LIVE_DICTATION_ENGINE_ROOT");
