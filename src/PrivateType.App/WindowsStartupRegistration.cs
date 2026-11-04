@@ -55,6 +55,9 @@ internal static class StartupOwnershipPolicy
             ? StartupOwnershipDecision.ClaimCurrent
             : StartupOwnershipDecision.ConfirmCurrent;
     }
+
+    internal static bool RemovesLegacy(bool hasPrivateTypeRegistration, bool hasLegacyRegistration, bool currentIsRelease) =>
+        hasPrivateTypeRegistration && hasLegacyRegistration && currentIsRelease;
 }
 
 internal static class StartupPreferencePolicy
