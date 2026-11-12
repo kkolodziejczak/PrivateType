@@ -33,8 +33,11 @@
         <Setter Property="Template">
           <Setter.Value>
             <ControlTemplate TargetType="ListBoxItem">
+              <!-- The text and the hairline keep the page edge; the selected fill and the focus ring reach 8 past it on both
+                   sides, like a selected row in Recent dictations, so the ring never touches the first letter. -->
               <Grid>
-                <Border x:Name="Row" Padding="0,9" Background="Transparent" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,0,0,1">
+                <Border x:Name="Row" Background="Transparent" />
+                <Border Margin="8,0" Padding="0,9" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,0,0,1">
                   <ContentPresenter />
                 </Border>
                 <!-- Keyboard focus: the same ring as a model row in setup. -->
@@ -83,8 +86,10 @@
         <TextBlock FontSize="13" Foreground="{DynamicResource ColorNeutral400}" TextWrapping="Wrap"
                    Text="Warnings, errors, and safe operational breadcrumbs stay in memory only until PrivateType closes. Audio and dictated text are never included." />
         <!-- Time and level keep their columns; a long message wraps under its own column, so nothing is cut off. -->
-        <ListBox x:Name="Entries" Grid.Row="1" Margin="0,14,0,0" ItemContainerStyle="{StaticResource EntryRow}"
-                 BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,1,0,0"
+        <!-- The list's top hairline, as wide as the rows' own. -->
+        <Border Grid.Row="1" Margin="0,14,0,0" VerticalAlignment="Top" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,1,0,0"
+                Visibility="{Binding Visibility, ElementName=Entries}" />
+        <ListBox x:Name="Entries" Grid.Row="1" Margin="-8,15,-8,0" ItemContainerStyle="{StaticResource EntryRow}"
                  ScrollViewer.HorizontalScrollBarVisibility="Disabled" AutomationProperties.Name="Diagnostics entries">
           <ListBox.ItemTemplate>
             <DataTemplate>

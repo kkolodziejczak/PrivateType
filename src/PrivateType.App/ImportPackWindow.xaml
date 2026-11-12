@@ -102,8 +102,9 @@
           </Grid>
         </Border>
         <Border Style="{StaticResource TableRow}">
-          <!-- The switch's right edge meets the fields' right edge; its focus ring may reach past it. -->
-          <CheckBox x:Name="EnabledBox" Style="{StaticResource SwitchRow}" Margin="0,0,-6,0" MinHeight="32" Content="Use this pack after importing" IsChecked="True"
+          <!-- The switch's right edge meets the fields' right edge; its focus ring may reach past it.
+               On whole pixels at 125 % the switch stands 7 px in, which is 5.6. -->
+          <CheckBox x:Name="EnabledBox" Style="{StaticResource SwitchRow}" Margin="0,0,-5.6,0" MinHeight="32" Content="Use this pack after importing" IsChecked="True"
                     AutomationProperties.Name="Use this pack after importing" />
         </Border>
 

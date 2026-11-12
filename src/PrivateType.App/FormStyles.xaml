@@ -708,9 +708,10 @@
     <Setter Property="FontFamily" Value="{DynamicResource AppFont}" />
     <Setter Property="FontSize" Value="13" />
     <Setter Property="Height" Value="30" />
-    <!-- 1 border + 8 + the text host's own 2 puts the text on the page edge at -11. -->
+    <!-- 1 border + 8 + the text host's own 2 put the text 11 in; on whole pixels at 125 % that is 13 px, or 10.4,
+         so this margin puts the text on the page edge. -->
     <Setter Property="Padding" Value="8,0" />
-    <Setter Property="Margin" Value="-11,0,0,0" />
+    <Setter Property="Margin" Value="-10.4,0,0,0" />
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderBrush" Value="Transparent" />
     <Style.Triggers>
