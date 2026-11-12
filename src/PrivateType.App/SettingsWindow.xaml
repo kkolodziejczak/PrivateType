@@ -91,19 +91,19 @@
                   </Grid.ColumnDefinitions>
                   <TextBox x:Name="KeyBox" Grid.Column="0" Style="{StaticResource KeycapRecorder}" Margin="-4,0,0,0" Text="{Binding ShortcutLabel, Mode=OneWay}" PreviewKeyDown="RecordShortcut"
                            ToolTip="Click, then press Ctrl+Shift plus a key." AutomationProperties.Name="{Binding ShortcutLabel, StringFormat='Shortcut {0}'}" />
-                  <TextBlock x:Name="Arrow" Grid.Column="1" Margin="8,0,6,0" VerticalAlignment="Center" FontSize="16" Foreground="{DynamicResource ColorNeutral600}" Text="→" />
+                  <TextBlock x:Name="Arrow" Grid.Column="1" Margin="6,0,2,0" VerticalAlignment="Center" FontSize="16" Foreground="{DynamicResource ColorNeutral600}" Text="→" />
                   <ComboBox x:Name="LanguageBox" Grid.Column="2" Height="32" ItemsSource="{Binding SupportedLanguages}" SelectedValuePath="LocaleCode"
                             SelectedValue="{Binding LocaleCode, Mode=TwoWay}" IsTextSearchEnabled="True" TextSearch.TextPath="Label"
                             AutomationProperties.Name="Recognition language" MaxDropDownHeight="320">
                     <ComboBox.ItemTemplate>
                       <DataTemplate>
-                        <TextBlock Foreground="{DynamicResource ColorText}" FontSize="14" Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Foreground="{DynamicResource ColorText}" Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
                       </DataTemplate>
                     </ComboBox.ItemTemplate>
                   </ComboBox>
                   <TextBlock x:Name="RecordHint" Grid.Column="1" Grid.ColumnSpan="2" Margin="12,0,0,0" VerticalAlignment="Center" FontSize="13" Foreground="{DynamicResource ColorNeutral400}"
                              Text="Press Ctrl+Shift + a key" Visibility="Collapsed" />
-                  <Button x:Name="RemoveButton" Grid.Column="3" Style="{StaticResource GhostButton}" Width="30" Height="30" Padding="0" Content="×" FontSize="17" Opacity="0"
+                  <Button x:Name="RemoveButton" Grid.Column="3" Style="{StaticResource GhostButton}" Width="28" Height="28" Padding="0" Content="×" FontSize="17" Opacity="0"
                           Tag="{Binding}" Click="RemoveBinding"
                           ToolTip="{Binding ShortcutLabel, StringFormat='Remove {0} shortcut'}" AutomationProperties.Name="{Binding ShortcutLabel, StringFormat='Remove {0} shortcut'}" />
                 </Grid>

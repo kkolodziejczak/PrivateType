@@ -257,7 +257,7 @@
   <Style x:Key="KeycapRecorder" TargetType="TextBox">
     <Setter Property="Foreground" Value="{DynamicResource ColorText}" />
     <Setter Property="FontFamily" Value="{DynamicResource MonoFont}" />
-    <Setter Property="FontSize" Value="15" />
+    <Setter Property="FontSize" Value="14" />
     <Setter Property="IsReadOnly" Value="True" />
     <Setter Property="Cursor" Value="Hand" />
     <Setter Property="HorizontalAlignment" Value="Left" />
