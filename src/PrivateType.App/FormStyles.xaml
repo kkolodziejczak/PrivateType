@@ -460,7 +460,7 @@
             <!-- On the field's edge, like a text box, so it keeps clear of the row dividers. -->
             <Border x:Name="FocusRing" Margin="-1" BorderBrush="{DynamicResource ColorAccent}" BorderThickness="2" CornerRadius="7" Visibility="Collapsed" IsHitTestVisible="False" />
             <Popup x:Name="Popup" Placement="Bottom" AllowsTransparency="True" IsOpen="{TemplateBinding IsDropDownOpen}" PopupAnimation="Fade">
-              <Border MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}" Margin="0,4,0,0" Padding="4" Background="{DynamicResource ColorNeutral900}" BorderBrush="{DynamicResource ColorDivider}" BorderThickness="1" CornerRadius="8">
+              <Border MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}" Margin="0,2,0,0" Padding="4" Background="{DynamicResource ColorNeutral900}" BorderBrush="{DynamicResource ColorDivider}" BorderThickness="1" CornerRadius="8">
                 <ScrollViewer MaxHeight="{TemplateBinding MaxDropDownHeight}" CanContentScroll="True">
                   <ItemsPresenter />
                 </ScrollViewer>
@@ -762,7 +762,7 @@
             <!-- On the field's edge, like a text box, so it keeps clear of the row dividers. -->
             <Border x:Name="FocusRing" Margin="-1" BorderBrush="{DynamicResource ColorAccent}" BorderThickness="2" CornerRadius="7" Visibility="Collapsed" IsHitTestVisible="False" />
             <Popup Placement="Bottom" AllowsTransparency="True" IsOpen="{TemplateBinding IsDropDownOpen}" PopupAnimation="Fade">
-              <Border MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}" Margin="0,4,0,0" Padding="4" Background="{DynamicResource ColorNeutral900}" BorderBrush="{DynamicResource ColorDivider}" BorderThickness="1" CornerRadius="8">
+              <Border MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}" Margin="0,2,0,0" Padding="4" Background="{DynamicResource ColorNeutral900}" BorderBrush="{DynamicResource ColorDivider}" BorderThickness="1" CornerRadius="8">
                 <ScrollViewer MaxHeight="{TemplateBinding MaxDropDownHeight}" CanContentScroll="True">
                   <ItemsPresenter />
                 </ScrollViewer>

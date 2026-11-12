@@ -83,7 +83,7 @@
             <Run x:Name="EmptyVerb" /><InlineUIContainer BaselineAlignment="Center"><ItemsControl x:Name="EmptyShortcutKeys" Margin="4,0" Focusable="False">
               <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
-                <DataTemplate><Border Style="{StaticResource HintKey}" Margin="2,5,2,1"><TextBlock Style="{StaticResource HintKeyLegend}" LineHeight="NaN" Text="{Binding Legend}" /></Border></DataTemplate>
+                <DataTemplate><Border Style="{StaticResource HintKey}" Margin="2,6,2,0"><TextBlock Style="{StaticResource HintKeyLegend}" LineHeight="NaN" Text="{Binding Legend}" /></Border></DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl></InlineUIContainer><Run x:Name="EmptyRest" />
           </TextBlock>
