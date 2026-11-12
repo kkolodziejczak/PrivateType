@@ -176,6 +176,11 @@ internal static class CaptureProbe
             }
 
             StopAnimations(window);
+            // Some windows place themselves where the pointer is; move away from it so nothing draws hovered.
+            window.Left = -20000;
+            window.Top = -20000;
+            Flush(window);
+            System.Windows.Input.Mouse.Synchronize();
             Flush(window);
             var width = Math.Ceiling(window.ActualWidth);
             var height = Math.Ceiling(window.ActualHeight);
