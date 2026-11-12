@@ -14,7 +14,7 @@ public partial class ModelSetupWindow : Window
     internal const string MissingEngineStatus = "This copy of PrivateType does not include the local speech engine.\n\nDownload and extract the complete PrivateType portable ZIP, or configure the engine when running from source.";
     internal const string EngineCouldNotStartHeading = "Local speech engine could not start";
     internal const string EngineCouldNotStartStatus = "The local speech engine is present but could not start.\n\nInstall the Microsoft Visual C++ Redistributable (x64), then select Retry.";
-    internal const string SharedStorageNotice = "Default: this verified model is shared with cache-aware PrivateType versions for this Windows account. Existing older release folders are not moved or deleted.";
+    internal const string SharedStorageNotice = "Stays on this computer, shared with other PrivateType versions on this Windows account.";
     internal const string PortableStorageNotice = "Portable-local mode: this copy uses its existing app\\models folder and does not use the shared cache.";
     private SpeechModelDefinition chosenModel;
     private bool completed;
@@ -49,11 +49,11 @@ public partial class ModelSetupWindow : Window
     private void ShowChosenTerms()
     {
         var model = ChosenModel;
-        ModelTermsName.Text = $"{model.LicenseName} model terms: ";
         ModelTermsLink.NavigateUri = model.LicenseUri;
-        ModelTermsLinkText.Text = model.LicenseUri.Host + model.LicenseUri.AbsolutePath.TrimEnd('/');
-        TermsText.Text = $"I understand that this downloads a separate local model under {model.LicenseName} terms.";
+        ModelTermsLinkText.Text = $"Read the {model.LicenseName} terms for {model.DisplayName}";
+        TermsText.Text = $"I accept the {model.LicenseName} terms for {model.DisplayName}.";
         TermsCheckBox.IsChecked = false;
+        ShowDownloadReadiness();
     }
 
     internal static string StorageNotice(ModelStorageMode mode)
@@ -95,6 +95,7 @@ public partial class ModelSetupWindow : Window
         ProgressCaption.Text = "The model will not download until the local speech engine is ready.";
         DownloadButton.Visibility = Visibility.Collapsed;
         RetryButton.Visibility = Visibility.Visible;
+        ShowDownloadReadiness();
     }
 
     public void ShowDownloadConsent() => ShowDownloadConsent(ModelStorageMode.Shared);
@@ -108,8 +109,8 @@ public partial class ModelSetupWindow : Window
         ProgressBar.Visibility = Visibility.Collapsed;
         ProgressCaption.Text = string.Empty;
         DownloadButton.Visibility = Visibility.Visible;
-        DownloadButton.IsEnabled = TermsCheckBox.IsChecked == true;
         RetryButton.Visibility = Visibility.Collapsed;
+        ShowDownloadReadiness();
     }
 
     public void ShowProgress(long downloaded, long total)
@@ -121,6 +122,7 @@ public partial class ModelSetupWindow : Window
         StatusText.Text = $"Downloading and verifying {ChosenModel.DisplayName}…";
         ConsentPanel.Visibility = Visibility.Collapsed;
         DownloadButton.Visibility = Visibility.Collapsed;
+        ShowDownloadReadiness();
         ProgressBar.Visibility = Visibility.Visible;
         SetStorageMode(storageMode);
         ProgressCaption.Text = $"{downloaded / 1024d / 1024d:F0} MiB of {total / 1024d / 1024d:F0} MiB";
@@ -136,13 +138,21 @@ public partial class ModelSetupWindow : Window
         ProgressBar.Opacity = 1;
         RetryButton.Visibility = Visibility.Visible;
         DownloadButton.Visibility = Visibility.Collapsed;
+        ShowDownloadReadiness();
         CancelButton.Content = "Close";
     }
 
     public void CloseAfterSuccess() { completed = true; Close(); }
     private void Retry(object sender, RoutedEventArgs e) => RetryRequested?.Invoke();
     private void Download(object sender, RoutedEventArgs e) => DownloadRequested?.Invoke(ChosenModel);
-    private void TermsChanged(object sender, RoutedEventArgs e) => DownloadButton.IsEnabled = TermsCheckBox.IsChecked == true;
+    private void TermsChanged(object sender, RoutedEventArgs e) => ShowDownloadReadiness();
+
+    // Download waits for the ticked terms, and says so beside the button while it waits.
+    private void ShowDownloadReadiness()
+    {
+        DownloadButton.IsEnabled = TermsCheckBox.IsChecked == true;
+        DownloadReasonText.Visibility = DownloadButton.Visibility == Visibility.Visible && !DownloadButton.IsEnabled ? Visibility.Visible : Visibility.Hidden;
+    }
     private void OpenModelTerms(object sender, RequestNavigateEventArgs e)
     {
         Process.Start(ModelTermsBrowserStartInfo(ChosenModel));
@@ -162,6 +172,13 @@ internal sealed class SetupModelChoice(SpeechModelDefinition model, bool isChose
     public SpeechModelDefinition Model { get; } = model;
     public string Name => Model.DisplayName;
     public string Summary => Model.Summary;
+    // The same three facts for every model: how text appears, which language, and phrase boosting.
+    public string Headline => Model.Id switch
+    {
+        SpeechModelCatalog.ParakeetId => "Text appears when you release, with an optional preview while you speak · detects the language itself, 25 European languages · no phrase boosting, fixes still apply",
+        SpeechModelCatalog.NemotronId => "Words appear while you speak · uses each shortcut's language, 32 languages · phrase boosting",
+        _ => Model.Summary
+    };
     public bool IsRecommended => Model.Id == SpeechModelCatalog.DefaultId;
     // The download size as a table value: "681 MiB".
     public string Size => $"{Model.Manifest.ExpectedBytes / 1024d / 1024d:F0} MiB";

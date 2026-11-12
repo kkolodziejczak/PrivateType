@@ -69,7 +69,7 @@ public partial class TeachWindow : Window
     private string lastPrefill = string.Empty;
     private string? savedScope;
 
-    public TeachWindow(FinalizedDictation dictation, string strength, Func<TaughtTerms, string?> save)
+    public TeachWindow(FinalizedDictation dictation, Func<TaughtTerms, string?> save)
     {
         InitializeComponent();
         sentence = dictation.Text;
@@ -80,12 +80,6 @@ public partial class TeachWindow : Window
         FixList.ItemsSource = fixRows;
         ScopeBox.ItemsSource = VocabularyScopes.All;
         ScopeBox.SelectedValue = SuggestedScope(dictation.LocaleCode);
-        StrengthText.Text = $"The phrases use your vocabulary strength ({strength switch
-        {
-            VocabularyStrengths.Low => "Low",
-            VocabularyStrengths.Strong => "Strong",
-            _ => "Normal"
-        }}) and help future dictations only.";
         UpdateState();
     }
 
@@ -93,12 +87,12 @@ public partial class TeachWindow : Window
     internal static string SuggestedScope(string localeCode) =>
         RecognitionLocaleCatalog.Get(localeCode).BaseLanguageCode ?? VocabularyScopes.Shared;
 
-    // "Saved 2 terms to Polish and Shared across languages."
+    // "Saved 2 fixes to Polish and Shared across languages."
     internal static string SavedSummary(IReadOnlyList<VocabularyEntry> entries)
     {
         var scopes = entries.Select(entry => entry.Scope).Distinct().Select(scope => VocabularyScopes.Get(scope).DisplayName).ToArray();
         var names = scopes.Length == 1 ? scopes[0] : $"{string.Join(", ", scopes[..^1])} and {scopes[^1]}";
-        return $"Saved {entries.Count} {(entries.Count == 1 ? "term" : "terms")} to {names}.";
+        return $"Saved {entries.Count} {(entries.Count == 1 ? "fix" : "fixes")} to {names}.";
     }
 
     internal IReadOnlyList<TeachWord> Words => words;
@@ -213,7 +207,7 @@ public partial class TeachWindow : Window
         AddFixButton.IsEnabled = canAdd;
         var count = fixes.Entries.Count + (canAdd ? 1 : 0);
         SaveButton.IsEnabled = count > 0;
-        SaveButton.Content = count > 1 ? $"Save {count} terms" : "Save term";
+        SaveButton.Content = count > 1 ? $"Save {count} fixes" : "Save fix";
         SelectionHint.Text = SelectionOverlapsFix
             ? "The selection includes words you already fixed. Remove that fix or select other words."
             : string.Empty;

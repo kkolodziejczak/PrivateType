@@ -42,8 +42,8 @@
       <!-- The same slim footer as Settings: the secondary action as text, the primary filled at the right. -->
       <Border Grid.Row="2" Padding="24,10,16,12" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,1,0,0">
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-          <Button x:Name="StartFreshButton" Style="{StaticResource GhostButton}" Margin="0,0,6,0" Padding="12,6" Content="Start fresh" IsCancel="True" Click="StartFresh" />
-          <Button x:Name="ImportButton" Style="{StaticResource PrimaryButton}" Padding="16,6" Content="Import settings" Click="Import" />
+          <Button x:Name="StartFreshButton" Style="{StaticResource GhostButton}" Margin="0,0,8,0" Height="32" Padding="12,0" Content="Start fresh" IsCancel="True" Click="StartFresh" />
+          <Button x:Name="ImportButton" Style="{StaticResource PrimaryButton}" Height="32" Padding="16,0" Content="Import settings" Click="Import" />
         </StackPanel>
       </Border>
     </Grid>

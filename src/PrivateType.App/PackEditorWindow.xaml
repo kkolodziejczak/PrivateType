@@ -87,7 +87,7 @@
                     </Grid.ColumnDefinitions>
                     <TextBox Height="30" FontFamily="{DynamicResource MonoFont}" FontSize="13" MaxLength="120"
                              Text="{Binding Phrase, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Pack phrase" />
-                    <Button Grid.Column="1" Style="{StaticResource IconKeyButton}" Margin="8,0,0,0" VerticalAlignment="Center" Content="×" FontSize="14"
+                    <Button Grid.Column="1" Style="{StaticResource IconKeyButton}" Margin="8,0,0,0" VerticalAlignment="Center" ContentTemplate="{StaticResource RemoveGlyph}" Content="Remove"
                             Tag="{Binding}" Click="RemovePhrase" ToolTip="Remove phrase" AutomationProperties.Name="Remove phrase" />
                   </Grid>
                 </DataTemplate>
@@ -108,8 +108,8 @@
           <TextBlock x:Name="ErrorText" Margin="0,0,16,0" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource ColorDanger}" TextWrapping="Wrap"
                      AutomationProperties.LiveSetting="Polite" />
           <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-            <Button Style="{StaticResource GhostButton}" Margin="0,0,6,0" Padding="12,6" Content="Cancel" IsCancel="True" />
-            <Button x:Name="SaveButton" Style="{StaticResource PrimaryButton}" Padding="16,6" Content="Save pack" IsDefault="True" Click="Save" />
+            <Button Style="{StaticResource GhostButton}" Margin="0,0,8,0" Height="32" Padding="12,0" Content="Cancel" IsCancel="True" />
+            <Button x:Name="SaveButton" Style="{StaticResource PrimaryButton}" Height="32" Padding="16,0" Content="Save pack" IsDefault="True" Click="Save" />
           </StackPanel>
         </Grid>
       </Border>

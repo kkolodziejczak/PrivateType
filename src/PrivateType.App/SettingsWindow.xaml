@@ -75,7 +75,8 @@
                 </Setter>
               </Style>
             </ScrollViewer.Resources>
-        <Grid Margin="24,18,16,28">
+        <!-- The bottom padding equals the scroll fade, so at the end of the page the last row is clear of it. -->
+        <Grid Margin="24,18,16,16">
         <!-- Every page is one grid: labels start at the page edge, controls start at the end of SettingsLabelColumn. -->
         <StackPanel x:Name="GeneralPage">
           <!-- The heart of the page: each shortcut drawn as the keys you hold, then the language it dictates in. -->
@@ -103,7 +104,8 @@
                   </ComboBox>
                   <TextBlock x:Name="RecordHint" Grid.Column="1" Grid.ColumnSpan="2" VerticalAlignment="Center" FontSize="13" Foreground="{DynamicResource ColorNeutral400}"
                              Text="Press Ctrl+Shift + a key" Visibility="Collapsed" />
-                  <Button x:Name="RemoveButton" Grid.Column="2" Style="{StaticResource GhostButton}" Width="28" Height="28" Padding="0" Content="×" FontSize="17" Opacity="0"
+                  <Button x:Name="RemoveButton" Grid.Column="2" Style="{StaticResource GhostButton}" Width="28" Height="28" Padding="0" ContentTemplate="{StaticResource RemoveGlyph}" Content="Remove" Opacity="0"
+                          ToolTipService.ShowsToolTipOnKeyboardFocus="True"
                           Tag="{Binding}" Click="RemoveBinding"
                           ToolTip="{Binding ShortcutLabel, StringFormat='Remove {0} shortcut'}" AutomationProperties.Name="{Binding ShortcutLabel, StringFormat='Remove {0} shortcut'}" />
                 </Grid>
@@ -647,7 +649,7 @@
         </Grid>
           </ScrollViewer>
           <!-- More page below: it fades into the footer. At the end the fade goes, so the page visibly stops. -->
-          <Rectangle x:Name="ScrollFade" Grid.Row="0" Height="32" Margin="0,0,12,0" VerticalAlignment="Bottom" IsHitTestVisible="False">
+          <Rectangle x:Name="ScrollFade" Grid.Row="0" Height="16" Margin="0,0,12,0" VerticalAlignment="Bottom" IsHitTestVisible="False">
             <Rectangle.Fill>
               <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
                 <GradientStop Offset="0" Color="#001B1C20" />
@@ -663,8 +665,8 @@
               </Grid.ColumnDefinitions>
               <TextBlock x:Name="ValidationText" Margin="0,0,16,0" VerticalAlignment="Center" FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource ColorText}" AutomationProperties.LiveSetting="Polite" />
               <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                <Button x:Name="CancelSettingsButton" Style="{StaticResource GhostButton}" Margin="0,0,6,0" Padding="12,6" Content="Cancel" IsCancel="True" />
-                <Button x:Name="SaveSettingsButton" Style="{StaticResource PrimaryButton}" Padding="16,6" Content="Save changes" IsDefault="True" Click="Save" />
+                <Button x:Name="CancelSettingsButton" Style="{StaticResource GhostButton}" Margin="0,0,8,0" Height="32" Padding="12,0" Content="Cancel" IsCancel="True" />
+                <Button x:Name="SaveSettingsButton" Style="{StaticResource PrimaryButton}" Height="32" Padding="16,0" Content="Save changes" IsDefault="True" Click="Save" />
               </StackPanel>
             </Grid>
           </Border>

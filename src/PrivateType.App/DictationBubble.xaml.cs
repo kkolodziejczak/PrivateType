@@ -35,7 +35,6 @@ public partial class DictationBubble : Window
     private const nint HtTransparent = -1;
     private readonly AdaptiveAudioMeter adaptiveAudioMeter = new();
     private readonly List<ScaleTransform> meterScales = [];
-    private IReadOnlyList<ShortcutBinding> shortcuts = [];
     private readonly double[] smoothedSpectrum = new double[SpectrumBarCount];
     private bool active;
     private bool recordingIndicatorVisible;
@@ -109,7 +108,6 @@ public partial class DictationBubble : Window
         active = false;
         recordingVisualsActive = false;
         StopRecordingIndicator();
-        shortcuts = settings.Shortcuts;
         BubbleShell.Opacity = OpacityForReadyState(modelLoaded);
         ApplyReadyVisuals(modelLoaded);
         SetWidthAroundCenter(ReadyWidth);
@@ -180,8 +178,7 @@ public partial class DictationBubble : Window
         StartRecordingIndicator();
         Hint.Visibility = Visibility.Collapsed;
         WaveformBars.Visibility = Visibility.Visible;
-        Transcript.FontSize = 15;
-        Transcript.Opacity = 1;
+        SetTranscriptLines(fontSize: 15, lineHeight: 22, opacity: 1);
         SetTranscript(string.Empty);
         TranscriptViewport.Visibility = Visibility.Visible;
         UpdateScrim();
@@ -273,27 +270,26 @@ public partial class DictationBubble : Window
         SetWidthAroundCenter(ActiveWidth);
         Hint.Visibility = Visibility.Collapsed;
         WaveformBars.Visibility = Visibility.Collapsed;
-        Transcript.FontSize = 13;
-        Transcript.Opacity = 0.85;
+        SetTranscriptLines(fontSize: 13, lineHeight: 19, opacity: 0.85);
         SetTranscript(message);
         TranscriptViewport.Visibility = Visibility.Visible;
         UpdateScrim();
         ClampToWorkAreaAfterLayout();
     }
 
-    public void ShowError(string message)
+    // The title names what failed; the message says what to do next.
+    public void ShowError(string title, string message)
     {
         CloseMenu();
         active = true;
         recordingVisualsActive = false;
         StopRecordingIndicator();
         BubbleShell.Opacity = 1;
-        ApplyErrorVisuals();
+        ApplyErrorVisuals(title);
         SetWidthAroundCenter(ActiveWidth);
         Hint.Visibility = Visibility.Collapsed;
         WaveformBars.Visibility = Visibility.Collapsed;
-        Transcript.FontSize = 13;
-        Transcript.Opacity = 0.85;
+        SetTranscriptLines(fontSize: 13, lineHeight: 19, opacity: 0.85);
         SetTranscript(message);
         TranscriptViewport.Visibility = Visibility.Visible;
         UpdateScrim();
@@ -403,7 +399,7 @@ public partial class DictationBubble : Window
         StopRecordingPulse();
         Pill.Background = System.Windows.Media.Brushes.Transparent;
         Pill.BorderBrush = System.Windows.Media.Brushes.Transparent;
-        SetPillContent(locale: null, heldKey: null, title: null);
+        SetPillContent(locale: null, title: null);
         // Without a model the key is only an outline: nothing is loaded behind it yet.
         SetMicrophoneKey(modelLoaded ? "ColorKeycap" : null, modelLoaded ? "ColorText" : "ColorNeutral400", raised: modelLoaded);
     }
@@ -411,7 +407,7 @@ public partial class DictationBubble : Window
     private void ApplyRecordingVisuals(string localeCode)
     {
         ApplyExpandedVisuals(title: null);
-        SetPillContent(LocaleLegend(localeCode), HeldKeyLegend(localeCode), title: null);
+        SetPillContent(LocaleLegend(localeCode), title: null);
         // Live: the key is pressed and lit.
         SetMicrophoneKey("ColorAccent800", "ColorAccent100", raised: false);
     }
@@ -422,9 +418,9 @@ public partial class DictationBubble : Window
         SetMicrophoneKey("ColorNeutral900", "ColorNeutral400", raised: true);
     }
 
-    private void ApplyErrorVisuals()
+    private void ApplyErrorVisuals(string title)
     {
-        ApplyExpandedVisuals("Error");
+        ApplyExpandedVisuals(title);
         SetMicrophoneKey("ColorDangerSurface", "ColorDanger", raised: true);
         MicrophoneMark.Visibility = Visibility.Collapsed;
         IconLegend.Visibility = Visibility.Visible;
@@ -435,16 +431,14 @@ public partial class DictationBubble : Window
         StopRecordingPulse();
         Pill.Background = Brush("ColorSurface");
         Pill.BorderBrush = Brush("ColorDivider");
-        SetPillContent(locale: null, heldKey: null, title);
+        SetPillContent(locale: null, title);
         SetMicrophoneKey("ColorKeycap", "ColorText", raised: true);
     }
 
-    private void SetPillContent(string? locale, string? heldKey, string? title)
+    private void SetPillContent(string? locale, string? title)
     {
         LocaleText.Text = locale ?? string.Empty;
         LocaleText.Visibility = locale is null ? Visibility.Collapsed : Visibility.Visible;
-        HeldKeyText.Text = heldKey ?? string.Empty;
-        HeldKey.Visibility = heldKey is null ? Visibility.Collapsed : Visibility.Visible;
         StatusTitle.Text = title ?? string.Empty;
         StatusTitle.Visibility = title is null ? Visibility.Collapsed : Visibility.Visible;
     }
@@ -463,11 +457,14 @@ public partial class DictationBubble : Window
 
     private static string LocaleLegend(string localeCode) => localeCode.Split('-')[0].ToUpperInvariant();
 
-    // The key of the shortcut being held, such as "R" for Ctrl+Shift+R.
-    private string? HeldKeyLegend(string localeCode) =>
-        HotkeyCatalog.FromBindings(shortcuts).FirstOrDefault(binding => binding.LocaleCode == localeCode) is { } binding
-            ? KeycapLegendsConverter.Split(binding.Label)[^1].Legend
-            : null;
+    // The viewport shows the last two whole lines of words, or up to three lines of a shorter message.
+    private void SetTranscriptLines(double fontSize, double lineHeight, double opacity)
+    {
+        Transcript.FontSize = fontSize;
+        Transcript.LineHeight = lineHeight;
+        Transcript.Opacity = opacity;
+        TranscriptViewport.MaxHeight = lineHeight * (fontSize < 15 ? 3 : 2);
+    }
 
     // The scrim under the pill holds the words or the hint, and is hidden while it has neither.
     private void UpdateScrim()

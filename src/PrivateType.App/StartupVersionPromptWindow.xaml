@@ -54,8 +54,8 @@
       <!-- The same slim footer as Settings: the safe choice as text, the change filled at the right. -->
       <Border Grid.Row="2" Padding="24,10,16,12" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,1,0,0">
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-          <Button x:Name="KeepButton" Style="{StaticResource GhostButton}" Margin="0,0,6,0" Padding="12,6" Content="Keep registered version" IsCancel="True" Click="KeepRegisteredVersion" />
-          <Button x:Name="UseButton" Style="{StaticResource PrimaryButton}" Padding="16,6" Content="Use this version" Click="UseCurrentVersion" />
+          <Button x:Name="KeepButton" Style="{StaticResource GhostButton}" Margin="0,0,8,0" Height="32" Padding="12,0" Content="Keep registered version" IsCancel="True" Click="KeepRegisteredVersion" />
+          <Button x:Name="UseButton" Style="{StaticResource PrimaryButton}" Height="32" Padding="16,0" Content="Use this version" Click="UseCurrentVersion" />
         </StackPanel>
       </Border>
     </Grid>

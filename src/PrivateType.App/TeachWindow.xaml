@@ -23,7 +23,7 @@
                         Background="{DynamicResource ColorKeycap}" BorderBrush="{DynamicResource ColorKeycapEdge}" BorderThickness="0,0,0,3">
                   <TextBlock x:Name="Label" HorizontalAlignment="Center" FontFamily="{DynamicResource MonoFont}" Text="{TemplateBinding Content}" />
                 </Border>
-                <Border x:Name="FocusRing" Margin="-3" BorderBrush="{DynamicResource ColorAccent}" BorderThickness="1.5" CornerRadius="7" Visibility="Collapsed" IsHitTestVisible="False" />
+                <Border x:Name="FocusRing" Margin="-3" BorderBrush="{DynamicResource ColorAccent}" BorderThickness="2" CornerRadius="8" Visibility="Collapsed" IsHitTestVisible="False" />
               </Grid>
               <ControlTemplate.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
@@ -82,8 +82,8 @@
           <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
         <StackPanel Margin="24,16,24,18">
-          <TextBlock FontSize="13" Foreground="{DynamicResource ColorNeutral400}" TextWrapping="Wrap"
-                     Text="Click the words it got wrong: each word, or just the first and last. Click an end word again to deselect." />
+          <TextBlock FontSize="13" TextWrapping="Wrap" Text="Click the words it got wrong, then type the correction." />
+          <TextBlock Margin="0,2,0,0" FontSize="12" Foreground="{DynamicResource ColorNeutral400}" TextWrapping="Wrap" Text="For a long phrase, click its first and last word." />
           <!-- The sentence as a row of word keys; it grows with the sentence and scrolls only when long. -->
           <ScrollViewer Margin="0,14,0,0" MaxHeight="200" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
             <ItemsControl x:Name="WordList" AutomationProperties.Name="Words from the last dictation" KeyboardNavigation.TabNavigation="Once" KeyboardNavigation.DirectionalNavigation="Cycle">
@@ -100,8 +100,17 @@
               </ItemsControl.ItemTemplate>
             </ItemsControl>
           </ScrollViewer>
-          <TextBlock x:Name="SelectionHint" Foreground="{DynamicResource ColorAccent300}" FontSize="12" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
-          <Grid Margin="0,14,0,0">
+          <!-- Holds no line while there is nothing to say, so the form sits one group gap below the words. -->
+          <TextBlock x:Name="SelectionHint" Margin="0,8,0,0" Foreground="{DynamicResource ColorAccent300}" FontSize="12" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite">
+            <TextBlock.Style>
+              <Style TargetType="TextBlock">
+                <Style.Triggers>
+                  <Trigger Property="Text" Value=""><Setter Property="Visibility" Value="Collapsed" /></Trigger>
+                </Style.Triggers>
+              </Style>
+            </TextBlock.Style>
+          </TextBlock>
+          <Grid Margin="0,16,0,0">
             <Grid.ColumnDefinitions>
               <ColumnDefinition Width="*" />
               <ColumnDefinition Width="12" />
@@ -127,6 +136,7 @@
             </StackPanel>
             <Button x:Name="AddFixButton" Grid.Column="4" VerticalAlignment="Bottom" Height="34" Content="Add fix" Click="AddFix" />
           </Grid>
+          <TextBlock Margin="0,6,0,0" HorizontalAlignment="Right" Style="{StaticResource PageNote}" Text="Add more than one, or just save" />
           <StackPanel x:Name="FixesPanel" Margin="0,8,0,0" Visibility="Collapsed">
             <TextBlock Style="{StaticResource GroupLabel}" Margin="0,14,0,4" Text="FIXES TO SAVE" />
             <ScrollViewer MaxHeight="120" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
@@ -143,7 +153,7 @@
                         <TextBlock VerticalAlignment="Center" FontFamily="{DynamicResource MonoFont}" FontSize="13" Text="{Binding Phrase}" TextTrimming="CharacterEllipsis" />
                         <TextBlock Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center" Style="{StaticResource PageNote}" TextWrapping="NoWrap" Text="{Binding Detail}" TextTrimming="CharacterEllipsis" />
                         <Button Grid.Column="2" Style="{StaticResource RowRemoveButton}" VerticalAlignment="Center" Tag="{Binding}" Click="RemoveFix"
-                                AutomationProperties.Name="{Binding RemoveName}" />
+                                ToolTip="{Binding RemoveName}" AutomationProperties.Name="{Binding RemoveName}" />
                       </Grid>
                     </Border>
                   </DataTemplate>
@@ -151,9 +161,7 @@
               </ItemsControl>
             </ScrollViewer>
           </StackPanel>
-          <TextBlock x:Name="StrengthText" Margin="0,16,0,0" Style="{StaticResource PageNote}" />
-          <TextBlock Margin="0,2,0,0" Style="{StaticResource PageNote}"
-                     Text="Each fix also corrects those words after future dictations. The rest of the sentence is not saved, and text already typed is not changed." />
+          <TextBlock Margin="0,16,0,0" Style="{StaticResource PageNote}" Text="Fixes apply to future dictations; text already typed stays as it is." />
         </StackPanel>
         <!-- Slim footer: the result on the left, Cancel as text and the filled Save on the right. -->
         <Border Grid.Row="1" Padding="24,10,16,12" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,1,0,0">
@@ -164,8 +172,8 @@
             </Grid.ColumnDefinitions>
             <TextBlock x:Name="ErrorText" Margin="0,0,16,0" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource ColorWarning}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-              <Button Style="{StaticResource GhostButton}" Margin="0,0,6,0" Padding="12,6" Content="Cancel" Click="CloseWindow" />
-              <Button x:Name="SaveButton" Style="{StaticResource PrimaryButton}" Padding="16,6" Content="Save term" IsDefault="True" Click="Save" />
+              <Button Style="{StaticResource GhostButton}" Margin="0,0,8,0" Height="32" Padding="12,0" Content="Cancel" Click="CloseWindow" />
+              <Button x:Name="SaveButton" Style="{StaticResource PrimaryButton}" Height="32" Padding="16,0" Content="Save fix" IsDefault="True" Click="Save" />
             </StackPanel>
           </Grid>
         </Border>
@@ -183,8 +191,8 @@
         </StackPanel>
         <Border Grid.Row="1" Padding="24,10,16,12" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,1,0,0">
           <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-            <Button x:Name="OpenVocabularyButton" Style="{StaticResource GhostButton}" Margin="0,0,6,0" Padding="12,6" Content="Open vocabulary" Click="OpenVocabulary" />
-            <Button x:Name="DoneButton" Style="{StaticResource PrimaryButton}" Padding="16,6" Content="Done" Click="Done" />
+            <Button x:Name="OpenVocabularyButton" Style="{StaticResource GhostButton}" Margin="0,0,8,0" Height="32" Padding="12,0" Content="Open vocabulary" Click="OpenVocabulary" />
+            <Button x:Name="DoneButton" Style="{StaticResource PrimaryButton}" Height="32" Padding="16,0" Content="Done" Click="Done" />
           </StackPanel>
         </Border>
       </Grid>

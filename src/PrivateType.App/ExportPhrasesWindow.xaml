@@ -63,8 +63,8 @@
           <TextBlock x:Name="ErrorText" Margin="0,0,16,0" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource ColorDanger}" TextWrapping="Wrap"
                      AutomationProperties.LiveSetting="Polite" />
           <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-            <Button Style="{StaticResource GhostButton}" Margin="0,0,6,0" Padding="12,6" Content="Cancel" IsCancel="True" />
-            <Button x:Name="SaveAsButton" Style="{StaticResource PrimaryButton}" Padding="16,6" Content="Save as…" IsDefault="True" Click="SaveAs" />
+            <Button Style="{StaticResource GhostButton}" Margin="0,0,8,0" Height="32" Padding="12,0" Content="Cancel" IsCancel="True" />
+            <Button x:Name="SaveAsButton" Style="{StaticResource PrimaryButton}" Height="32" Padding="16,0" Content="Save as…" IsDefault="True" Click="SaveAs" />
           </StackPanel>
         </Grid>
       </Border>

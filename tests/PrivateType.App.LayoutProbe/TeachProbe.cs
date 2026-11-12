@@ -61,7 +61,7 @@ internal static class TeachProbe
 
     private static void VerifyDialogStates(string outputDirectory)
     {
-        var window = new TeachWindow(new FinalizedDictation(Sentence, "en-US"), "normal", _ => null) { ShowInTaskbar = false };
+        var window = new TeachWindow(new FinalizedDictation(Sentence, "en-US"), _ => null) { ShowInTaskbar = false };
         window.Show();
         try
         {
@@ -85,7 +85,7 @@ internal static class TeachProbe
             Require(chips.Select(chip => chip.IsChecked == true).SequenceEqual(window.Words.Select(word => word.IsSelected)), "Chips must mirror the selection.");
             desired.Text = "MVVM";
             Flush(window);
-            Require((string)save.Content == "Save term", "One pending fix must offer to save one term.");
+            Require((string)save.Content == "Save fix", "One pending fix must offer to save one fix.");
             Capture(window, outputDirectory, "teach-range-edited.png");
 
             Click(chips[4]);
@@ -118,7 +118,7 @@ internal static class TeachProbe
             Flush(window);
             Click(add);
             Require(window.Fixes.Count == 1 && window.Words.Where(word => word.IsFixed).Select(word => word.Index).SequenceEqual([3, 4, 5])
-                && !chips[4].IsEnabled && desired.Text.Length == 0 && window.Words.All(word => !word.IsSelected) && save.IsEnabled && (string)save.Content == "Save term",
+                && !chips[4].IsEnabled && desired.Text.Length == 0 && window.Words.All(word => !word.IsSelected) && save.IsEnabled && (string)save.Content == "Save fix",
                 "Adding a fix must mark its words, clear the selection and spelling, and keep Save available.");
             Capture(window, outputDirectory, "teach-one-fix.png");
 
@@ -127,7 +127,7 @@ internal static class TeachProbe
             desired.Text = "App";
             ((ComboBox)window.FindName("ScopeBox")).SelectedValue = VocabularyScopes.Shared;
             Flush(window);
-            Require((string)save.Content == "Save 2 terms", "A pending fix must count toward the terms to save.");
+            Require((string)save.Content == "Save 2 fixes", "A pending fix must count toward the fixes to save.");
             Click(add);
             Require(window.Fixes.Select(fix => fix.Entry).SequenceEqual([new VocabularyEntry("App", VocabularyScopes.Shared), new VocabularyEntry("MVVM", "en")]),
                 "Fixes must keep their own language and stay in sentence order.");
@@ -146,7 +146,7 @@ internal static class TeachProbe
             var remove = Descendants(fixList).OfType<Button>().ToList();
             Require(remove.Count == 2 && remove.All(button => AutomationPeer(button).GetName().StartsWith("Remove fix", StringComparison.Ordinal)), "Every fix needs a named remove button.");
             Click(remove[0]);
-            Require(window.Fixes.Count == 1 && chips[1].IsEnabled && !window.Words[1].IsFixed && (string)save.Content == "Save term", "Removing a fix must free its words.");
+            Require(window.Fixes.Count == 1 && chips[1].IsEnabled && !window.Words[1].IsFixed && (string)save.Content == "Save fix", "Removing a fix must free its words.");
         }
         finally
         {
@@ -157,7 +157,7 @@ internal static class TeachProbe
     private static void VerifyRetryAndSave()
     {
         var attempts = new List<TaughtTerms>();
-        var window = new TeachWindow(new FinalizedDictation(Sentence, "pl-PL"), "strong", taught =>
+        var window = new TeachWindow(new FinalizedDictation(Sentence, "pl-PL"), taught =>
         {
             attempts.Add(taught);
             return attempts.Count == 1 ? "The phrases could not be saved. Check that the PrivateType folder is writable, then try again." : null;
@@ -188,7 +188,7 @@ internal static class TeachProbe
                 Click((Button)window.FindName("SaveButton"));
 
                 Require(((FrameworkElement)window.FindName("SavedPanel")).IsVisible && !((FrameworkElement)window.FindName("EditPanel")).IsVisible
-                    && ((TextBlock)window.FindName("SavedText")).Text == "Saved 2 terms to Shared across languages and Polish.",
+                    && ((TextBlock)window.FindName("SavedText")).Text == "Saved 2 fixes to Shared across languages and Polish.",
                     "A successful save must confirm how many terms went to which languages.");
                 Capture(window, outputDirectory, "teach-saved.png");
                 Click((Button)window.FindName("OpenVocabularyButton"));

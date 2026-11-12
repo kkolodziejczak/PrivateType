@@ -125,8 +125,8 @@
           <TextBlock x:Name="ErrorText" Margin="0,0,16,0" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource ColorDanger}" TextWrapping="Wrap"
                      AutomationProperties.LiveSetting="Polite" />
           <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-            <Button Style="{StaticResource GhostButton}" Margin="0,0,6,0" Padding="12,6" Content="Cancel" IsCancel="True" />
-            <Button x:Name="ImportButton" Style="{StaticResource PrimaryButton}" Padding="16,6" Content="Import pack" IsDefault="True" Click="Import" />
+            <Button Style="{StaticResource GhostButton}" Margin="0,0,8,0" Height="32" Padding="12,0" Content="Cancel" IsCancel="True" />
+            <Button x:Name="ImportButton" Style="{StaticResource PrimaryButton}" Height="32" Padding="16,0" Content="Import pack" IsDefault="True" Click="Import" />
           </StackPanel>
         </Grid>
       </Border>

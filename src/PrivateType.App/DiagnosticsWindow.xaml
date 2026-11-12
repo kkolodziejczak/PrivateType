@@ -83,11 +83,11 @@
       <!-- The same slim footer as Settings: Clear set apart on the left, Save report filled at the right. -->
       <Border Grid.Row="2" Padding="16,10,16,12" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,1,0,0">
         <Grid>
-          <Button Style="{StaticResource GhostButton}" Padding="8,6" HorizontalAlignment="Left" Content="Clear" Click="ClearReport" />
+          <Button Style="{StaticResource GhostButton}" Height="32" Padding="8,0" HorizontalAlignment="Left" Content="Clear" Click="ClearReport" />
           <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-            <Button Style="{StaticResource GhostButton}" Margin="0,0,6,0" Padding="12,6" Content="Close" Click="Close" />
-            <Button Style="{StaticResource GhostButton}" Margin="0,0,6,0" Padding="12,6" Content="Copy report" Click="CopyReport" />
-            <Button Style="{StaticResource PrimaryButton}" Padding="16,6" Content="Save report" Click="SaveReport" />
+            <Button Style="{StaticResource GhostButton}" Margin="0,0,8,0" Height="32" Padding="12,0" Content="Close" Click="Close" />
+            <Button Style="{StaticResource GhostButton}" Margin="0,0,8,0" Height="32" Padding="12,0" Content="Copy report" Click="CopyReport" />
+            <Button Style="{StaticResource PrimaryButton}" Height="32" Padding="16,0" Content="Save report" Click="SaveReport" />
           </StackPanel>
         </Grid>
       </Border>

@@ -750,7 +750,7 @@ internal sealed class DictationApplication : IDisposable
 
         openHistoryWindow?.Close();
         hotkey.Suspend();
-        var window = new TeachWindow(dictation, settings.VocabularyStrength, SaveTaughtPhrases);
+        var window = new TeachWindow(dictation, SaveTaughtPhrases);
         window.Loaded += (_, _) => BringToForeground(window);
         openTeachWindow = window;
         try
@@ -871,6 +871,13 @@ internal sealed class DictationApplication : IDisposable
     }
 
     internal static string KeptTextHint(KeyChord historyShortcut) => $"Press {historyShortcut.Label} to paste it.";
+
+    // A failed dictation names what failed in the bubble's title and says what to try next in words.
+    internal const string DictationStoppedTitle = "Dictation stopped";
+    internal const string ModelLoadFailedTitle = "Model didn't load";
+    internal static string DictationStoppedText(string reason) =>
+        $"{reason} Check that a microphone is connected and allowed in Windows privacy settings, then try again.";
+    internal const string ModelLoadFailedText = "The local model could not load. Try again; if it keeps failing, open Diagnostics in Settings.";
 
     private ITextInjector CreateInjector() => settings.InsertionMode == TextInsertionModes.Paste
         ? new ClipboardPasteInjector(settings.IncludeInClipboardHistory)
@@ -1023,7 +1030,7 @@ internal sealed class DictationApplication : IDisposable
             RecordDiagnostic("model.load.failed", exception);
             statusItem.Text = "Model could not load";
             trayIcon.ShowBalloonTip(5000, "PrivateType", $"The local model could not load: {exception.Message}", Forms.ToolTipIcon.Error);
-            bubble.ShowError("The local model could not load.");
+            bubble.ShowError(ModelLoadFailedTitle, ModelLoadFailedText);
         }
     }
 
@@ -1173,7 +1180,7 @@ internal sealed class DictationApplication : IDisposable
                 break;
             case BubblePresentationKind.Error:
                 trayIcon.Icon = trayIcons.Ready;
-                bubble.ShowError(bubblePresentation.Text);
+                bubble.ShowError(DictationStoppedTitle, DictationStoppedText(bubblePresentation.Text));
                 _ = ReturnToReadyWhenCurrentAsync(version, TimeSpan.FromSeconds(2));
                 break;
             case BubblePresentationKind.Hide:

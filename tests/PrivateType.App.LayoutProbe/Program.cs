@@ -167,7 +167,7 @@ static void RenderWindows(bool monitorPlacementOnly)
 
     var errorPanel = new DictationBubble();
     errorPanel.ShowReady(PortableSettings.Default, modelLoaded: true);
-    errorPanel.ShowError("Couldn't reach the microphone.");
+    errorPanel.ShowError(DictationApplication.DictationStoppedTitle, DictationApplication.DictationStoppedText("Couldn't reach the microphone."));
     Render(errorPanel, Path.Combine(outputDirectory, "status-panel-error.png"));
 
     VerifyTargetMonitorPlacement();

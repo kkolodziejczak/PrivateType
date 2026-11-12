@@ -43,8 +43,7 @@ public partial class SettingsWindow : Window
         ConfirmImport = copy => new ImportSettingsPromptWindow(copy) { Owner = this }.ShowDialog() == true;
         if (openVocabulary)
             VocabularyTab.IsChecked = true;
-        MaxHeight = Math.Max(320, SystemParameters.WorkArea.Height - 24);
-        Height = Math.Min(800, MaxHeight);
+        FitToWorkArea(SystemParameters.WorkArea.Height);
         var version = ApplicationVersion.Current;
         Title = $"{ApplicationVersion.Label(version)} settings";
         SettingsHeaderText.Text = HeaderText(version);
@@ -130,6 +129,13 @@ public partial class SettingsWindow : Window
 
     internal void ShowVocabularyPage() => VocabularyTab.IsChecked = true;
     internal void ShowModelPage() => ModelTab.IsChecked = true;
+
+    // A short work area clamps the window, and the page scrolls inside it.
+    internal void FitToWorkArea(double workAreaHeight)
+    {
+        MaxHeight = Math.Max(320, workAreaHeight - 24);
+        Height = Math.Min(800, MaxHeight);
+    }
 
     private void OpenModelPage(object sender, RoutedEventArgs e) => ShowModelPage();
 
