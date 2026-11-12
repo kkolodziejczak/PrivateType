@@ -431,6 +431,7 @@
   </Style>
   <Style TargetType="ComboBox">
     <Setter Property="Foreground" Value="{DynamicResource ColorText}" />
+    <Setter Property="Background" Value="Transparent" />
     <Setter Property="FontSize" Value="13" />
     <Setter Property="Cursor" Value="Hand" />
     <Setter Property="Template">
@@ -607,10 +608,9 @@
        While its row has the pointer or focus it rests on the hover fill, so it reads as a control, not as text. -->
   <Style x:Key="ValuePicker" TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
     <Setter Property="Height" Value="32" />
-    <Setter Property="Width" Value="214" />
+    <Setter Property="Width" Value="204" />
     <Setter Property="Margin" Value="-8,0,0,0" />
     <Setter Property="HorizontalAlignment" Value="Left" />
-    <Setter Property="Background" Value="Transparent" />
     <Style.Triggers>
       <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=Grid}}" Value="True"><Setter Property="Background" Value="{DynamicResource ColorBg}" /></DataTrigger>
       <DataTrigger Binding="{Binding IsKeyboardFocusWithin, RelativeSource={RelativeSource AncestorType=Grid}}" Value="True"><Setter Property="Background" Value="{DynamicResource ColorBg}" /></DataTrigger>

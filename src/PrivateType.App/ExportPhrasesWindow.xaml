@@ -20,12 +20,13 @@
       </Grid.RowDefinitions>
       <Border BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,0,0,1" CornerRadius="11,11,0,0" Background="Transparent" MouseLeftButtonDown="DragWindow">
         <Grid Margin="16,0,8,0">
-          <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,36,0">
+          <!-- A dock, not a stack, so a long pack name is trimmed before the close button. -->
+          <DockPanel VerticalAlignment="Center" Margin="0,0,36,0">
             <Border Width="18" Height="18" CornerRadius="4" Background="{DynamicResource ColorKeycap}" BorderBrush="{DynamicResource ColorKeycapEdge}" BorderThickness="0,0,0,2">
               <Ellipse Width="6" Height="6" Fill="{DynamicResource ColorAccent400}" />
             </Border>
             <TextBlock x:Name="TitleText" Margin="10,0,0,0" VerticalAlignment="Center" FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" Text="Export phrases" />
-          </StackPanel>
+          </DockPanel>
           <Button Style="{StaticResource GhostButton}" Width="28" Height="28" Padding="0" HorizontalAlignment="Right" VerticalAlignment="Center" Content="×" FontSize="18"
                   IsCancel="True" AutomationProperties.Name="Close" />
         </Grid>

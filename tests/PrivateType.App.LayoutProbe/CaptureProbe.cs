@@ -45,7 +45,12 @@ internal static class CaptureProbe
         Draw(NewSettings(), output, "settings", "settings-general");
         Draw(NewSettings(), output, "settings", "settings-general-end", window => Scroll(window).ScrollToBottom());
         Draw(NewSettings(), output, "settings", "settings-general-focus", window => FocusKeyboard(window, (Control)window.FindName("InsertionModeBox")));
-        Draw(NewSettings(), output, "settings", "settings-general-picker-open", window => ((ComboBox)window.FindName("InsertionModeBox")).IsDropDownOpen = true);
+        Draw(NewSettings(), output, "settings", "settings-general-picker-open", window =>
+        {
+            var picker = (ComboBox)window.FindName("InsertionModeBox");
+            FocusKeyboard(window, picker);
+            picker.IsDropDownOpen = true;
+        });
         Draw(NewSettings(), output, "settings", "settings-dirty", window => ((ComboBox)window.FindName("ShortcutModeBox")).SelectedIndex = 1);
         Draw(NewSettings(), output, "settings", "settings-short", window => ((SettingsWindow)window).FitToWorkArea(600));
         Draw(NewSettings(), output, "settings", "settings-vocabulary", window => Page(window, "VocabularyTab"));
@@ -214,7 +219,7 @@ internal static class CaptureProbe
         Draw(new TeachWindow(new FinalizedDictation(longSentence, "en-US"), _ => null), output, "teach", "teach-long", window =>
         {
             var teach = (TeachWindow)window;
-            AddFix(teach, 9, 10, "Kubernetes");
+            AddFix(teach, 8, 9, "Kubernetes");
             teach.ActivateWord(17);
             teach.ActivateWord(18);
             Flush(window);

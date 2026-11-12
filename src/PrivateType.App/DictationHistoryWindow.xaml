@@ -140,10 +140,10 @@
                             Visibility="{Binding ShowNotInserted, Converter={StaticResource BoolToVisibility}}">
                       <TextBlock Foreground="{DynamicResource ColorWarning}" FontFamily="{DynamicResource MonoFont}" FontSize="10" FontWeight="SemiBold" Text="NOT INSERTED" />
                     </Border>
-                    <!-- The way back: the row's own Enter key pastes it. -->
-                    <TextBlock Margin="8,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource ColorNeutral400}" FontSize="12" Text="select it and press Enter to paste"
-                               Visibility="{Binding ShowNotInserted, Converter={StaticResource BoolToVisibility}}" />
                   </StackPanel>
+                  <!-- The way back: the row's own Enter key pastes it. -->
+                  <TextBlock Margin="0,4,0,0" Foreground="{DynamicResource ColorNeutral400}" FontSize="12" TextWrapping="Wrap" Text="Select it and press Enter to paste."
+                             Visibility="{Binding ShowNotInserted, Converter={StaticResource BoolToVisibility}}" />
                 </StackPanel>
                 <Button x:Name="RemoveKey" Grid.Column="1" Style="{StaticResource IconKeyButton}" Margin="10,0,0,0" VerticalAlignment="Top" ContentTemplate="{StaticResource RemoveGlyph}" Content="Remove"
                         Focusable="False" Opacity="0" Tag="{Binding}" Click="RemoveEntry" ToolTip="Remove dictation" AutomationProperties.Name="Remove dictation" />
