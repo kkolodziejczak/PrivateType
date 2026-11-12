@@ -28,7 +28,7 @@ internal static class SettingsLanguageProbe
         try
         {
             Flush(window);
-            var selectors = Descendants(window).OfType<ComboBox>().Where(box => box.Name.Length == 0 && box.ItemsSource is IEnumerable<LanguageOption>).ToList();
+            var selectors = Descendants(window).OfType<ComboBox>().Where(box => box.Name is "" or "LanguageBox" && box.ItemsSource is IEnumerable<LanguageOption>).ToList();
             Require(selectors.Count == 3, "Each shortcut row must have a language selector.");
             foreach (var selector in selectors)
             {
