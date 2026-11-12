@@ -209,7 +209,7 @@ internal static class SettingsModelProbe
             Require(cards.Count == 2, "Setup must offer both models.");
             Require(setup.ChosenModel.Id == SpeechModelCatalog.ParakeetId && cards[0].IsChecked == true
                 && link.NavigateUri == SpeechModelCatalog.Parakeet.LicenseUri, "A new install must start on the recommended Parakeet, listed first, with its terms.");
-            var badges = cards.Select(card => Descendants(card).OfType<TextBlock>().Any(text => text.Text == "Recommended" && text.IsVisible)).ToList();
+            var badges = cards.Select(card => Descendants(card).OfType<TextBlock>().Any(text => text.Text == "RECOMMENDED" && text.IsVisible)).ToList();
             Require(badges.SequenceEqual([true, false]), "Only the recommended model carries the Recommended tag.");
             var advice = (TextBlock)setup.FindName("ModelAdviceText");
             Require(advice.IsVisible && advice.Text.Contains("Nemotron", StringComparison.Ordinal), "Setup must say when to choose Nemotron instead.");

@@ -5,26 +5,45 @@
         WindowStartupLocation="CenterScreen" ResizeMode="NoResize" WindowStyle="None" AllowsTransparency="True"
         Background="Transparent" Foreground="{DynamicResource ColorText}" FontFamily="{DynamicResource AppFont}"
         Loaded="FocusImport">
-  <Border Margin="8" Background="{DynamicResource ColorSurface}" BorderBrush="{DynamicResource ColorDivider}" BorderThickness="1" CornerRadius="16">
+  <Window.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="FormStyles.xaml" />
+      </ResourceDictionary.MergedDictionaries>
+    </ResourceDictionary>
+  </Window.Resources>
+  <Border Margin="8" Background="{DynamicResource ColorSurface}" BorderBrush="{DynamicResource ColorDivider}" BorderThickness="1" CornerRadius="12">
     <Grid>
-      <Grid.RowDefinitions><RowDefinition Height="42"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-      <Border Background="{DynamicResource ColorNeutral900}" CornerRadius="15,15,0,0" MouseLeftButtonDown="DragWindow">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="40" />
+        <RowDefinition Height="*" />
+        <RowDefinition Height="Auto" />
+      </Grid.RowDefinitions>
+      <!-- The same title bar as Settings: keycap mark, name, and what this window is for. -->
+      <Border Background="{DynamicResource ColorSurface}" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,0,0,1" CornerRadius="11,11,0,0" MouseLeftButtonDown="DragWindow">
         <Grid Margin="16,0,8,0">
-          <TextBlock VerticalAlignment="Center" Opacity=".8" FontSize="13" Text="PrivateType — earlier version found"/>
-          <Button Width="28" Height="28" Padding="0" HorizontalAlignment="Right" Content="×" FontSize="18" Background="Transparent" BorderBrush="Transparent" Foreground="{DynamicResource ColorNeutral400}" AutomationProperties.Name="Start fresh" Click="StartFresh"/>
+          <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+            <Border Width="18" Height="18" CornerRadius="4" Background="{DynamicResource ColorKeycap}" BorderBrush="{DynamicResource ColorKeycapEdge}" BorderThickness="0,0,0,2">
+              <Ellipse Width="6" Height="6" Fill="{DynamicResource ColorAccent400}" />
+            </Border>
+            <TextBlock Margin="10,0,0,0" VerticalAlignment="Center" FontSize="13" FontWeight="SemiBold" Text="PrivateType" />
+            <TextBlock Margin="8,0,0,0" VerticalAlignment="Center" FontSize="13" Foreground="{DynamicResource ColorNeutral400}" Text="earlier version found" />
+          </StackPanel>
+          <Button Width="28" Height="28" Padding="0" HorizontalAlignment="Right" VerticalAlignment="Center" Content="×" FontSize="18" Style="{StaticResource GhostButton}"
+                  AutomationProperties.Name="Start fresh" Click="StartFresh" />
         </Grid>
       </Border>
-      <Border Grid.Row="1" Padding="22" Background="{DynamicResource ColorSurface}" CornerRadius="0,0,14,14">
-        <StackPanel>
-          <TextBlock FontSize="22" FontWeight="SemiBold" Text="Bring over your settings?"/>
-          <TextBlock x:Name="SourceText" Margin="0,6,0,0" Opacity=".75" FontSize="14" TextWrapping="Wrap"/>
-          <Border Margin="0,16,0,0" Padding="12" Background="{DynamicResource ColorBg}" BorderBrush="{DynamicResource ColorDivider}" BorderThickness="1" CornerRadius="8">
-            <TextBlock FontSize="13" TextWrapping="Wrap" Text="Copies your shortcuts, microphone, vocabulary and packs, sounds, recent dictation options, and speech model choice. Windows startup is asked separately. The earlier copy is not changed."/>
-          </Border>
-          <StackPanel Margin="0,22,0,0" Orientation="Horizontal" HorizontalAlignment="Right">
-            <Button x:Name="ImportButton" Style="{StaticResource PrimaryButton}" Margin="0,0,8,0" Content="Import settings" Click="Import"/>
-            <Button x:Name="StartFreshButton" Content="Start fresh" IsCancel="True" Click="StartFresh"/>
-          </StackPanel>
+      <StackPanel Grid.Row="1" Margin="24,18,24,22">
+        <TextBlock FontSize="15" FontWeight="SemiBold" Text="Bring over your settings?" />
+        <TextBlock x:Name="SourceText" Margin="0,4,0,0" FontSize="13" Foreground="{DynamicResource ColorNeutral400}" TextWrapping="Wrap" />
+        <TextBlock Margin="0,14,0,0" FontSize="13" LineHeight="19" TextWrapping="Wrap"
+                   Text="Copies your shortcuts, microphone, vocabulary and packs, sounds, recent dictation options, and speech model choice. Windows startup is asked separately. The earlier copy is not changed." />
+      </StackPanel>
+      <!-- The same slim footer as Settings: the secondary action as text, the primary filled at the right. -->
+      <Border Grid.Row="2" Padding="24,10,16,12" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,1,0,0">
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+          <Button x:Name="StartFreshButton" Style="{StaticResource GhostButton}" Margin="0,0,6,0" Padding="12,6" Content="Start fresh" IsCancel="True" Click="StartFresh" />
+          <Button x:Name="ImportButton" Style="{StaticResource PrimaryButton}" Padding="16,6" Content="Import settings" Click="Import" />
         </StackPanel>
       </Border>
     </Grid>

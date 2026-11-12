@@ -5,26 +5,57 @@
         WindowStartupLocation="CenterScreen" ResizeMode="NoResize" WindowStyle="None" AllowsTransparency="True"
         Background="Transparent" Foreground="{DynamicResource ColorText}" FontFamily="{DynamicResource AppFont}"
         Loaded="FocusSafeChoice">
-  <Border Margin="8" Background="{DynamicResource ColorSurface}" BorderBrush="{DynamicResource ColorDivider}" BorderThickness="1" CornerRadius="16">
+  <Window.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="FormStyles.xaml" />
+      </ResourceDictionary.MergedDictionaries>
+    </ResourceDictionary>
+  </Window.Resources>
+  <Border Margin="8" Background="{DynamicResource ColorSurface}" BorderBrush="{DynamicResource ColorDivider}" BorderThickness="1" CornerRadius="12">
     <Grid>
-      <Grid.RowDefinitions><RowDefinition Height="42"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-      <Border Background="{DynamicResource ColorNeutral900}" CornerRadius="15,15,0,0" MouseLeftButtonDown="DragWindow">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="40" />
+        <RowDefinition Height="*" />
+        <RowDefinition Height="Auto" />
+      </Grid.RowDefinitions>
+      <!-- The same title bar as Settings: keycap mark, name, and what this window is for. -->
+      <Border Background="{DynamicResource ColorSurface}" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,0,0,1" CornerRadius="11,11,0,0" MouseLeftButtonDown="DragWindow">
         <Grid Margin="16,0,8,0">
-          <TextBlock VerticalAlignment="Center" Opacity=".8" FontSize="13" Text="PrivateType — Windows startup"/>
-          <Button Width="28" Height="28" Padding="0" HorizontalAlignment="Right" Content="×" FontSize="18" Background="Transparent" BorderBrush="Transparent" Foreground="{DynamicResource ColorNeutral400}" AutomationProperties.Name="Keep registered version" Click="KeepRegisteredVersion"/>
+          <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+            <Border Width="18" Height="18" CornerRadius="4" Background="{DynamicResource ColorKeycap}" BorderBrush="{DynamicResource ColorKeycapEdge}" BorderThickness="0,0,0,2">
+              <Ellipse Width="6" Height="6" Fill="{DynamicResource ColorAccent400}" />
+            </Border>
+            <TextBlock Margin="10,0,0,0" VerticalAlignment="Center" FontSize="13" FontWeight="SemiBold" Text="PrivateType" />
+            <TextBlock Margin="8,0,0,0" VerticalAlignment="Center" FontSize="13" Foreground="{DynamicResource ColorNeutral400}" Text="Windows startup" />
+          </StackPanel>
+          <Button Width="28" Height="28" Padding="0" HorizontalAlignment="Right" VerticalAlignment="Center" Content="×" FontSize="18" Style="{StaticResource GhostButton}"
+                  AutomationProperties.Name="Keep registered version" Click="KeepRegisteredVersion" />
         </Grid>
       </Border>
-      <Border Grid.Row="1" Padding="22" Background="{DynamicResource ColorSurface}" CornerRadius="0,0,14,14">
-        <StackPanel>
-          <TextBlock FontSize="22" FontWeight="SemiBold" Text="Use this version at startup?"/>
-          <TextBlock x:Name="VersionSummary" Margin="0,6,0,0" Opacity=".75" FontSize="14" TextWrapping="Wrap"/>
-          <Border Margin="0,16,0,0" Padding="12" Background="{DynamicResource ColorBg}" BorderBrush="{DynamicResource ColorDivider}" BorderThickness="1" CornerRadius="8">
-            <TextBlock FontSize="13" TextWrapping="Wrap" Text="You can run either version. Choose whether the version you opened should replace the version currently registered to start with Windows."/>
-          </Border>
-          <StackPanel Margin="0,22,0,0" Orientation="Horizontal" HorizontalAlignment="Right">
-            <Button x:Name="UseButton" Style="{StaticResource PrimaryButton}" Margin="0,0,8,0" Content="Use this version" Click="UseCurrentVersion"/>
-            <Button x:Name="KeepButton" Content="Keep registered version" IsCancel="True" Click="KeepRegisteredVersion"/>
-          </StackPanel>
+      <StackPanel Grid.Row="1" Margin="24,18,24,22">
+        <TextBlock FontSize="15" FontWeight="SemiBold" Text="Use this version at startup?" />
+        <!-- The two versions as table values, so each stays beside its label. -->
+        <Border Margin="0,14,0,0" Style="{StaticResource TableRow}">
+          <Grid>
+            <TextBlock Style="{StaticResource RowLabel}" Text="Starts with Windows" />
+            <TextBlock x:Name="RegisteredVersionText" Style="{StaticResource RowValue}" HorizontalAlignment="Right" />
+          </Grid>
+        </Border>
+        <Border Style="{StaticResource TableRow}" BorderThickness="0,1,0,1">
+          <Grid>
+            <TextBlock Style="{StaticResource RowLabel}" Text="You opened" />
+            <TextBlock x:Name="CurrentVersionText" Style="{StaticResource RowValue}" HorizontalAlignment="Right" Foreground="{DynamicResource ColorText}" />
+          </Grid>
+        </Border>
+        <TextBlock Margin="0,12,0,0" FontSize="12" Foreground="{DynamicResource ColorNeutral400}" TextWrapping="Wrap"
+                   Text="You can run either version. Choose whether the version you opened should replace the version currently registered to start with Windows." />
+      </StackPanel>
+      <!-- The same slim footer as Settings: the safe choice as text, the change filled at the right. -->
+      <Border Grid.Row="2" Padding="24,10,16,12" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,1,0,0">
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+          <Button x:Name="KeepButton" Style="{StaticResource GhostButton}" Margin="0,0,6,0" Padding="12,6" Content="Keep registered version" IsCancel="True" Click="KeepRegisteredVersion" />
+          <Button x:Name="UseButton" Style="{StaticResource PrimaryButton}" Padding="16,6" Content="Use this version" Click="UseCurrentVersion" />
         </StackPanel>
       </Border>
     </Grid>

@@ -8,7 +8,8 @@ public partial class StartupVersionPromptWindow : Window
     public StartupVersionPromptWindow(Version? registeredVersion, Version? currentVersion)
     {
         InitializeComponent();
-        VersionSummary.Text = $"{VersionLabel(registeredVersion)} is currently registered. You opened {VersionLabel(currentVersion)}.";
+        RegisteredVersionText.Text = VersionLabel(registeredVersion);
+        CurrentVersionText.Text = VersionLabel(currentVersion);
     }
 
     internal static string VersionLabel(Version? version) => ApplicationVersion.Label(version);
