@@ -131,6 +131,12 @@ public partial class SettingsWindow : Window
     internal void ShowVocabularyPage() => VocabularyTab.IsChecked = true;
     internal void ShowModelPage() => ModelTab.IsChecked = true;
 
+    private void OpenModelPage(object sender, RoutedEventArgs e) => ShowModelPage();
+
+    // The fade says "more below"; at the end of the page it goes, so the page visibly stops.
+    private void ShowScrollFade(object sender, System.Windows.Controls.ScrollChangedEventArgs e) =>
+        ScrollFade.Visibility = SettingsScrollViewer.VerticalOffset < SettingsScrollViewer.ScrollableHeight - 1 ? Visibility.Visible : Visibility.Hidden;
+
     private void PageChanged(object sender, RoutedEventArgs e)
     {
         if (GeneralPage is null || VocabularyPage is null || ModelPage is null)
