@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="PrivateType recent dictations" Icon="/PrivateType;component/Assets/PrivateType.ready.ico" Width="460" SizeToContent="Height" MaxHeight="560"
-        WindowStartupLocation="Manual" ResizeMode="NoResize" WindowStyle="None" AllowsTransparency="True" ShowInTaskbar="False" Topmost="True"
+        WindowStartupLocation="Manual" ResizeMode="NoResize" WindowStyle="None" UseLayoutRounding="True" AllowsTransparency="True" ShowInTaskbar="False" Topmost="True"
         Background="Transparent" Foreground="{DynamicResource ColorText}" FontFamily="{DynamicResource AppFont}" PreviewKeyDown="HandleKeys">
   <Window.Resources>
     <ResourceDictionary>
@@ -83,7 +83,7 @@
             <Run x:Name="EmptyVerb" /><InlineUIContainer BaselineAlignment="Center"><ItemsControl x:Name="EmptyShortcutKeys" Margin="4,0" Focusable="False">
               <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
-                <DataTemplate><Border Style="{StaticResource HintKey}" Margin="2,6,2,0"><TextBlock Style="{StaticResource HintKeyLegend}" LineHeight="NaN" Text="{Binding Legend}" /></Border></DataTemplate>
+                <DataTemplate><Border Style="{StaticResource HintKey}" Margin="2,5,2,1"><TextBlock Style="{StaticResource HintKeyLegend}" LineHeight="NaN" Text="{Binding Legend}" /></Border></DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl></InlineUIContainer><Run x:Name="EmptyRest" />
           </TextBlock>

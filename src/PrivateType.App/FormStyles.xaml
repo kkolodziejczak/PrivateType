@@ -142,8 +142,9 @@
     <Setter Property="Template">
       <Setter.Value>
         <ControlTemplate TargetType="Button">
-          <Grid>
-            <Rectangle x:Name="Outline" RadiusX="6" RadiusY="6" Stroke="{DynamicResource ColorNeutral600}" StrokeThickness="1" StrokeDashArray="3,3" Fill="Transparent" />
+          <Grid Background="Transparent">
+            <local:DashedKeyOutline x:Name="Outline" Stroke="{DynamicResource ColorNeutral600}" />
+            <Border x:Name="FocusRing" BorderBrush="{DynamicResource ColorAccent}" BorderThickness="2" CornerRadius="6" Visibility="Collapsed" IsHitTestVisible="False" />
             <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="Center" VerticalAlignment="Center" RecognizesAccessKey="True" />
           </Grid>
           <ControlTemplate.Triggers>
@@ -152,9 +153,8 @@
               <Setter Property="Foreground" Value="{DynamicResource ColorText}" />
             </Trigger>
             <Trigger Property="IsKeyboardFocused" Value="True">
-              <Setter TargetName="Outline" Property="Stroke" Value="{DynamicResource ColorAccent}" />
-              <Setter TargetName="Outline" Property="StrokeDashArray" Value="{x:Null}" />
-              <Setter TargetName="Outline" Property="StrokeThickness" Value="2" />
+              <Setter TargetName="Outline" Property="Visibility" Value="Collapsed" />
+              <Setter TargetName="FocusRing" Property="Visibility" Value="Visible" />
             </Trigger>
             <!-- Nothing to add yet: the outline and its words fade back, like any disabled key. -->
             <Trigger Property="IsEnabled" Value="False">
@@ -207,7 +207,9 @@
               <ColumnDefinition Width="10" />
               <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
-            <Border x:Name="CheckBoxBorder" Grid.Column="0" Width="18" Height="18" VerticalAlignment="{TemplateBinding VerticalContentAlignment}" Background="{DynamicResource ColorBg}"
+            <!-- The fill is one whole shape under the outline, so a ticked box has no seam between its edge and its fill. -->
+            <Border x:Name="CheckBoxFill" Grid.Column="0" Width="18" Height="18" VerticalAlignment="{TemplateBinding VerticalContentAlignment}" Background="{DynamicResource ColorBg}" CornerRadius="4" />
+            <Border x:Name="CheckBoxBorder" Grid.Column="0" Width="18" Height="18" VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
                     BorderBrush="{DynamicResource ColorNeutral600}" BorderThickness="1.5" CornerRadius="4">
               <Path x:Name="CheckMark" Data="M3.5,8.5 L6.5,11.5 L12.5,4.5" Stroke="{DynamicResource ColorBg}" StrokeThickness="2" StrokeLineJoin="Round" Visibility="Collapsed" />
             </Border>
@@ -217,7 +219,7 @@
           </Grid>
           <ControlTemplate.Triggers>
             <Trigger Property="IsChecked" Value="True">
-              <Setter TargetName="CheckBoxBorder" Property="Background" Value="{DynamicResource ColorText}" />
+              <Setter TargetName="CheckBoxFill" Property="Background" Value="{DynamicResource ColorText}" />
               <Setter TargetName="CheckBoxBorder" Property="BorderBrush" Value="{DynamicResource ColorText}" />
               <Setter TargetName="CheckMark" Property="Visibility" Value="Visible" />
             </Trigger>
@@ -248,8 +250,10 @@
               <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <ContentPresenter VerticalAlignment="Center" RecognizesAccessKey="True" />
+            <!-- The fill is one whole shape under the outline, so a switch that is on has no seam between its edge and its fill. -->
+            <Border x:Name="TrackFill" Grid.Column="1" Width="44" Height="24" Margin="12,0,6,0" VerticalAlignment="Center" CornerRadius="12" Background="{DynamicResource ColorBg}" />
             <Border x:Name="Track" Grid.Column="1" Width="44" Height="24" Margin="12,0,6,0" VerticalAlignment="Center" CornerRadius="12"
-                    Background="{DynamicResource ColorBg}" BorderBrush="{DynamicResource ColorNeutral600}" BorderThickness="1.5">
+                    BorderBrush="{DynamicResource ColorNeutral600}" BorderThickness="1.5">
               <Ellipse x:Name="Knob" Width="15" Height="15" Margin="3,0" HorizontalAlignment="Left" Fill="{DynamicResource ColorNeutral400}" />
             </Border>
             <Border x:Name="FocusRing" Grid.Column="1" Width="50" Height="30" Margin="9,0,3,0" VerticalAlignment="Center" CornerRadius="15"
@@ -257,7 +261,7 @@
           </Grid>
           <ControlTemplate.Triggers>
             <Trigger Property="IsChecked" Value="True">
-              <Setter TargetName="Track" Property="Background" Value="{DynamicResource ColorText}" />
+              <Setter TargetName="TrackFill" Property="Background" Value="{DynamicResource ColorText}" />
               <Setter TargetName="Track" Property="BorderBrush" Value="{DynamicResource ColorText}" />
               <Setter TargetName="Knob" Property="HorizontalAlignment" Value="Right" />
               <Setter TargetName="Knob" Property="Fill" Value="{DynamicResource ColorBg}" />
@@ -478,7 +482,8 @@
   </Style>
   <Style TargetType="ComboBoxItem">
     <Setter Property="Foreground" Value="{DynamicResource ColorText}" />
-    <Setter Property="Padding" Value="10,7" />
+    <!-- Tall enough that an open two-option list ends below the value of the row it covers, not through its letters. -->
+    <Setter Property="Padding" Value="10,8" />
     <Setter Property="Template">
       <Setter.Value>
         <ControlTemplate TargetType="ComboBoxItem">
@@ -601,7 +606,8 @@
     </Style.Triggers>
   </Style>
   <!-- The ⓘ after a row label: its tooltip carries the row's explanation for pointer users. -->
-  <!-- A 16 px stroked circle-i inside a 24 × 24 target that also takes keyboard focus and then shows the same tip. -->
+  <!-- A 16 px stroked circle-i inside a 24 × 24 target that also takes keyboard focus and then shows the same tip.
+       Its stroke and radius are multiples of 0.8, one pixel at 125 %, so the ring and the stem lie on whole pixels there. -->
   <Style x:Key="InfoMark" TargetType="ContentControl">
     <Setter Property="Margin" Value="2,0,0,0" />
     <Setter Property="Width" Value="24" />
@@ -620,8 +626,8 @@
       <Setter.Value>
         <ControlTemplate TargetType="ContentControl">
           <Grid Background="Transparent">
-            <Path Width="16" Height="16" Stroke="{TemplateBinding Foreground}" StrokeThickness="1.4" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                  Data="M8,0.7 A7.3,7.3 0 1 1 7.99,0.7 Z M8,7.2 V11.6" />
+            <Path Width="16" Height="16" Stroke="{TemplateBinding Foreground}" StrokeThickness="1.6" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                  Data="M8,0.8 A7.2,7.2 0 1 1 7.99,0.8 Z M8,7.2 V11.6" />
             <Ellipse Width="1.9" Height="1.9" Margin="0,0,0,6.6" Fill="{TemplateBinding Foreground}" />
             <Border x:Name="FocusRing" Margin="-1" BorderBrush="{DynamicResource ColorAccent}" BorderThickness="2" CornerRadius="13" Visibility="Collapsed" />
           </Grid>
@@ -669,8 +675,10 @@
                 </Style>
               </ContentPresenter.Resources>
             </ContentPresenter>
+            <!-- The fill is one whole shape under the outline, so a switch that is on has no seam between its edge and its fill. -->
+            <Border x:Name="TrackFill" Grid.Column="1" Width="44" Height="24" HorizontalAlignment="Left" VerticalAlignment="Center" CornerRadius="12" Background="{DynamicResource ColorBg}" />
             <Border x:Name="Track" Grid.Column="1" Width="44" Height="24" HorizontalAlignment="Left" VerticalAlignment="Center" CornerRadius="12"
-                    Background="{DynamicResource ColorBg}" BorderBrush="{DynamicResource ColorNeutral600}" BorderThickness="1.5">
+                    BorderBrush="{DynamicResource ColorNeutral600}" BorderThickness="1.5">
               <Ellipse x:Name="Knob" Width="15" Height="15" Margin="3,0" HorizontalAlignment="Left" Fill="{DynamicResource ColorNeutral400}" />
             </Border>
             <Border x:Name="FocusRing" Grid.Column="1" Width="50" Height="30" Margin="-3,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Center" CornerRadius="15"
@@ -678,7 +686,7 @@
           </Grid>
           <ControlTemplate.Triggers>
             <Trigger Property="IsChecked" Value="True">
-              <Setter TargetName="Track" Property="Background" Value="{DynamicResource ColorText}" />
+              <Setter TargetName="TrackFill" Property="Background" Value="{DynamicResource ColorText}" />
               <Setter TargetName="Track" Property="BorderBrush" Value="{DynamicResource ColorText}" />
               <Setter TargetName="Knob" Property="HorizontalAlignment" Value="Right" />
               <Setter TargetName="Knob" Property="Fill" Value="{DynamicResource ColorBg}" />
@@ -710,11 +718,16 @@
       <Trigger Property="IsKeyboardFocused" Value="True"><Setter Property="Background" Value="{DynamicResource ColorBg}" /></Trigger>
     </Style.Triggers>
   </Style>
-  <!-- Removes a list row: a trash outline in the app's stroke style, so it never reads as the window's close ×. -->
+  <!-- Removes a list row: a trash outline in the app's stroke style, so it never reads as the window's close ×.
+       Drawn on a grid of 0.8, one pixel at 125 %: the outline is two pixels there and the two inner bars one, with clear gaps. -->
   <DataTemplate x:Key="RemoveGlyph">
-    <Path Width="14" Height="14" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Control}}" StrokeThickness="1.3"
-          StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
-          Data="M2,3.8 H12 M5.4,3.8 V2.2 H8.6 V3.8 M3.4,3.8 L4.1,12.2 H9.9 L10.6,3.8 M6,6.2 V9.8 M8,6.2 V9.8" />
+    <Grid Width="14.4" Height="14.4">
+      <Path Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Control}}" StrokeThickness="1.6"
+            StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+            Data="M1.6,3.2 H12.8 M5.6,3.2 V1.6 H8.8 V3.2 M3.2,3.2 L4,12.8 H10.4 L11.2,3.2" />
+      <Path Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Control}}" StrokeThickness="0.8"
+            StrokeStartLineCap="Round" StrokeEndLineCap="Round" Data="M6,6 V10 M8.4,6 V10" />
+    </Grid>
   </DataTemplate>
   <!-- The remove key of a list row: 28 × 28, its name on hover and on keyboard focus. The row shows it on hover or focus. -->
   <Style x:Key="RowRemoveButton" TargetType="Button" BasedOn="{StaticResource GhostButton}">

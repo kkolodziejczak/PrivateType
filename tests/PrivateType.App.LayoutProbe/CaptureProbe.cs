@@ -199,8 +199,15 @@ internal static class CaptureProbe
         Draw(Consent(SpeechModelCatalog.ParakeetId, ticked: true), output, "model-setup", "setup-consent-ticked");
         Draw(Consent(SpeechModelCatalog.NemotronId, ticked: false), output, "model-setup", "setup-consent-nemotron");
         Draw(Consent(SpeechModelCatalog.NemotronId, ticked: true), output, "model-setup", "setup-consent-nemotron-ticked");
+        // A portable-local copy has the longest storage note.
+        Draw(Consent(SpeechModelCatalog.ParakeetId, ticked: false, ModelStorageMode.Portable), output, "model-setup", "setup-consent-portable");
+        Draw(Consent(SpeechModelCatalog.NemotronId, ticked: false), output, "model-setup", "setup-consent-focus", window =>
+            FocusKeyboard(window, Descendants((ItemsControl)window.FindName("ModelChoices")).OfType<RadioButton>().ElementAt(1)));
         // The app reports the chosen model's manifest size as the download total.
         var total = SpeechModelCatalog.Parakeet.Manifest.ExpectedBytes;
+        var downloadStart = new ModelSetupWindow();
+        downloadStart.ShowProgress(0, total);
+        Draw(downloadStart, output, "model-setup", "setup-download-start");
         var download = new ModelSetupWindow();
         download.ShowProgress(400L * 1024 * 1024, total);
         Draw(download, output, "model-setup", "setup-download");
@@ -211,15 +218,23 @@ internal static class CaptureProbe
         failure.ShowProgress(400L * 1024 * 1024, total);
         failure.ShowFailure("Unable to read data from the transport connection.", connectionDropped: true);
         Draw(failure, output, "model-setup", "setup-failure");
+        // A failure that is not a dropped connection, with a system message long enough to wrap.
+        var otherFailure = new ModelSetupWindow();
+        otherFailure.ShowProgress(400L * 1024 * 1024, total);
+        otherFailure.ShowFailure("The downloaded file did not match the size the server reported. Expected 714080256 bytes and received 419430400 bytes.", connectionDropped: false);
+        Draw(otherFailure, output, "model-setup", "setup-failure-other");
         var missing = new ModelSetupWindow();
         missing.ShowMissingEnginePrerequisite();
         Draw(missing, output, "model-setup", "setup-engine-missing");
+        var couldNotStart = new ModelSetupWindow();
+        couldNotStart.ShowEngineStartPrerequisite();
+        Draw(couldNotStart, output, "model-setup", "setup-engine-start");
     }
 
-    private static ModelSetupWindow Consent(string modelId, bool ticked)
+    private static ModelSetupWindow Consent(string modelId, bool ticked, ModelStorageMode storage = ModelStorageMode.Shared)
     {
         var consent = new ModelSetupWindow(modelId);
-        consent.ShowDownloadConsent();
+        consent.ShowDownloadConsent(storage);
         ((CheckBox)consent.FindName("TermsCheckBox")).IsChecked = ticked;
         return consent;
     }
@@ -346,11 +361,27 @@ internal static class CaptureProbe
             new Version(1, 3, 0), new DateTime(2026, 9, 28, 9, 0, 0, DateTimeKind.Utc));
         Draw(new ImportSettingsPromptWindow(deepCopy), output, "import-prompt", "import-prompt-long-path");
         Draw(new StartupVersionPromptWindow(new Version(2, 4, 0), new Version(1, 9, 3)), output, "version-prompt", "version-prompt");
-        Draw(new DiagnosticsWindow(new InMemoryDiagnostics()), output, "diagnostics", "diagnostics-empty");
-        Draw(new DiagnosticsWindow(SampleDiagnostics()), output, "diagnostics", "diagnostics-entries");
+        Draw(new DiagnosticsWindow(new InMemoryDiagnostics(), Clock), output, "diagnostics", "diagnostics-empty");
+        Draw(new DiagnosticsWindow(SampleDiagnostics(), Clock), output, "diagnostics", "diagnostics-entries");
+        // The Error row reached with the arrow keys: selected and focused.
+        Draw(new DiagnosticsWindow(SampleDiagnostics(), Clock), output, "diagnostics", "diagnostics-row-focus", window =>
+        {
+            var entries = (ListBox)window.FindName("Entries");
+            entries.SelectedIndex = 1;
+            Flush(window);
+            FocusKeyboard(window, (IInputElement)entries.ItemContainerGenerator.ContainerFromIndex(1));
+        });
+        Draw(new DiagnosticsWindow(BusyDiagnostics(), Clock), output, "diagnostics", "diagnostics-busy");
+        Draw(new DiagnosticsWindow(InformationOnlyDiagnostics(), Clock), output, "diagnostics", "diagnostics-info-only");
         Draw(new OpenSourceLicensesWindow(), output, "licenses", "licenses");
-        Draw(new OpenSourceLicensesWindow(BundledLicenses()), output, "licenses", "licenses-bundled");
+        Draw(new OpenSourceLicensesWindow(BundledLicenses(everyFile: false)), output, "licenses", "licenses-bundled");
+        Draw(new OpenSourceLicensesWindow(BundledLicenses(everyFile: false)), output, "licenses", "licenses-bundled-end",
+            window => ((TextBox)window.FindName("Notices")).ScrollToEnd());
+        Draw(new OpenSourceLicensesWindow(BundledLicenses(everyFile: true)), output, "licenses", "licenses-bundled-full");
     }
+
+    // The person's clock in every diagnostics capture: two hours ahead of the UTC timestamps the log keeps, whatever zone the capture runs in.
+    private static readonly TimeZoneInfo Clock = TimeZoneInfo.CreateCustomTimeZone("capture", TimeSpan.FromHours(2), "capture", "capture");
 
     // Three warnings and one error, with only the event names and details the log keeps; no dictated text.
     private static InMemoryDiagnostics SampleDiagnostics()
@@ -365,14 +396,115 @@ internal static class CaptureProbe
         return diagnostics;
     }
 
-    // The licenses folder a portable release ships, written from the notices text in the release script.
-    private static string BundledLicenses([CallerFilePath] string source = "")
+    // A real session's log: the application and three dictations, each under its own session ID. Most entries are
+    // information; the four problems of the short sample are among them. Only event names and the details the log keeps.
+    private static InMemoryDiagnostics BusyDiagnostics()
     {
-        var script = File.ReadAllText(Path.Combine(Path.GetDirectoryName(source)!, "..", "..", "Build-PortableRelease.ps1")).Replace("\r\n", "\n");
+        var diagnostics = new InMemoryDiagnostics();
+        var at = Now.AddMinutes(-21);
+        void Record(string session, int secondsLater, string name, (string Key, string Value)[] details, Exception? error = null)
+        {
+            at = at.AddSeconds(secondsLater);
+            diagnostics.Record(new DictationDiagnostic(session, at, name, details.ToDictionary(pair => pair.Key, pair => pair.Value), error));
+        }
+
+        void StartDictation(string session, int secondsLater, string language)
+        {
+            Record(session, secondsLater, "session.started", [("language", language)]);
+            Record(session, 0, "capture.start", [("source", "default")]);
+            Record(session, 0, "session.state", [("state", "Recording")]);
+        }
+
+        void FinishDictation(string session, int spokenSeconds, string recorded, string took, string characters, bool inserted)
+        {
+            Record(session, 3, "session.update", [("characters", "38")]);
+            Record(session, spokenSeconds, "session.update", [("characters", characters)]);
+            Record(session, 1, "capture.stop", [("recordedSeconds", recorded)]);
+            Record(session, 0, "session.finalizing", [("state", "Finalizing")]);
+            Record(session, 1, "transcription.timed", [("recordedSeconds", recorded), ("tookSeconds", took)]);
+            Record(session, 0, "recognizer.complete", [("characters", characters)]);
+            Record(session, 0, "text.corrected", [("characters", characters)]);
+            if (inserted)
+            {
+                Record(session, 0, "injection.started", [("characters", characters)]);
+                Record(session, 0, "injection.completed", [("characters", characters)]);
+            }
+            else
+            {
+                Record(session, 0, "insertion.skipped", [("reason", "foreground-changed"), ("characters", characters)]);
+            }
+
+            Record(session, 0, "session.completed", [("state", "Idle")]);
+        }
+
+        Record("application", 0, "engine.started", [("device", "vulkan:1")]);
+        Record("application", 1, "model.loading", [("device", "vulkan:1")]);
+        Record("application", 2, "model.load.failed", [("device", "vulkan:1")]);
+        Record("application", 0, "engine.fallback", [("device", "cpu")]);
+        Record("application", 5, "model.loaded", [("device", "cpu"), ("tookSeconds", "4.6")]);
+        Record("application", 1, "engine.warmed", [("tookSeconds", "0.7")]);
+        StartDictation("d41a07", 352, "en-US");
+        FinishDictation("d41a07", 9, "13.2", "1.1", "142", inserted: false);
+        Record("application", 44, "history.opened", [("source", "shortcut")]);
+        Record("application", 6, "history.pasted", [("characters", "142")]);
+        Record("application", 0, "history.closed", [("reason", "pasted")]);
+        StartDictation("e8802c", 214, "pl-PL");
+        Record("e8802c", 1, "session.failed", [("phase", "capture.start"), ("state", "Recording")], new InvalidOperationException("synthetic"));
+        Record("application", 238, "cue.skipped", [("source", "ready"), ("reason", "muted")]);
+        StartDictation("f3c95b", 2, "en-US");
+        FinishDictation("f3c95b", 17, "21.4", "1.8", "264", inserted: true);
+        Record("application", 30, "model.unload.scheduled", [("minutes", "10")]);
+        return diagnostics;
+    }
+
+    // Nothing failed, but the log is not empty: one start and one dictation, all information.
+    private static InMemoryDiagnostics InformationOnlyDiagnostics()
+    {
+        var diagnostics = new InMemoryDiagnostics();
+        void Record(string session, int second, string name, params (string Key, string Value)[] details) =>
+            diagnostics.Record(new DictationDiagnostic(session, Now.AddMinutes(-4).AddSeconds(second), name, details.ToDictionary(pair => pair.Key, pair => pair.Value)));
+        Record("application", 0, "engine.started", ("device", "vulkan:1"));
+        Record("application", 1, "model.loading", ("device", "vulkan:1"));
+        Record("application", 4, "model.loaded", ("device", "vulkan:1"), ("tookSeconds", "2.9"));
+        Record("application", 5, "engine.warmed", ("tookSeconds", "0.4"));
+        Record("d41a07", 62, "session.started", ("language", "en-US"));
+        Record("d41a07", 75, "transcription.timed", ("recordedSeconds", "11.8"), ("tookSeconds", "0.9"));
+        Record("d41a07", 75, "injection.completed", ("characters", "126"));
+        Record("d41a07", 75, "session.completed", ("state", "Idle"));
+        return diagnostics;
+    }
+
+    // The licenses folder a portable release ships. The notices are the text in the release script; with every file, the
+    // other license texts lie beside them under the names the release uses: PrivateType's own license in full, and a
+    // short stand-in for each text the release copies from a package or the engine.
+    private static string BundledLicenses(bool everyFile, [CallerFilePath] string source = "")
+    {
+        var repository = Path.Combine(Path.GetDirectoryName(source)!, "..", "..");
+        var script = File.ReadAllText(Path.Combine(repository, "Build-PortableRelease.ps1")).Replace("\r\n", "\n");
         var start = script.IndexOf("@'\nPrivateType third-party notices", StringComparison.Ordinal) + 3;
         var end = script.IndexOf("\n'@ | Set-Content", start, StringComparison.Ordinal);
-        var folder = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "privatetype-capture-licenses")).FullName;
+        var folder = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), everyFile ? "privatetype-capture-licenses-full" : "privatetype-capture-licenses")).FullName;
         File.WriteAllText(Path.Combine(folder, "THIRD-PARTY-NOTICES.txt"), script[start..end]);
+        if (!everyFile)
+            return folder;
+
+        File.Copy(Path.Combine(repository, "LICENSE"), Path.Combine(folder, "PrivateType-MIT.txt"), overwrite: true);
+        (string Name, string Text)[] standIns =
+        [
+            ("NAudio-MIT.txt", "MIT License\n\nStand-in for the capture: the release ships the NAudio 2.2.1 license text here."),
+            ("VulkanRT-License.txt", "Stand-in for the capture: the release ships the Vulkan loader's MIT and Apache-2.0 texts here."),
+            ("dotnet-LICENSE.txt", "The MIT License (MIT)\n\nStand-in for the capture: the release ships the .NET runtime license here."),
+            ("dotnet-THIRD-PARTY-NOTICES.txt", "Stand-in for the capture: the release ships the .NET runtime's third-party notices here."),
+            (Path.Combine("NeMo-Speech.cpp", "LICENSE"), "Apache License, Version 2.0\n\nStand-in for the capture: the release ships the engine's license here."),
+            (Path.Combine("NeMo-Speech.cpp", "NOTICE"), "Stand-in for the capture: the release ships NVIDIA's NOTICE here."),
+            (Path.Combine("NeMo-Speech.cpp", "third_party", "ggml", "LICENSE"), "MIT License\n\nStand-in for the capture: the release ships the ggml license here.")
+        ];
+        foreach (var (file, text) in standIns)
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(Path.Combine(folder, file))!);
+            File.WriteAllText(Path.Combine(folder, file), text);
+        }
+
         return folder;
     }
 
@@ -411,8 +543,9 @@ internal static class CaptureProbe
             // Last, so nothing settles between the pointer arriving and the drawing.
             if (window == hovered)
                 MoveMouseOver(window, hoverPoint);
-            var width = Math.Ceiling(window.ActualWidth);
-            var height = Math.Ceiling(window.ActualHeight);
+            // The window's own pixels, one to one: its size in whole pixels at the capture scale, so nothing is resampled.
+            var width = Pixels(window.ActualWidth) / Scale;
+            var height = Pixels(window.ActualHeight) / Scale;
             var shot = new RenderTargetBitmap(Pixels(width), Pixels(height), 96 * Scale, 96 * Scale, PixelFormats.Pbgra32);
             shot.Render(window);
 

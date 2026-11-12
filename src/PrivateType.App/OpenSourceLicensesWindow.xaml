@@ -1,7 +1,7 @@
 <Window x:Class="PrivateType.App.OpenSourceLicensesWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Icon="/PrivateType;component/Assets/PrivateType.ready.ico" Width="620" Height="520" WindowStartupLocation="CenterOwner" WindowStyle="None"
+        Title="PrivateType open-source licenses" Icon="/PrivateType;component/Assets/PrivateType.ready.ico" Width="620" Height="520" WindowStartupLocation="CenterOwner" WindowStyle="None" UseLayoutRounding="True"
         AllowsTransparency="True" Background="Transparent" Foreground="{DynamicResource ColorText}"
         FontFamily="{DynamicResource AppFont}">
   <Window.Resources>
@@ -34,7 +34,7 @@
         <RowDefinition Height="Auto" />
       </Grid.RowDefinitions>
       <!-- The same title bar as Settings: keycap mark, name, and what this window is for. -->
-      <Border Background="{DynamicResource ColorSurface}" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,0,0,1" CornerRadius="11,11,0,0">
+      <Border Background="{DynamicResource ColorSurface}" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,0,0,1" CornerRadius="11,11,0,0" MouseLeftButtonDown="DragWindow">
         <Grid Margin="16,0,8,0">
           <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
             <Border Width="18" Height="18" CornerRadius="4" Background="{DynamicResource ColorKeycap}" BorderBrush="{DynamicResource ColorKeycapEdge}" BorderThickness="0,0,0,2">
@@ -67,7 +67,7 @@
       <!-- The same slim footer as Settings: the secondary action as text, the primary filled at the right. -->
       <Border Grid.Row="2" Padding="24,10,16,12" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,1,0,0">
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-          <Button Style="{StaticResource GhostButton}" Margin="0,0,8,0" Height="32" Padding="12,0" Content="Open licenses folder" Click="OpenLicensesFolder" />
+          <Button x:Name="OpenLicensesFolderButton" Style="{StaticResource GhostButton}" Margin="0,0,8,0" Height="32" Padding="12,0" Content="Open licenses folder" Click="OpenLicensesFolder" />
           <Button Style="{StaticResource PrimaryButton}" Height="32" Padding="16,0" Content="Close" Click="Close" />
         </StackPanel>
       </Border>

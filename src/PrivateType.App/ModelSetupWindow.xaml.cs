@@ -16,7 +16,10 @@ public partial class ModelSetupWindow : Window
     internal const string MissingEngineStep = "Download the complete PrivateType portable ZIP, extract every file, and start PrivateType from that folder.";
     internal const string EngineCouldNotStartHeading = "Speech engine couldn't start";
     internal const string EngineCouldNotStartCause = "The speech engine is here, but Windows couldn't start it.";
-    internal const string EngineCouldNotStartStep = "Install the Microsoft Visual C++ Redistributable (x64), then select Retry.";
+    internal const string EngineCouldNotStartStep = $"Install the Microsoft Visual C++ Redistributable (x64), then select {CheckAgainAction}.";
+    // The filled button names what it does: a missing or stopped engine is looked for again, a failed download starts again.
+    internal const string CheckAgainAction = "Check again";
+    internal const string RetryDownloadAction = "Retry";
     internal const string FailureHeading = "Download interrupted";
     internal const string DroppedConnectionCause = "The connection dropped before the model finished. Retry starts the download again.";
     internal const string UnfinishedDownloadCause = "The model didn't finish downloading. Retry starts the download again.";
@@ -101,6 +104,7 @@ public partial class ModelSetupWindow : Window
         ProgressBar.Visibility = Visibility.Collapsed;
         PhaseStrip.Visibility = Visibility.Collapsed;
         DownloadButton.Visibility = Visibility.Collapsed;
+        RetryButton.Content = CheckAgainAction;
         RetryButton.Visibility = Visibility.Visible;
         ShowDownloadReadiness();
     }
@@ -141,9 +145,15 @@ public partial class ModelSetupWindow : Window
         PhaseStrip.Visibility = verifying ? Visibility.Visible : Visibility.Collapsed;
         ProgressBar.Visibility = verifying ? Visibility.Collapsed : Visibility.Visible;
         ProgressBar.Value = total == 0 ? 0 : Math.Min(100, downloaded * 100d / total);
-        ProgressBar.BeginAnimation(OpacityProperty, verifying ? null
-            : new DoubleAnimation(1, 0.75, TimeSpan.FromSeconds(0.8)) { AutoReverse = true, RepeatBehavior = RepeatBehavior.Forever });
+        // The step under way pulses, so a wait of several seconds still shows that work is happening.
+        Pulse(ProgressBar, !verifying);
+        Pulse(CheckingSegment, verifying);
     }
+
+    private static void Pulse(UIElement step, bool underWay)
+        => step.BeginAnimation(OpacityProperty, underWay
+            ? new DoubleAnimation(1, 0.75, TimeSpan.FromSeconds(0.8)) { AutoReverse = true, RepeatBehavior = RepeatBehavior.Forever }
+            : null);
 
     // A dropped connection is told apart from other failures by the network exceptions in the chain.
     internal static bool IsDroppedConnection(Exception exception)
@@ -166,9 +176,11 @@ public partial class ModelSetupWindow : Window
         ShowStopped(FailureHeading, connectionDropped ? DroppedConnectionCause : UnfinishedDownloadCause, string.Empty);
         FailureDetailText.Text = message;
         FailureDetailText.Visibility = Visibility.Visible;
-        ProgressBar.BeginAnimation(OpacityProperty, null);
+        Pulse(ProgressBar, underWay: false);
+        Pulse(CheckingSegment, underWay: false);
         ProgressBar.Visibility = Visibility.Collapsed;
         PhaseStrip.Visibility = Visibility.Collapsed;
+        RetryButton.Content = RetryDownloadAction;
         RetryButton.Visibility = Visibility.Visible;
         DownloadButton.Visibility = Visibility.Collapsed;
         ShowDownloadReadiness();

@@ -297,14 +297,16 @@ public partial class DictationBubble : Window
         if (at < 0)
             return;
 
-        var keys = new StackPanel { Orientation = System.Windows.Controls.Orientation.Horizontal, Margin = new Thickness(1, 0, 1, 0) };
+        // The first key starts where the words start, so keys at the start of a line stand under the line above;
+        // the spaces of the sentence keep them apart from the words on either side.
+        var keys = new StackPanel { Orientation = System.Windows.Controls.Orientation.Horizontal };
         foreach (var key in KeycapLegendsConverter.Split(label))
         {
             keys.Children.Add(new Border
             {
                 MinWidth = 22,
                 Height = 18,
-                Margin = new Thickness(1, 3, 1, 0),
+                Margin = new Thickness(keys.Children.Count == 0 ? 0 : 2, 3, 0, 0),
                 Padding = new Thickness(4, 0, 4, 0),
                 CornerRadius = new CornerRadius(4),
                 Background = Brush("ColorKeycap"),

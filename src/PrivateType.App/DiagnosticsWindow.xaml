@@ -1,7 +1,7 @@
 <Window x:Class="PrivateType.App.DiagnosticsWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Icon="/PrivateType;component/Assets/PrivateType.ready.ico" Width="620" Height="480" WindowStartupLocation="CenterOwner" WindowStyle="None"
+        Title="PrivateType diagnostics" Icon="/PrivateType;component/Assets/PrivateType.ready.ico" Width="620" Height="480" WindowStartupLocation="CenterOwner" WindowStyle="None" UseLayoutRounding="True"
         AllowsTransparency="True" Background="Transparent" Foreground="{DynamicResource ColorText}" FontFamily="{DynamicResource AppFont}">
   <Window.Resources>
     <ResourceDictionary>
@@ -23,8 +23,9 @@
           </Setter.Value>
         </Setter>
       </Style>
-      <!-- One entry per table row: mono text between hairlines. -->
+      <!-- One entry per table row: mono text between hairlines. A screen reader hears the row as one sentence. -->
       <Style x:Key="EntryRow" TargetType="ListBoxItem">
+        <Setter Property="AutomationProperties.Name" Value="{Binding SpokenName}" />
         <Setter Property="FontFamily" Value="{DynamicResource MonoFont}" />
         <Setter Property="FontSize" Value="12" />
         <Setter Property="Foreground" Value="{DynamicResource ColorNeutral400}" />
@@ -32,10 +33,15 @@
         <Setter Property="Template">
           <Setter.Value>
             <ControlTemplate TargetType="ListBoxItem">
-              <Border x:Name="Row" Padding="0,9" Background="Transparent" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,0,0,1">
-                <ContentPresenter />
-              </Border>
+              <Grid>
+                <Border x:Name="Row" Padding="0,9" Background="Transparent" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,0,0,1">
+                  <ContentPresenter />
+                </Border>
+                <!-- Keyboard focus: the same ring as a model row in setup. -->
+                <Border x:Name="FocusRing" BorderBrush="{DynamicResource ColorAccent}" BorderThickness="2" CornerRadius="2" Visibility="Hidden" IsHitTestVisible="False" />
+              </Grid>
               <ControlTemplate.Triggers>
+                <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="FocusRing" Property="Visibility" Value="Visible" /></Trigger>
                 <Trigger Property="IsMouseOver" Value="True"><Setter Property="Foreground" Value="{DynamicResource ColorText}" /></Trigger>
                 <Trigger Property="IsSelected" Value="True">
                   <Setter TargetName="Row" Property="Background" Value="{DynamicResource ColorNeutral900}" />
@@ -56,7 +62,7 @@
         <RowDefinition Height="Auto" />
       </Grid.RowDefinitions>
       <!-- The same title bar as Settings: keycap mark, name, and what this window is for. -->
-      <Border Background="{DynamicResource ColorSurface}" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,0,0,1" CornerRadius="11,11,0,0">
+      <Border Background="{DynamicResource ColorSurface}" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,0,0,1" CornerRadius="11,11,0,0" MouseLeftButtonDown="DragWindow">
         <Grid Margin="16,0,8,0">
           <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
             <Border Width="18" Height="18" CornerRadius="4" Background="{DynamicResource ColorKeycap}" BorderBrush="{DynamicResource ColorKeycapEdge}" BorderThickness="0,0,0,2">

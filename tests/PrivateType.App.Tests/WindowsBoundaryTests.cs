@@ -296,6 +296,8 @@ public sealed class WindowsBoundaryTests
         Assert.DoesNotContain("Visual C++", ModelSetupWindow.MissingEngineStep);
         Assert.Contains("complete PrivateType portable ZIP", ModelSetupWindow.MissingEngineStep);
         Assert.Contains("Visual C++", ModelSetupWindow.EngineCouldNotStartStep);
+        // The step names the button the person sees in that state.
+        Assert.EndsWith($"then select {ModelSetupWindow.CheckAgainAction}.", ModelSetupWindow.EngineCouldNotStartStep);
     }
 
     [Fact]

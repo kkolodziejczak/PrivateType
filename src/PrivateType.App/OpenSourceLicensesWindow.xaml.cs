@@ -28,6 +28,8 @@ public partial class OpenSourceLicensesWindow : Window
         Notices.Text = found ? File.ReadAllText(noticePath) : string.Empty;
         Notices.Visibility = found ? Visibility.Visible : Visibility.Collapsed;
         MissingNoticesPanel.Visibility = found ? Visibility.Collapsed : Visibility.Visible;
+        // A button that could open nothing is not offered.
+        OpenLicensesFolderButton.Visibility = Directory.Exists(licensesDirectory) ? Visibility.Visible : Visibility.Collapsed;
         // Without the notices the intro promises nothing it can't show.
         IntroText.Text = found ? $"{MitLicensed} Full notices for every bundled component are included with the portable app." : MitLicensed;
     }
@@ -39,4 +41,10 @@ public partial class OpenSourceLicensesWindow : Window
     }
 
     private void Close(object sender, RoutedEventArgs e) => Close();
+
+    private void DragWindow(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (e.LeftButton == System.Windows.Input.MouseButtonState.Pressed)
+            DragMove();
+    }
 }

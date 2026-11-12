@@ -41,4 +41,23 @@ public sealed class LocalDiagnosticsLogTests
         Assert.Equal(["recordedSeconds", "tookSeconds"], entries[0].Details.Keys.Order());
         Assert.Equal(["announced", "predictedSeconds", "recordedSeconds"], entries[1].Details.Keys.Order());
     }
+
+    [Fact]
+    public void Shows_an_entry_on_the_persons_clock_and_names_it_for_a_screen_reader()
+    {
+        var log = new InMemoryDiagnostics();
+        log.Record(new DictationDiagnostic("session-1", new DateTimeOffset(2026, 10, 2, 11, 58, 7, TimeSpan.Zero), "cue.skipped", new Dictionary<string, string>
+        {
+            ["source"] = "ready",
+            ["reason"] = "muted"
+        }));
+        var twoHoursAhead = TimeZoneInfo.CreateCustomTimeZone("test", TimeSpan.FromHours(2), "test", "test");
+
+        var row = DiagnosticRow.From(log.Snapshot().Single(), twoHoursAhead);
+
+        Assert.Equal("13:58:07", row.Time);
+        Assert.Equal("Warning", row.Level);
+        Assert.Equal("cue.skipped source=ready reason=muted", row.Message);
+        Assert.Equal("Warning, 13:58, cue skipped, source ready, reason muted", row.SpokenName);
+    }
 }
