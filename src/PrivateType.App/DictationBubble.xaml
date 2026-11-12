@@ -24,7 +24,7 @@
           <Border x:Name="IconTile" Width="44" Height="44" CornerRadius="22" Background="{DynamicResource ColorKeycap}"
                   BorderBrush="{DynamicResource ColorKeycapEdge}" BorderThickness="0,0,0,3">
             <Grid ClipToBounds="False">
-              <Ellipse x:Name="RecordingPulseRing" Width="44" Height="44" Margin="0,0,0,-3" Opacity="0" Stroke="{DynamicResource ColorAccent}" StrokeThickness="1.5" IsHitTestVisible="False" RenderTransformOrigin="0.5,0.5">
+              <Ellipse x:Name="RecordingPulseRing" Width="44" Height="44" Opacity="0" Stroke="{DynamicResource ColorAccent}" StrokeThickness="1.5" IsHitTestVisible="False" RenderTransformOrigin="0.5,0.5">
                 <Ellipse.RenderTransform>
                   <ScaleTransform x:Name="RecordingPulseScale" />
                 </Ellipse.RenderTransform>

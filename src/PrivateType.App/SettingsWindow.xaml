@@ -90,7 +90,7 @@
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                   </Grid.ColumnDefinitions>
-                  <TextBox x:Name="KeyBox" Grid.Column="0" Style="{StaticResource KeycapRecorder}" Margin="-4,0,0,0" Text="{Binding ShortcutLabel, Mode=OneWay}" PreviewKeyDown="RecordShortcut"
+                  <TextBox x:Name="KeyBox" Grid.Column="0" Style="{StaticResource KeycapRecorder}" Margin="-4,1.6,0,-1.6" Text="{Binding ShortcutLabel, Mode=OneWay}" PreviewKeyDown="RecordShortcut"
                            ToolTip="Click, then press Ctrl+Shift plus a key." AutomationProperties.Name="{Binding ShortcutLabel, StringFormat='Shortcut {0}'}" />
                   <TextBlock x:Name="Arrow" Grid.Column="0" Margin="0,0,10,0" HorizontalAlignment="Right" VerticalAlignment="Center" FontSize="16" Foreground="{DynamicResource ColorNeutral600}" Text="→" />
                   <ComboBox x:Name="LanguageBox" Grid.Column="1" Style="{StaticResource ValuePicker}" ItemsSource="{Binding SupportedLanguages}" SelectedValuePath="LocaleCode"
@@ -215,7 +215,7 @@
                   <TextBlock x:Name="HistoryShortcutLabel" Style="{StaticResource RowLabel}" Text="Picker shortcut" />
                   <TextBlock Style="{StaticResource InfoMark}" ToolTip="{Binding Text, ElementName=HistoryHint}" />
                 </StackPanel>
-                <TextBox x:Name="HistoryShortcutBox" Grid.Column="1" Style="{StaticResource KeycapRecorder}" Margin="-4,0,0,0"
+                <TextBox x:Name="HistoryShortcutBox" Grid.Column="1" Style="{StaticResource KeycapRecorder}" Margin="-4,1.6,0,-1.6"
                          ToolTip="Click, then press the new shortcut, for example Win+Shift+V." AutomationProperties.Name="Recent dictations shortcut"
                          GotKeyboardFocus="StartRecordingHistoryShortcut" LostKeyboardFocus="StopRecordingHistoryShortcut" />
               </Grid>

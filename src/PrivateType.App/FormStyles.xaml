@@ -86,6 +86,8 @@
     <Setter Property="FontWeight" Value="SemiBold" />
     <Style.Triggers>
       <Trigger Property="IsMouseOver" Value="True"><Setter Property="Background" Value="{DynamicResource ColorAccent400}" /></Trigger>
+      <!-- The blue ring would double the darker blue edge; while focused the key is one even shape inside an even gap. -->
+      <Trigger Property="IsKeyboardFocused" Value="True"><Setter Property="BorderBrush" Value="{DynamicResource ColorAccent}" /></Trigger>
     </Style.Triggers>
   </Style>
   <!-- A text action: no cap until hovered. -->
@@ -153,6 +155,12 @@
               <Setter TargetName="Outline" Property="Stroke" Value="{DynamicResource ColorAccent}" />
               <Setter TargetName="Outline" Property="StrokeDashArray" Value="{x:Null}" />
               <Setter TargetName="Outline" Property="StrokeThickness" Value="2" />
+            </Trigger>
+            <!-- Nothing to add yet: the outline and its words fade back, like any disabled key. -->
+            <Trigger Property="IsEnabled" Value="False">
+              <Setter TargetName="Outline" Property="Stroke" Value="{DynamicResource ColorNeutral800}" />
+              <Setter Property="Foreground" Value="{DynamicResource ColorNeutral600}" />
+              <Setter Property="Cursor" Value="Arrow" />
             </Trigger>
           </ControlTemplate.Triggers>
         </ControlTemplate>
@@ -285,7 +293,8 @@
                     BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6">
               <ScrollViewer x:Name="PART_ContentHost" />
             </Border>
-            <Border x:Name="FocusRing" Margin="-3" BorderBrush="{DynamicResource ColorAccent}" BorderThickness="2" CornerRadius="9" Visibility="Collapsed" IsHitTestVisible="False" />
+            <!-- The ring lies on the field's own edge: one blue border, with no seam inside it and no reach into the rows around it. -->
+            <Border x:Name="FocusRing" Margin="-1" BorderBrush="{DynamicResource ColorAccent}" BorderThickness="2" CornerRadius="7" Visibility="Collapsed" IsHitTestVisible="False" />
           </Grid>
           <ControlTemplate.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
@@ -448,7 +457,8 @@
                       StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Data="M0,0 L4,4 L8,0" />
               </Grid>
             </ToggleButton>
-            <Border x:Name="FocusRing" Margin="-3" BorderBrush="{DynamicResource ColorAccent}" BorderThickness="2" CornerRadius="9" Visibility="Collapsed" IsHitTestVisible="False" />
+            <!-- On the field's edge, like a text box, so it keeps clear of the row dividers. -->
+            <Border x:Name="FocusRing" Margin="-1" BorderBrush="{DynamicResource ColorAccent}" BorderThickness="2" CornerRadius="7" Visibility="Collapsed" IsHitTestVisible="False" />
             <Popup x:Name="Popup" Placement="Bottom" AllowsTransparency="True" IsOpen="{TemplateBinding IsDropDownOpen}" PopupAnimation="Fade">
               <Border MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}" Margin="0,4,0,0" Padding="4" Background="{DynamicResource ColorNeutral900}" BorderBrush="{DynamicResource ColorDivider}" BorderThickness="1" CornerRadius="8">
                 <ScrollViewer MaxHeight="{TemplateBinding MaxDropDownHeight}" CanContentScroll="True">
@@ -576,11 +586,11 @@
     <Setter Property="Margin" Value="2,0,0,0" />
     <Setter Property="Width" Value="24" />
     <Setter Property="Height" Value="24" />
-    <Setter Property="Padding" Value="0,4,0,0" />
+    <Setter Property="Padding" Value="0,1,0,0" />
     <Setter Property="TextAlignment" Value="Center" />
     <Setter Property="Background" Value="Transparent" />
-    <Setter Property="FontSize" Value="12" />
-    <Setter Property="Foreground" Value="{DynamicResource ColorNeutral600}" />
+    <Setter Property="FontSize" Value="16" />
+    <Setter Property="Foreground" Value="{DynamicResource ColorNeutral400}" />
     <Setter Property="VerticalAlignment" Value="Center" />
     <Setter Property="Text" Value="ⓘ" />
     <Setter Property="Cursor" Value="Help" />
@@ -749,7 +759,8 @@
                       StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Data="M0,0 L4,4 L8,0" />
               </Grid>
             </ToggleButton>
-            <Border x:Name="FocusRing" Margin="-3" BorderBrush="{DynamicResource ColorAccent}" BorderThickness="2" CornerRadius="9" Visibility="Collapsed" IsHitTestVisible="False" />
+            <!-- On the field's edge, like a text box, so it keeps clear of the row dividers. -->
+            <Border x:Name="FocusRing" Margin="-1" BorderBrush="{DynamicResource ColorAccent}" BorderThickness="2" CornerRadius="7" Visibility="Collapsed" IsHitTestVisible="False" />
             <Popup Placement="Bottom" AllowsTransparency="True" IsOpen="{TemplateBinding IsDropDownOpen}" PopupAnimation="Fade">
               <Border MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}" Margin="0,4,0,0" Padding="4" Background="{DynamicResource ColorNeutral900}" BorderBrush="{DynamicResource ColorDivider}" BorderThickness="1" CornerRadius="8">
                 <ScrollViewer MaxHeight="{TemplateBinding MaxDropDownHeight}" CanContentScroll="True">

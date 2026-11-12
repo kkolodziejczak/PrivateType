@@ -99,10 +99,9 @@
                               </StackPanel>
                               <TextBlock Grid.Column="3" Margin="12,0,0,0" VerticalAlignment="Center" FontSize="12" Typography.NumeralAlignment="Tabular"
                                          Foreground="{DynamicResource ColorNeutral400}" Text="{Binding Size}" />
-                              <!-- One plain line on the same three facts for every model, then the longer description. -->
+                              <!-- One description per model: the same three facts for each, so the difference reads across the two cards. -->
                               <StackPanel Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="2" Margin="0,4,0,0">
                                 <TextBlock FontSize="13" Foreground="{DynamicResource ColorText}" Text="{Binding Headline}" TextWrapping="Wrap" />
-                                <TextBlock Margin="0,4,0,0" FontSize="12" Foreground="{DynamicResource ColorNeutral400}" Text="{Binding Summary}" TextWrapping="Wrap" />
                               </StackPanel>
                             </Grid>
                           </Border>

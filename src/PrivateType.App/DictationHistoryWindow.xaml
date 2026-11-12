@@ -83,13 +83,14 @@
             <Run x:Name="EmptyVerb" /><InlineUIContainer BaselineAlignment="Center"><ItemsControl x:Name="EmptyShortcutKeys" Margin="4,0" Focusable="False">
               <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
-                <DataTemplate><Border Style="{StaticResource HintKey}" Margin="2,3"><TextBlock Style="{StaticResource HintKeyLegend}" LineHeight="NaN" Text="{Binding Legend}" /></Border></DataTemplate>
+                <DataTemplate><Border Style="{StaticResource HintKey}" Margin="2,5,2,1"><TextBlock Style="{StaticResource HintKeyLegend}" LineHeight="NaN" Text="{Binding Legend}" /></Border></DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl></InlineUIContainer><Run x:Name="EmptyRest" />
           </TextBlock>
         </StackPanel>
         <!-- A flat mono list: hairlines between rows, a tinted selected row, the focus ring only for keyboard focus, the remove key on hover and on the selected row.
-             Each hairline sits above its row and the first row has none, so the last row ends on the footer's own line. -->
+             Each hairline sits above its row and the first row has none, so the last row ends on the footer's own line.
+             The focus ring lies on the row's own hairlines, drawn above the next row, so no divider runs beside it. -->
         <ListBox x:Name="EntriesList" HorizontalContentAlignment="Stretch"
                  ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto"
                  AutomationProperties.Name="Recent dictations" KeyboardNavigation.TabNavigation="Once">
@@ -106,11 +107,11 @@
                 <Setter.Value>
                   <ControlTemplate TargetType="ListBoxItem">
                     <Grid Background="Transparent">
-                      <Border x:Name="Tint" Margin="6,2" CornerRadius="6" />
+                      <Border x:Name="Tint" Margin="6,1,6,0" CornerRadius="6" />
                       <Border Margin="16,0,10,0" Padding="0,10" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="{TemplateBinding BorderThickness}">
                         <ContentPresenter />
                       </Border>
-                      <Border x:Name="FocusRing" Margin="6,2" BorderBrush="{DynamicResource ColorAccent}" BorderThickness="2" CornerRadius="6"
+                      <Border x:Name="FocusRing" Margin="6,0,6,-1" BorderBrush="{DynamicResource ColorAccent}" BorderThickness="2" CornerRadius="6"
                               Visibility="Collapsed" IsHitTestVisible="False" />
                     </Grid>
                     <ControlTemplate.Triggers>
@@ -128,6 +129,9 @@
                 </Setter.Value>
               </Setter>
               <Style.Triggers>
+                <Trigger Property="IsKeyboardFocused" Value="True">
+                  <Setter Property="Panel.ZIndex" Value="1" />
+                </Trigger>
                 <DataTrigger Binding="{Binding RelativeSource={RelativeSource PreviousData}}" Value="{x:Null}">
                   <Setter Property="BorderThickness" Value="0" />
                 </DataTrigger>
@@ -186,7 +190,7 @@
             <Border Style="{StaticResource HintKey}"><TextBlock Style="{StaticResource HintKeyLegend}" Text="Esc" /></Border>
             <TextBlock Style="{StaticResource HintAction}" Text="close" />
           </StackPanel>
-          <TextBlock Grid.Column="1" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource ColorNeutral600}"
+          <TextBlock Grid.Column="1" Margin="0,0,0,2" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource ColorNeutral600}"
                      Text="kept in memory only" />
         </Grid>
       </Border>

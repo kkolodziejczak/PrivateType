@@ -76,9 +76,14 @@
         </Grid.RowDefinitions>
         <TextBlock FontSize="13" Foreground="{DynamicResource ColorNeutral400}" TextWrapping="Wrap"
                    Text="Warnings, errors, and safe operational breadcrumbs stay in memory only until PrivateType closes. Audio and dictated text are never included." />
-        <ListBox x:Name="Entries" Grid.Row="1" Margin="0,14,0,0" DisplayMemberPath="Display" ItemContainerStyle="{StaticResource EntryRow}"
+        <!-- A line too long for the row ends in an ellipsis short of the edge; Copy and Save keep the whole line. -->
+        <ListBox x:Name="Entries" Grid.Row="1" Margin="0,14,0,0" ItemContainerStyle="{StaticResource EntryRow}"
                  BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,1,0,0"
-                 ScrollViewer.HorizontalScrollBarVisibility="Disabled" AutomationProperties.Name="Diagnostics entries" />
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled" AutomationProperties.Name="Diagnostics entries">
+          <ListBox.ItemTemplate>
+            <DataTemplate><TextBlock Margin="0,0,12,0" Text="{Binding Display}" TextTrimming="CharacterEllipsis" /></DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
         <!-- Nothing logged yet: what that means, and when to come back. Save, Copy and Clear stay available. -->
         <StackPanel x:Name="EmptyPanel" Grid.Row="1" Margin="0,0,0,24" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed">
           <TextBlock HorizontalAlignment="Center" FontSize="15" FontWeight="SemiBold" Text="Nothing logged this session" />
@@ -86,13 +91,14 @@
                      Text="If dictation goes wrong, come back here before you close PrivateType and save the report." />
         </StackPanel>
       </Grid>
-      <!-- The same slim footer as Settings: Clear set apart on the left, Save report filled at the right. -->
+      <!-- The same slim footer as Settings, in three weights: destructive Clear alone on the left in the danger colour,
+           then Close as text, Copy report as a key and Save report filled at the right. -->
       <Border Grid.Row="2" Padding="16,10,16,12" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,1,0,0">
         <Grid>
-          <Button Style="{StaticResource GhostButton}" Height="32" Padding="8,0" HorizontalAlignment="Left" Content="Clear" Click="ClearReport" />
+          <Button Style="{StaticResource GhostButton}" Height="32" Padding="8,0" HorizontalAlignment="Left" Foreground="{DynamicResource ColorDanger}" Content="Clear" Click="ClearReport" />
           <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
             <Button Style="{StaticResource GhostButton}" Margin="0,0,8,0" Height="32" Padding="12,0" Content="Close" Click="Close" />
-            <Button Style="{StaticResource GhostButton}" Margin="0,0,8,0" Height="32" Padding="12,0" Content="Copy report" Click="CopyReport" />
+            <Button Margin="0,0,8,0" Height="32" Padding="12,0" Content="Copy report" Click="CopyReport" />
             <Button Style="{StaticResource PrimaryButton}" Height="32" Padding="16,0" Content="Save report" Click="SaveReport" />
           </StackPanel>
         </Grid>

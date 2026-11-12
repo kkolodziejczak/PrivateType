@@ -115,7 +115,7 @@ internal static class CaptureProbe
         Draw(recording, output, "bubble", "bubble-recording");
         var quiet = Ready(loaded: true);
         quiet.ShowRecording("en-US");
-        quiet.ShowAudioMeter(new AudioMeter(0.72, Enumerable.Range(0, 44).Select(index => index is > 15 and < 28 ? 0.95 : 0.24).ToArray()));
+        quiet.ShowAudioMeter(new AudioMeter(0.05, Enumerable.Range(0, 44).Select(index => index is > 15 and < 28 ? 0.16 : 0.03).ToArray()));
         Draw(quiet, output, "bubble", "bubble-recording-quiet");
         var finalizing = Ready(loaded: true);
         finalizing.ShowRecording("en-US");
@@ -365,9 +365,11 @@ internal static class CaptureProbe
         {
             var child = (FrameworkElement)popup.Child;
             var owner = (FrameworkElement)VisualTreeHelper.GetParent(popup);
-            var origin = owner.TranslatePoint(new Point(0, owner.ActualHeight + child.Margin.Top), window);
-            // The brush maps the child's own drawing, which can sit off its layout origin, onto the same place below the owner.
+            var origin = owner.TranslatePoint(new Point(0, owner.ActualHeight), window);
+            // The brush draws the child at its own offset in the popup (its margin), so the viewbox is taken there and drawn there below the owner.
+            var offset = VisualTreeHelper.GetOffset(child);
             var bounds = Rect.Union(VisualTreeHelper.GetContentBounds(child), VisualTreeHelper.GetDescendantBounds(child));
+            bounds.Offset(offset);
             var brush = new VisualBrush(child) { Stretch = Stretch.None, ViewboxUnits = BrushMappingMode.Absolute, Viewbox = bounds };
             context.DrawRectangle(brush, null, new Rect(Backdrop + origin.X + bounds.X, Backdrop + origin.Y + bounds.Y, bounds.Width, bounds.Height));
         }

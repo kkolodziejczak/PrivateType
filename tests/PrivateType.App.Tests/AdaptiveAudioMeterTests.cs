@@ -39,4 +39,15 @@ public sealed class AdaptiveAudioMeterTests
         Assert.Equal(0.95, normalized.Spectrum[2]);
         Assert.Equal(0.8, normalized.Level);
     }
+
+    [Fact]
+    public void Bubble_bars_stay_lower_for_quiet_speech_than_for_normal_speech()
+    {
+        var quiet = DictationBubble.MeterLoudness(0.05);
+        var normal = DictationBubble.MeterLoudness(0.72);
+
+        Assert.Equal(1, normal);
+        Assert.InRange(quiet, 0.3, 0.6);
+        Assert.Equal(0.25, DictationBubble.MeterLoudness(0));
+    }
 }

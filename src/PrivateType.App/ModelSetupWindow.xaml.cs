@@ -184,8 +184,7 @@ internal sealed class SetupModelChoice(SpeechModelDefinition model, bool isChose
 
     public SpeechModelDefinition Model { get; } = model;
     public string Name => Model.DisplayName;
-    public string Summary => Model.Summary;
-    // The same three facts for every model: how text appears, which language, and phrase boosting.
+    // One description per model, the same three facts for each: how text appears, which language, and phrase boosting.
     public string Headline => Model.Id switch
     {
         SpeechModelCatalog.ParakeetId => "Text appears when you release, with an optional preview while you speak · detects the language itself, 25 European languages · no phrase boosting, fixes still apply",

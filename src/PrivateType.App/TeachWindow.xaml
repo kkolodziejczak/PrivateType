@@ -134,9 +134,10 @@
                 </ComboBox.ItemTemplate>
               </ComboBox>
             </StackPanel>
-            <Button x:Name="AddFixButton" Grid.Column="4" VerticalAlignment="Bottom" Height="34" Content="Add fix" Click="AddFix" />
+            <!-- Save fix (filled, in the footer) saves what is typed here; this dashed key only sets it aside to fix more words first,
+                 the same "+ Add" key as Settings uses for another shortcut or phrase. -->
+            <Button x:Name="AddFixButton" Grid.Column="4" Style="{StaticResource GhostKeyButton}" VerticalAlignment="Bottom" Height="34" Content="+ Another fix" Click="AddFix" />
           </Grid>
-          <TextBlock Margin="0,6,0,0" HorizontalAlignment="Right" Style="{StaticResource PageNote}" Text="Add more than one, or just save" />
           <StackPanel x:Name="FixesPanel" Margin="0,8,0,0" Visibility="Collapsed">
             <TextBlock Style="{StaticResource GroupLabel}" Margin="0,14,0,4" Text="FIXES TO SAVE" />
             <ScrollViewer MaxHeight="120" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">

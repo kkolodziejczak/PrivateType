@@ -213,11 +213,13 @@ public partial class DictationBubble : Window
         if (!recordingVisualsActive)
             return;
 
+        // The gain keeps the spectrum's shape readable; the bars' height still follows the real loudness.
+        var loudness = MeterLoudness(meter.Level);
         meter = adaptiveAudioMeter.Normalize(meter);
         var level = Math.Clamp(meter.Level, 0, 1);
         for (var index = 0; index < smoothedSpectrum.Length; index++)
         {
-            var target = index < meter.Spectrum.Count ? Math.Clamp(meter.Spectrum[index], 0, 1) : 0;
+            var target = index < meter.Spectrum.Count ? Math.Clamp(meter.Spectrum[index], 0, 1) * loudness : 0;
             smoothedSpectrum[index] += (target - smoothedSpectrum[index]) * 0.68;
         }
 
@@ -237,6 +239,13 @@ public partial class DictationBubble : Window
         var scale = 1 + (level * 4.0 / 44);
         RecordingPulseScale.ScaleX = scale;
         RecordingPulseScale.ScaleY = scale;
+    }
+
+    // Maps the raw level to a bar ceiling: about -32 dB keeps a quarter of the height, -6 dB and louder the full height.
+    internal static double MeterLoudness(double rawLevel)
+    {
+        var decibels = 20 * Math.Log10(Math.Max(rawLevel, 0.0001));
+        return Math.Clamp(0.25 + (0.75 * (decibels + 32) / 26), 0.25, 1);
     }
 
     // After release the microphone is off but text has not arrived yet; say so, keeping any preview.
@@ -449,6 +458,8 @@ public partial class DictationBubble : Window
         IconTile.Background = fill is null ? System.Windows.Media.Brushes.Transparent : Brush(fill);
         IconTile.BorderBrush = fill is null ? Brush(glyph) : Brush("ColorKeycapEdge");
         IconTile.BorderThickness = fill is null ? new Thickness(1.5) : new Thickness(0, 0, 0, raised ? 3 : 0);
+        // The ring spans the whole key, so it reaches over the raised edge and stays centred on a pressed key.
+        RecordingPulseRing.Margin = new Thickness(-IconTile.BorderThickness.Left, -IconTile.BorderThickness.Top, -IconTile.BorderThickness.Right, -IconTile.BorderThickness.Bottom);
         IconOutline.Fill = Brush(glyph);
         IconStand.Stroke = Brush(glyph);
         MicrophoneMark.Visibility = Visibility.Visible;
