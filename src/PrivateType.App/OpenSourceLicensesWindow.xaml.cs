@@ -36,6 +36,7 @@ public partial class OpenSourceLicensesWindow : Window
 
     private void WritePage(Credits credits, bool hasFolder)
     {
+        Page.Blocks.Add(Space(22));
         Page.Blocks.Add(new Paragraph(new Run("What PrivateType is built with")) { FontSize = 20, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0) });
         Page.Blocks.Add(Note("PrivateType is MIT-licensed. Each part below keeps its own license.", top: 6));
         if (!hasFolder)
@@ -49,7 +50,11 @@ public partial class OpenSourceLicensesWindow : Window
             Page.Blocks.Add(Entry(component));
         }
         Page.Blocks.Add(Note($"Not part of PrivateType: the NVIDIA speech models. You download them separately, under their own terms: {credits.ModelTerms}.", top: 22));
+        Page.Blocks.Add(Space(20));
     }
+
+    // Fixed space at an edge of the page, where flow layout would drop a margin.
+    private static BlockUIContainer Space(double height) => new(new Border { Height = height }) { Margin = new Thickness(0) };
 
     // Three lines: the name and its maker, what it does, its license (and, for the engine, what it carries under their own).
     private Paragraph Entry(CreditedComponent component)
