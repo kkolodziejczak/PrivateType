@@ -113,22 +113,30 @@ internal static class CaptureProbe
 
     private static ScrollViewer Scroll(Window window) => (ScrollViewer)window.FindName("SettingsScrollViewer");
 
-    // The one window drawn with the pointer over it; every other window is drawn with hit testing off.
+    // The one window drawn with the pointer over it, and where; every other window is drawn with hit testing off.
     private static Window? hovered;
+    private static Point hoverPoint;
 
-    // Moves the window so the element's centre is under the pointer, without moving the pointer, and lets the window see it.
+    // Marks the element's centre as under the pointer. The window stays off screen and the real pointer never moves:
+    // just before drawing, the window is told the mouse moved there.
     private static void Hover(Window window, FrameworkElement element)
     {
         hovered = window;
-        window.Topmost = true;
-        NativeMethods.GetCursorPos(out var cursor);
-        var pointer = PresentationSource.FromVisual(window)!.CompositionTarget!.TransformFromDevice.Transform(new Point(cursor.X, cursor.Y));
-        var centre = element.TranslatePoint(new Point(element.ActualWidth / 2, element.ActualHeight / 2), window);
-        window.Left = Math.Round(pointer.X - centre.X);
-        window.Top = Math.Round(pointer.Y - centre.Y);
-        Flush(window);
-        System.Windows.Input.Mouse.Synchronize();
+        hoverPoint = element.TranslatePoint(new Point(element.ActualWidth / 2, element.ActualHeight / 2), window);
     }
+
+    private static void MoveMouseOver(Window window, Point at)
+    {
+        var device = PresentationSource.FromVisual(window)!.CompositionTarget!.TransformToDevice.Transform(at);
+        var position = ((int)Math.Round(device.Y) << 16) | ((int)Math.Round(device.X) & 0xFFFF);
+        SendMessage(new System.Windows.Interop.WindowInteropHelper(window).Handle, WmMouseMove, 0, position);
+        window.UpdateLayout();
+    }
+
+    private const int WmMouseMove = 0x0200;
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern nint SendMessage(nint window, int message, nint wParam, nint lParam);
 
     private static void Bubble(string output)
     {
@@ -391,6 +399,9 @@ internal static class CaptureProbe
             Flush(window);
             System.Windows.Input.Mouse.Synchronize();
             Flush(window);
+            // Drawn before the window can hear that the pointer is really elsewhere.
+            if (window == hovered)
+                MoveMouseOver(window, hoverPoint);
             var width = Math.Ceiling(window.ActualWidth);
             var height = Math.Ceiling(window.ActualHeight);
             var shot = new RenderTargetBitmap(Pixels(width), Pixels(height), 96 * Scale, 96 * Scale, PixelFormats.Pbgra32);
