@@ -117,19 +117,28 @@ internal static class CaptureProbe
     private static Window? hovered;
     private static Point hoverPoint;
 
-    // Marks the element's centre as under the pointer. The window stays off screen and the real pointer never moves:
-    // just before drawing, the window is told the mouse moved there.
+    // Marks the element's centre as the point to hover. The real pointer never moves: just before drawing, the window is put
+    // under it where it already is and told the mouse moved there.
     private static void Hover(Window window, FrameworkElement element)
     {
         hovered = window;
         hoverPoint = element.TranslatePoint(new Point(element.ActualWidth / 2, element.ActualHeight / 2), window);
     }
 
+    // Windows and WPF only take a mouse move over a window that is really under the pointer.
     private static void MoveMouseOver(Window window, Point at)
     {
-        var device = PresentationSource.FromVisual(window)!.CompositionTarget!.TransformToDevice.Transform(at);
+        var toDevice = PresentationSource.FromVisual(window)!.CompositionTarget!.TransformToDevice;
+        NativeMethods.GetCursorPos(out var cursor);
+        var pointer = PresentationSource.FromVisual(window)!.CompositionTarget!.TransformFromDevice.Transform(new Point(cursor.X, cursor.Y));
+        window.Topmost = true;
+        window.Left = pointer.X - at.X;
+        window.Top = pointer.Y - at.Y;
+        Flush(window);
+        var device = toDevice.Transform(at);
         var position = ((int)Math.Round(device.Y) << 16) | ((int)Math.Round(device.X) & 0xFFFF);
         SendMessage(new System.Windows.Interop.WindowInteropHelper(window).Handle, WmMouseMove, 0, position);
+        System.Windows.Input.Mouse.Synchronize();
         window.UpdateLayout();
     }
 
@@ -399,7 +408,7 @@ internal static class CaptureProbe
             Flush(window);
             System.Windows.Input.Mouse.Synchronize();
             Flush(window);
-            // Drawn before the window can hear that the pointer is really elsewhere.
+            // Last, so nothing settles between the pointer arriving and the drawing.
             if (window == hovered)
                 MoveMouseOver(window, hoverPoint);
             var width = Math.Ceiling(window.ActualWidth);
