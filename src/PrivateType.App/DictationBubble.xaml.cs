@@ -178,7 +178,7 @@ public partial class DictationBubble : Window
         StartRecordingIndicator();
         Hint.Visibility = Visibility.Collapsed;
         WaveformBars.Visibility = Visibility.Visible;
-        SetTranscriptLines(fontSize: 15, lineHeight: 22, opacity: 1);
+        SetTranscriptLines(fontSize: 15, lineHeight: 22, lines: 2, opacity: 1);
         SetTranscript(string.Empty);
         TranscriptViewport.Visibility = Visibility.Visible;
         UpdateScrim();
@@ -270,7 +270,7 @@ public partial class DictationBubble : Window
         SetWidthAroundCenter(ActiveWidth);
         Hint.Visibility = Visibility.Collapsed;
         WaveformBars.Visibility = Visibility.Collapsed;
-        SetTranscriptLines(fontSize: 13, lineHeight: 19, opacity: 0.85);
+        SetTranscriptLines(fontSize: 13, lineHeight: 19, lines: 3, opacity: 0.85);
         SetTranscript(message);
         TranscriptViewport.Visibility = Visibility.Visible;
         UpdateScrim();
@@ -289,7 +289,7 @@ public partial class DictationBubble : Window
         SetWidthAroundCenter(ActiveWidth);
         Hint.Visibility = Visibility.Collapsed;
         WaveformBars.Visibility = Visibility.Collapsed;
-        SetTranscriptLines(fontSize: 13, lineHeight: 19, opacity: 0.85);
+        SetTranscriptLines(fontSize: 13, lineHeight: 19, lines: 3, opacity: 0.85);
         SetTranscript(message);
         TranscriptViewport.Visibility = Visibility.Visible;
         UpdateScrim();
@@ -458,12 +458,12 @@ public partial class DictationBubble : Window
     private static string LocaleLegend(string localeCode) => localeCode.Split('-')[0].ToUpperInvariant();
 
     // The viewport shows the last two whole lines of words, or up to three lines of a shorter message.
-    private void SetTranscriptLines(double fontSize, double lineHeight, double opacity)
+    private void SetTranscriptLines(double fontSize, double lineHeight, int lines, double opacity)
     {
         Transcript.FontSize = fontSize;
         Transcript.LineHeight = lineHeight;
         Transcript.Opacity = opacity;
-        TranscriptViewport.MaxHeight = lineHeight * (fontSize < 15 ? 3 : 2);
+        TranscriptViewport.MaxHeight = lineHeight * lines;
     }
 
     // The scrim under the pill holds the words or the hint, and is hidden while it has neither.

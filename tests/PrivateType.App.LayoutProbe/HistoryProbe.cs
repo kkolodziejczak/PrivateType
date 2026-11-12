@@ -122,7 +122,9 @@ internal static class HistoryProbe
             foreach (var index in Enumerable.Range(0, items.Length))
             {
                 var container = (ListBoxItem)list.ItemContainerGenerator.ContainerFromIndex(index);
-                Require(container.ActualHeight is > 40 and < 110, $"Entry {index} must stay compact (was {container.ActualHeight:0}).");
+                // A dropped dictation adds one line saying how to paste it.
+                var tallest = items[index].ShowNotInserted ? 126 : 110;
+                Require(container.ActualHeight > 40 && container.ActualHeight < tallest, $"Entry {index} must stay compact (was {container.ActualHeight:0}).");
                 VerifyContained(window, container);
                 Require(UIElementAutomationPeer.CreatePeerForElement(container)?.GetName() == items[index].Preview, "Each entry needs its text as the accessible name.");
             }
