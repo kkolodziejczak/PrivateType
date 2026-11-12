@@ -21,7 +21,7 @@
               <Grid>
                 <Border x:Name="Chip" MinWidth="30" Padding="10,5,10,4" CornerRadius="5"
                         Background="{DynamicResource ColorKeycap}" BorderBrush="{DynamicResource ColorKeycapEdge}" BorderThickness="0,0,0,3">
-                  <TextBlock x:Name="Label" HorizontalAlignment="Center" FontFamily="{DynamicResource MonoFont}" Text="{TemplateBinding Content}" />
+                  <TextBlock x:Name="Label" HorizontalAlignment="Center" Text="{TemplateBinding Content}" />
                 </Border>
                 <Border x:Name="FocusRing" Margin="-3" BorderBrush="{DynamicResource ColorAccent}" BorderThickness="2" CornerRadius="8" Visibility="Collapsed" IsHitTestVisible="False" />
               </Grid>
@@ -120,7 +120,7 @@
             </Grid.ColumnDefinitions>
             <StackPanel>
               <TextBlock FontSize="12" Foreground="{DynamicResource ColorNeutral400}" Text="Write it as" />
-              <TextBox x:Name="DesiredBox" Margin="0,6,0,0" Height="34" Padding="8,0" MaxLength="120" FontFamily="{DynamicResource MonoFont}" FontSize="13"
+              <TextBox x:Name="DesiredBox" Margin="0,6,0,0" Height="34" Padding="8,0" MaxLength="120" FontSize="13"
                        TextChanged="DesiredChanged" PreviewKeyDown="DesiredKeyDown" AutomationProperties.Name="Write it as" />
             </StackPanel>
             <StackPanel Grid.Column="2">
@@ -150,7 +150,7 @@
                           <ColumnDefinition Width="*" />
                           <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <TextBlock VerticalAlignment="Center" FontFamily="{DynamicResource MonoFont}" FontSize="13" Text="{Binding Phrase}" TextTrimming="CharacterEllipsis" />
+                        <TextBlock VerticalAlignment="Center" FontSize="13" Text="{Binding Phrase}" TextTrimming="CharacterEllipsis" />
                         <TextBlock Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center" Style="{StaticResource PageNote}" TextWrapping="NoWrap" Text="{Binding Detail}" TextTrimming="CharacterEllipsis" />
                         <Button Grid.Column="2" Style="{StaticResource RowRemoveButton}" VerticalAlignment="Center" Tag="{Binding}" Click="RemoveFix"
                                 ToolTip="{Binding RemoveName}" AutomationProperties.Name="{Binding RemoveName}" />

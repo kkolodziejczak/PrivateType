@@ -39,13 +39,13 @@
         <Border Margin="0,14,0,0" Style="{StaticResource TableRow}">
           <Grid>
             <TextBlock Style="{StaticResource RowLabel}" Text="Starts with Windows" />
-            <TextBlock x:Name="RegisteredVersionText" Style="{StaticResource RowValue}" HorizontalAlignment="Right" />
+            <TextBlock x:Name="RegisteredVersionText" Style="{StaticResource RowValue}" FontFamily="{DynamicResource MonoFont}" FontSize="12" HorizontalAlignment="Right" />
           </Grid>
         </Border>
         <Border Style="{StaticResource TableRow}" BorderThickness="0,1,0,1">
           <Grid>
             <TextBlock Style="{StaticResource RowLabel}" Text="You opened" />
-            <TextBlock x:Name="CurrentVersionText" Style="{StaticResource RowValue}" HorizontalAlignment="Right" Foreground="{DynamicResource ColorText}" />
+            <TextBlock x:Name="CurrentVersionText" Style="{StaticResource RowValue}" FontFamily="{DynamicResource MonoFont}" FontSize="12" HorizontalAlignment="Right" Foreground="{DynamicResource ColorText}" />
           </Grid>
         </Border>
         <TextBlock Margin="0,12,0,0" FontSize="12" Foreground="{DynamicResource ColorNeutral400}" TextWrapping="Wrap"

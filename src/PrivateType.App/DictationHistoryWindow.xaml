@@ -132,13 +132,13 @@
                   <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <StackPanel>
-                  <TextBlock Foreground="{DynamicResource ColorText}" FontFamily="{DynamicResource MonoFont}" FontSize="13" Text="{Binding Preview}" TextWrapping="Wrap"
-                             TextTrimming="CharacterEllipsis" MaxHeight="57" LineHeight="19" LineStackingStrategy="BlockLineHeight" />
+                  <TextBlock Foreground="{DynamicResource ColorText}" FontSize="14" Text="{Binding Preview}" TextWrapping="Wrap"
+                             TextTrimming="CharacterEllipsis" MaxHeight="60" LineHeight="20" LineStackingStrategy="BlockLineHeight" />
                   <StackPanel Margin="0,5,0,0" Orientation="Horizontal">
-                    <TextBlock VerticalAlignment="Center" Foreground="{DynamicResource ColorNeutral400}" FontFamily="{DynamicResource MonoFont}" FontSize="11" Text="{Binding Details}" />
+                    <TextBlock VerticalAlignment="Center" Foreground="{DynamicResource ColorNeutral400}" FontSize="12" Typography.NumeralAlignment="Tabular" Text="{Binding Details}" />
                     <Border Margin="10,0,0,0" Padding="5,1" VerticalAlignment="Center" CornerRadius="3" BorderBrush="{DynamicResource ColorWarning}" BorderThickness="1"
                             Visibility="{Binding ShowNotInserted, Converter={StaticResource BoolToVisibility}}">
-                      <TextBlock Foreground="{DynamicResource ColorWarning}" FontFamily="{DynamicResource MonoFont}" FontSize="10" FontWeight="SemiBold" Text="NOT INSERTED" />
+                      <TextBlock Foreground="{DynamicResource ColorWarning}" FontSize="10" FontWeight="SemiBold" Text="NOT INSERTED" />
                     </Border>
                   </StackPanel>
                   <!-- The way back: the row's own Enter key pastes it. -->
@@ -176,7 +176,7 @@
             <Border Style="{StaticResource HintKey}"><TextBlock Style="{StaticResource HintKeyLegend}" Text="Esc" /></Border>
             <TextBlock Style="{StaticResource HintAction}" Text="close" />
           </StackPanel>
-          <TextBlock Grid.Column="1" VerticalAlignment="Center" FontFamily="{DynamicResource MonoFont}" FontSize="11" Foreground="{DynamicResource ColorNeutral600}"
+          <TextBlock Grid.Column="1" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource ColorNeutral600}"
                      Text="kept in memory only" />
         </Grid>
       </Border>
