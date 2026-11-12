@@ -294,7 +294,7 @@ public sealed class WindowsBoundaryTests
     public void Recommends_Visual_Cpp_only_when_the_engine_exists_but_cannot_start()
     {
         Assert.DoesNotContain("Visual C++", ModelSetupWindow.MissingEngineStep);
-        Assert.Contains("complete PrivateType portable ZIP", ModelSetupWindow.MissingEngineStep);
+        Assert.StartsWith(ModelSetupWindow.GetCompleteZipAction, ModelSetupWindow.MissingEngineStep);
         Assert.Contains("Visual C++", ModelSetupWindow.EngineCouldNotStartStep);
         // The step names the button the person sees in that state.
         Assert.EndsWith($"then select {ModelSetupWindow.CheckAgainAction}.", ModelSetupWindow.EngineCouldNotStartStep);

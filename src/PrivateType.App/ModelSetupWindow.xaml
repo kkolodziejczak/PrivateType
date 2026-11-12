@@ -1,7 +1,8 @@
 <Window x:Class="PrivateType.App.ModelSetupWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Set up PrivateType" Icon="/PrivateType;component/Assets/PrivateType.ready.ico" Width="460" SizeToContent="Height"
+        xmlns:local="clr-namespace:PrivateType.App"
+        Title="Set up PrivateType" Icon="/PrivateType;component/Assets/PrivateType.ready.ico" Width="636" Height="536"
         WindowStartupLocation="CenterScreen" ResizeMode="NoResize" WindowStyle="None" UseLayoutRounding="True" AllowsTransparency="True"
         Background="Transparent" Foreground="{DynamicResource ColorText}" FontFamily="{DynamicResource AppFont}">
   <Window.Resources>
@@ -13,18 +14,40 @@
         <Setter Property="Template">
           <Setter.Value>
             <ControlTemplate TargetType="ProgressBar">
-              <Border x:Name="PART_Track" Background="{DynamicResource ColorNeutral800}" CornerRadius="2">
-                <Border x:Name="PART_Indicator" HorizontalAlignment="Left" Background="{DynamicResource ColorAccent}" CornerRadius="2" />
+              <Border x:Name="PART_Track" Background="{DynamicResource ColorNeutral800}" CornerRadius="3">
+                <Border x:Name="PART_Indicator" HorizontalAlignment="Left" Background="{DynamicResource ColorAccent}" CornerRadius="3" />
               </Border>
             </ControlTemplate>
           </Setter.Value>
         </Setter>
       </Style>
-      <!-- Supporting lines under the heading and the table. -->
-      <Style x:Key="FinePrint" TargetType="TextBlock">
+      <!-- A triangle with an exclamation mark, in its foreground colour: something stopped and needs the person. -->
+      <Style x:Key="WarningMark" TargetType="ContentControl">
+        <Setter Property="Width" Value="20" />
+        <Setter Property="Height" Value="20" />
+        <Setter Property="IsTabStop" Value="False" />
+        <Setter Property="Template">
+          <Setter.Value>
+            <ControlTemplate TargetType="ContentControl">
+              <Canvas Width="20" Height="20">
+                <Path Data="M10,2 C10.6,2 11.1,2.3 11.4,2.8 L18.7,15.6 C19.3,16.7 18.5,18 17.3,18 L2.7,18 C1.5,18 0.7,16.7 1.3,15.6 L8.6,2.8 C8.9,2.3 9.4,2 10,2 Z"
+                      Fill="{TemplateBinding Foreground}" />
+                <Path Data="M9,7 L11,7 L10.7,12.5 L9.3,12.5 Z M10,13.6 A1.1,1.1 0 1 1 9.99,13.6 Z" Fill="{DynamicResource ColorBg}" />
+              </Canvas>
+            </ControlTemplate>
+          </Setter.Value>
+        </Setter>
+      </Style>
+      <!-- One line of the review: a quiet label and its value. -->
+      <Style x:Key="FactLabel" TargetType="TextBlock">
         <Setter Property="FontSize" Value="12" />
         <Setter Property="Foreground" Value="{DynamicResource ColorNeutral400}" />
+        <Setter Property="Margin" Value="0,9,0,0" />
+      </Style>
+      <Style x:Key="FactValue" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="13" />
         <Setter Property="TextWrapping" Value="Wrap" />
+        <Setter Property="Margin" Value="0,8,0,0" />
       </Style>
     </ResourceDictionary>
   </Window.Resources>
@@ -35,8 +58,12 @@
         <RowDefinition Height="*" />
         <RowDefinition Height="Auto" />
       </Grid.RowDefinitions>
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="136" />
+        <ColumnDefinition Width="*" />
+      </Grid.ColumnDefinitions>
       <!-- The same title bar as Settings: keycap mark, name, and what this window is for. -->
-      <Border Background="{DynamicResource ColorSurface}" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,0,0,1" CornerRadius="11,11,0,0" MouseLeftButtonDown="DragWindow">
+      <Border Grid.ColumnSpan="2" Background="{DynamicResource ColorSurface}" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,0,0,1" CornerRadius="11,11,0,0" MouseLeftButtonDown="DragWindow">
         <Grid Margin="16,0,8,0">
           <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
             <Border Width="18" Height="18" CornerRadius="4" Background="{DynamicResource ColorKeycap}" BorderBrush="{DynamicResource ColorKeycapEdge}" BorderThickness="0,0,0,2">
@@ -49,138 +76,230 @@
                   Click="CloseWindow" AutomationProperties.Name="Close" />
         </Grid>
       </Border>
-      <StackPanel Grid.Row="1" Margin="24,18,24,20">
-        <TextBlock x:Name="HeadingText" FontSize="15" FontWeight="SemiBold" Text="Download local dictation" />
-        <TextBlock x:Name="StatusText" Margin="0,4,0,0" FontSize="13" Foreground="{DynamicResource ColorNeutral400}" TextWrapping="Wrap" Text="Download the local speech model before using dictation." />
-        <!-- The system's own words for a failure: quieter than the explanation above, and selectable so it can be copied. -->
-        <TextBox x:Name="FailureDetailText" Margin="0,6,0,0" Padding="0" FontSize="12" Foreground="{DynamicResource ColorNeutral400}" Background="Transparent" BorderThickness="0"
-                 IsReadOnly="True" TextWrapping="Wrap" AutomationProperties.Name="Error details" Visibility="Collapsed">
-          <TextBox.Template>
-            <ControlTemplate TargetType="TextBox"><ScrollViewer x:Name="PART_ContentHost" Margin="-2,0" /></ControlTemplate>
-          </TextBox.Template>
-        </TextBox>
-        <!-- What to do next, in the text colour: set only when setup has stopped and needs the person. -->
-        <TextBlock x:Name="NextStepText" Margin="0,12,0,0" FontSize="13" TextWrapping="Wrap">
-          <TextBlock.Style>
-            <Style TargetType="TextBlock">
-              <Style.Triggers>
-                <Trigger Property="Text" Value=""><Setter Property="Visibility" Value="Collapsed" /></Trigger>
-              </Style.Triggers>
-            </Style>
-          </TextBlock.Style>
-        </TextBlock>
-        <StackPanel x:Name="ConsentPanel">
-          <TextBlock Style="{StaticResource GroupLabel}" Margin="0,18,0,6" Text="SPEECH MODEL" />
-          <!-- The choices are table rows: the chosen one carries the accent bar, like the current page in the Settings rail. -->
-          <Border BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,0,0,1">
-            <ItemsControl x:Name="ModelChoices" KeyboardNavigation.TabNavigation="Continue">
+      <!-- The rail: where the person is in setup and what is left. It shows position only and can't be clicked. -->
+      <Border Grid.Row="1" Grid.RowSpan="2" Background="{DynamicResource ColorBg}" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,0,1,0" CornerRadius="0,0,0,11">
+        <DockPanel Margin="16,20,16,20">
+          <TextBlock DockPanel.Dock="Bottom" FontSize="12" Foreground="{DynamicResource ColorNeutral400}" TextWrapping="Wrap" Text="Your voice is processed on this computer." />
+          <StackPanel>
+            <TextBlock x:Name="BeforeSetupLabel" Style="{StaticResource GroupLabel}" Margin="0,0,0,10" Text="BEFORE SETUP" Visibility="Collapsed" />
+            <ItemsControl x:Name="RailSteps" Focusable="False" AutomationProperties.LiveSetting="Polite">
               <ItemsControl.ItemTemplate>
-                <DataTemplate>
-                  <RadioButton Foreground="{DynamicResource ColorText}" GroupName="SetupModel" IsChecked="{Binding IsChosen, Mode=TwoWay}" Cursor="Hand"
-                               FocusVisualStyle="{x:Null}" AutomationProperties.Name="{Binding Name}">
-                    <RadioButton.Template>
-                      <ControlTemplate TargetType="RadioButton">
-                        <Grid>
-                          <Border x:Name="Row" Background="Transparent" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,1,0,0">
-                            <Grid Margin="14,10,12,11">
-                              <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="16" />
-                                <ColumnDefinition Width="12" />
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                              </Grid.ColumnDefinitions>
-                              <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                              </Grid.RowDefinitions>
-                              <Grid Width="16" Height="16" VerticalAlignment="Center">
-                                <Ellipse x:Name="Ring" Stroke="{DynamicResource ColorNeutral600}" StrokeThickness="1.5" />
-                                <Ellipse x:Name="Dot" Width="8" Height="8" Fill="{DynamicResource ColorAccent}" Visibility="Hidden" />
-                              </Grid>
-                              <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                                <TextBlock FontSize="13" FontWeight="SemiBold" Text="{Binding ShortName}" />
-                                <Border Margin="8,0,0,0" Padding="5,1,5,2" CornerRadius="3" VerticalAlignment="Center" BorderBrush="{DynamicResource ColorNeutral800}" BorderThickness="1"
-                                        Visibility="{Binding IsRecommended, Converter={StaticResource BoolToVisibility}}">
-                                  <TextBlock FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource ColorNeutral400}" Text="RECOMMENDED" />
-                                </Border>
-                              </StackPanel>
-                              <TextBlock Grid.Column="3" Margin="12,0,0,0" VerticalAlignment="Center" FontSize="12" Typography.NumeralAlignment="Tabular"
-                                         Foreground="{DynamicResource ColorNeutral400}" Text="{Binding Size}" />
-                              <!-- The model's full ID, as Settings shows it under the same short name. -->
-                              <TextBlock Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="2" Margin="0,2,0,0" FontFamily="{DynamicResource MonoFont}" FontSize="11"
-                                         Foreground="{DynamicResource ColorNeutral600}" Text="{Binding Name}" />
-                              <!-- One description per model: the same three facts for each, so the difference reads across the two cards. -->
-                              <StackPanel Grid.Row="2" Grid.Column="2" Grid.ColumnSpan="2" Margin="0,4,0,0">
-                                <TextBlock FontSize="13" Foreground="{DynamicResource ColorText}" Text="{Binding Headline}" TextWrapping="Wrap" />
-                              </StackPanel>
-                            </Grid>
-                          </Border>
-                          <!-- Starts under the row's top hairline, where the row's fill starts. -->
-                          <Border x:Name="Bar" Width="2" Margin="0,1,0,0" HorizontalAlignment="Left" Background="{DynamicResource ColorAccent}" Visibility="Hidden" />
-                          <Border x:Name="FocusRing" BorderBrush="{DynamicResource ColorAccent}" BorderThickness="2" CornerRadius="2" Visibility="Hidden" />
-                        </Grid>
-                        <ControlTemplate.Triggers>
-                          <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Row" Property="Background" Value="{DynamicResource ColorHairline}" /></Trigger>
-                          <Trigger Property="IsChecked" Value="True">
-                            <Setter TargetName="Row" Property="Background" Value="{DynamicResource ColorNeutral900}" />
-                            <Setter TargetName="Bar" Property="Visibility" Value="Visible" />
-                            <Setter TargetName="Dot" Property="Visibility" Value="Visible" />
-                            <Setter TargetName="Ring" Property="Stroke" Value="{DynamicResource ColorAccent}" />
-                          </Trigger>
-                          <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="FocusRing" Property="Visibility" Value="Visible" /></Trigger>
-                        </ControlTemplate.Triggers>
-                      </ControlTemplate>
-                    </RadioButton.Template>
-                  </RadioButton>
+                <DataTemplate DataType="{x:Type local:SetupRailStep}">
+                  <Grid Margin="-16,0,0,0" AutomationProperties.Name="{Binding SpokenName}">
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="16" />
+                      <ColumnDefinition Width="20" />
+                      <ColumnDefinition Width="10" />
+                      <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                      <RowDefinition Height="Auto" />
+                      <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <!-- The current step carries the accent bar at the rail's edge, like the current page in Settings. -->
+                    <Border x:Name="Bar" Width="2" HorizontalAlignment="Left" CornerRadius="1" Background="{DynamicResource ColorAccent}" Visibility="Hidden" />
+                    <!-- Joins this step's mark to the next one's. -->
+                    <Rectangle x:Name="Joiner" Grid.Column="1" Grid.RowSpan="2" Width="1" Margin="0,22,0,2" HorizontalAlignment="Center" Fill="{DynamicResource ColorNeutral800}" />
+                    <Grid Grid.Column="1" Width="20" Height="20" VerticalAlignment="Top">
+                      <Ellipse x:Name="Disc" Fill="{DynamicResource ColorBg}" Stroke="{DynamicResource ColorNeutral800}" StrokeThickness="1" />
+                      <TextBlock x:Name="Number" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="11" FontWeight="SemiBold"
+                                 Foreground="{DynamicResource ColorNeutral600}" Typography.NumeralAlignment="Tabular" Text="{Binding Number}" />
+                      <Path x:Name="Tick" Data="M6,10.5 L8.8,13.2 L14,7.2" Stroke="{DynamicResource ColorNeutral400}" StrokeThickness="1.6" StrokeLineJoin="Round"
+                            StrokeStartLineCap="Round" StrokeEndLineCap="Round" Visibility="Collapsed" />
+                      <ContentControl x:Name="Warning" Style="{StaticResource WarningMark}" Foreground="{DynamicResource ColorDanger}" Visibility="Collapsed" />
+                    </Grid>
+                    <TextBlock x:Name="Label" Grid.Column="3" Margin="0,1,0,0" FontSize="13" Foreground="{DynamicResource ColorNeutral600}" TextWrapping="Wrap" Text="{Binding Label}" />
+                    <Border x:Name="Gap" Grid.Row="1" Grid.ColumnSpan="4" Height="16" />
+                  </Grid>
+                  <DataTemplate.Triggers>
+                    <DataTrigger Binding="{Binding IsLast}" Value="True">
+                      <Setter TargetName="Joiner" Property="Visibility" Value="Collapsed" />
+                      <Setter TargetName="Gap" Property="Visibility" Value="Collapsed" />
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding State}" Value="{x:Static local:SetupRailState.Done}">
+                      <Setter TargetName="Number" Property="Visibility" Value="Collapsed" />
+                      <Setter TargetName="Tick" Property="Visibility" Value="Visible" />
+                      <Setter TargetName="Disc" Property="Fill" Value="{DynamicResource ColorNeutral900}" />
+                      <Setter TargetName="Label" Property="Foreground" Value="{DynamicResource ColorNeutral400}" />
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding State}" Value="{x:Static local:SetupRailState.Current}">
+                      <Setter TargetName="Bar" Property="Visibility" Value="Visible" />
+                      <Setter TargetName="Disc" Property="Fill" Value="{DynamicResource ColorAccent}" />
+                      <Setter TargetName="Disc" Property="Stroke" Value="{DynamicResource ColorAccent}" />
+                      <Setter TargetName="Number" Property="Foreground" Value="{DynamicResource ColorAccentText}" />
+                      <Setter TargetName="Label" Property="Foreground" Value="{DynamicResource ColorText}" />
+                      <Setter TargetName="Label" Property="FontWeight" Value="SemiBold" />
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding State}" Value="{x:Static local:SetupRailState.Stopped}">
+                      <Setter TargetName="Disc" Property="Visibility" Value="Collapsed" />
+                      <Setter TargetName="Number" Property="Visibility" Value="Collapsed" />
+                      <Setter TargetName="Warning" Property="Visibility" Value="Visible" />
+                      <Setter TargetName="Label" Property="Foreground" Value="{DynamicResource ColorDanger}" />
+                      <Setter TargetName="Label" Property="FontWeight" Value="SemiBold" />
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding State}" Value="{x:Static local:SetupRailState.Needed}">
+                      <Setter TargetName="Disc" Property="Visibility" Value="Collapsed" />
+                      <Setter TargetName="Number" Property="Visibility" Value="Collapsed" />
+                      <Setter TargetName="Warning" Property="Visibility" Value="Visible" />
+                      <Setter TargetName="Warning" Property="Foreground" Value="{DynamicResource ColorWarning}" />
+                      <Setter TargetName="Label" Property="Foreground" Value="{DynamicResource ColorText}" />
+                      <Setter TargetName="Label" Property="FontWeight" Value="SemiBold" />
+                    </DataTrigger>
+                  </DataTemplate.Triggers>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
-          </Border>
-          <TextBlock Margin="0,10,0,0" Style="{StaticResource FinePrint}" Text="Your voice is processed on this computer." />
-          <TextBlock Margin="0,16,0,0" FontSize="13" TextWrapping="Wrap">
-            <Hyperlink x:Name="ModelTermsLink" Foreground="{DynamicResource ColorAccent400}" RequestNavigate="OpenModelTerms" ToolTip="Open the model terms in your default browser"><Run x:Name="ModelTermsLinkText" /></Hyperlink>
-          </TextBlock>
-          <CheckBox x:Name="TermsCheckBox" Margin="0,10,0,0" VerticalContentAlignment="Top" Checked="TermsChanged" Unchecked="TermsChanged"><TextBlock x:Name="TermsText" FontSize="13" TextWrapping="Wrap" /></CheckBox>
-          <TextBlock x:Name="StorageNoticeText" Margin="0,10,0,0" Style="{StaticResource FinePrint}" />
+          </StackPanel>
+        </DockPanel>
+      </Border>
+      <!-- The content pane: one step's question at a time, in the same frame. -->
+      <Grid Grid.Row="1" Grid.Column="1" Margin="24,18,24,20">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto" />
+          <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <TextBlock x:Name="HeadingText" FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap" />
+
+        <!-- Step 1: which model, and nothing else. -->
+        <Border x:Name="ChoosePane" Grid.Row="1" Margin="0,14,0,0" VerticalAlignment="Top" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,0,0,1">
+          <!-- The choices are table rows: the chosen one carries the accent bar, like the current page in the Settings rail. -->
+          <ItemsControl x:Name="ModelChoices" KeyboardNavigation.TabNavigation="Continue">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <RadioButton Foreground="{DynamicResource ColorText}" GroupName="SetupModel" IsChecked="{Binding IsChosen, Mode=TwoWay}" Cursor="Hand"
+                             FocusVisualStyle="{x:Null}" AutomationProperties.Name="{Binding ShortName}">
+                  <RadioButton.Template>
+                    <ControlTemplate TargetType="RadioButton">
+                      <Grid>
+                        <Border x:Name="Row" Background="Transparent" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,1,0,0">
+                          <Grid Margin="14,12,12,13">
+                            <Grid.ColumnDefinitions>
+                              <ColumnDefinition Width="16" />
+                              <ColumnDefinition Width="12" />
+                              <ColumnDefinition Width="*" />
+                              <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                              <RowDefinition Height="Auto" />
+                              <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid Width="16" Height="16" VerticalAlignment="Center">
+                              <Ellipse x:Name="Ring" Stroke="{DynamicResource ColorNeutral600}" StrokeThickness="1.5" />
+                              <Ellipse x:Name="Dot" Width="8" Height="8" Fill="{DynamicResource ColorAccent}" Visibility="Hidden" />
+                            </Grid>
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                              <TextBlock VerticalAlignment="Center" FontSize="13" FontWeight="SemiBold" Text="{Binding ShortName}" />
+                              <Border Margin="8,0,0,0" Style="{StaticResource StatusChip}" Visibility="{Binding IsRecommended, Converter={StaticResource BoolToVisibility}}">
+                                <TextBlock FontWeight="SemiBold" Text="RECOMMENDED" />
+                              </Border>
+                            </StackPanel>
+                            <TextBlock Grid.Column="3" Margin="12,0,0,0" VerticalAlignment="Center" FontSize="13" Typography.NumeralAlignment="Tabular"
+                                       Foreground="{DynamicResource ColorNeutral400}" Text="{Binding Size}" />
+                            <!-- The reason to pick it first, then the same two facts for each model, so the difference reads across the rows. -->
+                            <StackPanel Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="2" Margin="0,6,0,0">
+                              <TextBlock FontSize="13" Text="{Binding Facts.Lead}" TextWrapping="Wrap" />
+                              <TextBlock Margin="0,4,0,0" FontSize="13" Foreground="{DynamicResource ColorNeutral400}" Text="{Binding Facts.Languages}" TextWrapping="Wrap" />
+                              <TextBlock Margin="0,2,0,0" FontSize="13" Foreground="{DynamicResource ColorNeutral400}" Text="{Binding Facts.Phrases}" TextWrapping="Wrap" />
+                            </StackPanel>
+                          </Grid>
+                        </Border>
+                        <!-- Starts under the row's top hairline, where the row's fill starts. -->
+                        <Border x:Name="Bar" Width="2" Margin="0,1,0,0" HorizontalAlignment="Left" Background="{DynamicResource ColorAccent}" Visibility="Hidden" />
+                        <Border x:Name="FocusRing" BorderBrush="{DynamicResource ColorAccent}" BorderThickness="2" CornerRadius="2" Visibility="Hidden" />
+                      </Grid>
+                      <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Row" Property="Background" Value="{DynamicResource ColorHairline}" /></Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                          <Setter TargetName="Row" Property="Background" Value="{DynamicResource ColorNeutral900}" />
+                          <Setter TargetName="Bar" Property="Visibility" Value="Visible" />
+                          <Setter TargetName="Dot" Property="Visibility" Value="Visible" />
+                          <Setter TargetName="Ring" Property="Stroke" Value="{DynamicResource ColorAccent}" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="FocusRing" Property="Visibility" Value="Visible" /></Trigger>
+                      </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                  </RadioButton.Template>
+                </RadioButton>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </Border>
+
+        <!-- Step 2: what will be downloaded, from where, where it stays and under which terms; then the consent. -->
+        <StackPanel x:Name="ReviewPane" Grid.Row="1" Margin="0,8,0,0">
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="96" />
+              <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <TextBlock Style="{StaticResource FactLabel}" Text="Download" />
+            <TextBlock x:Name="SizeText" Grid.Column="1" Style="{StaticResource FactValue}" Typography.NumeralAlignment="Tabular" />
+            <TextBlock Grid.Row="1" Style="{StaticResource FactLabel}" Text="From" />
+            <TextBlock Grid.Row="1" Grid.Column="1" Style="{StaticResource FactValue}" Text="NVIDIA on Hugging Face" />
+            <TextBlock Grid.Row="2" Style="{StaticResource FactLabel}" Text="Kept" />
+            <TextBlock x:Name="StorageNoticeText" Grid.Row="2" Grid.Column="1" Style="{StaticResource FactValue}" />
+            <TextBlock Grid.Row="3" Style="{StaticResource FactLabel}" Text="Later" />
+            <TextBlock Grid.Row="3" Grid.Column="1" Style="{StaticResource FactValue}" Text="Change or delete models in Settings → Model" />
+            <TextBlock Grid.Row="4" Style="{StaticResource FactLabel}" Text="License" />
+            <!-- The link is its own keyboard stop; following it leaves the choice and the checkbox as they are. -->
+            <TextBlock Grid.Row="4" Grid.Column="1" Style="{StaticResource FactValue}"><Run x:Name="LicenseNameText" /><Run Text="    " /><Hyperlink x:Name="ModelTermsLink"
+                Foreground="{DynamicResource ColorAccent400}" RequestNavigate="OpenModelTerms" ToolTip="Open the model terms in your default browser"><Run Text="Read the terms" /></Hyperlink></TextBlock>
+            <TextBlock Grid.Row="5" Style="{StaticResource FactLabel}" Text="Model" />
+            <TextBlock x:Name="ModelIdText" Grid.Row="5" Grid.Column="1" Margin="0,9,0,0" FontFamily="{DynamicResource MonoFont}" FontSize="12" Foreground="{DynamicResource ColorNeutral400}" TextWrapping="Wrap" />
+          </Grid>
+          <CheckBox x:Name="TermsCheckBox" Margin="0,16,0,0" VerticalContentAlignment="Top" Checked="TermsChanged" Unchecked="TermsChanged"><TextBlock x:Name="TermsText" FontSize="13" TextWrapping="Wrap" /></CheckBox>
+          <!-- Why Download waits, under the box it waits for. -->
+          <TextBlock x:Name="DownloadReasonText" Margin="28,4,0,0" FontSize="12" Foreground="{DynamicResource ColorNeutral400}" Text="Accept the terms to download." />
         </StackPanel>
-        <ProgressBar x:Name="ProgressBar" Margin="0,18,0,0" Height="4" Minimum="0" Maximum="100" Visibility="Collapsed" />
-        <!-- Checking a finished download has no measurable progress: the two phases, the first done, the second under way. -->
-        <Grid x:Name="PhaseStrip" Margin="0,18,0,0" Visibility="Collapsed" AutomationProperties.Name="Downloaded. Checking files.">
-          <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*" />
-            <ColumnDefinition Width="4" />
-            <ColumnDefinition Width="*" />
-          </Grid.ColumnDefinitions>
-          <StackPanel>
-            <Border Height="4" CornerRadius="2" Background="{DynamicResource ColorAccent}" />
-            <TextBlock Margin="0,8,0,0" FontSize="12" Foreground="{DynamicResource ColorNeutral400}" Text="Downloaded ✓" />
+
+        <!-- Step 2 while downloading, and step 3 while checking: the work under way, in the same place. -->
+        <StackPanel x:Name="ProgressPane" Grid.Row="1" Margin="0,16,0,0">
+          <TextBlock x:Name="ProgressAmountText" FontSize="15" FontWeight="SemiBold" Typography.NumeralAlignment="Tabular" />
+          <ProgressBar x:Name="ProgressBar" Margin="0,10,0,0" Height="6" Minimum="0" Maximum="100" />
+          <TextBlock x:Name="ProgressNextText" Margin="0,10,0,0" FontSize="13" Foreground="{DynamicResource ColorNeutral400}" TextWrapping="Wrap" />
+          <TextBlock x:Name="ProgressModelText" Margin="0,16,0,0" FontFamily="{DynamicResource MonoFont}" FontSize="12" Foreground="{DynamicResource ColorNeutral600}" />
+        </StackPanel>
+
+        <!-- A stopped state: why, and what to do. -->
+        <StackPanel x:Name="StoppedPane" Grid.Row="1" Margin="0,6,0,0">
+          <TextBlock x:Name="StatusText" FontSize="13" Foreground="{DynamicResource ColorNeutral400}" TextWrapping="Wrap" />
+          <!-- What to do next, in the text colour. -->
+          <TextBlock x:Name="NextStepText" Margin="0,10,0,0" FontSize="13" TextWrapping="Wrap" />
+          <!-- The system's own words for a failure: labelled, quieter than the explanation, and selectable so it can be copied. -->
+          <StackPanel x:Name="FailureDetailPanel">
+            <TextBlock Style="{StaticResource GroupLabel}" Margin="0,20,0,6" Text="DETAILS" />
+            <TextBox x:Name="FailureDetailText" Padding="0" FontFamily="{DynamicResource MonoFont}" FontSize="12" Foreground="{DynamicResource ColorNeutral600}" Background="Transparent"
+                     BorderThickness="0" IsReadOnly="True" TextWrapping="Wrap" AutomationProperties.Name="Error details">
+              <TextBox.Template>
+                <ControlTemplate TargetType="TextBox"><ScrollViewer x:Name="PART_ContentHost" Margin="-2,0" /></ControlTemplate>
+              </TextBox.Template>
+            </TextBox>
           </StackPanel>
-          <StackPanel Grid.Column="2">
-            <Border x:Name="CheckingSegment" Height="4" CornerRadius="2" Background="{DynamicResource ColorNeutral800}" />
-            <TextBlock Margin="0,8,0,0" FontSize="12" FontWeight="SemiBold" Text="Checking files…" />
-          </StackPanel>
-        </Grid>
-        <!-- Under the choice while choosing; at the end of every other state. -->
-        <TextBlock Margin="0,14,0,0" Text="Your voice is processed on this computer.">
-          <TextBlock.Style>
-            <Style TargetType="TextBlock" BasedOn="{StaticResource FinePrint}">
-              <Style.Triggers>
-                <DataTrigger Binding="{Binding Visibility, ElementName=ConsentPanel}" Value="Visible"><Setter Property="Visibility" Value="Collapsed" /></DataTrigger>
-              </Style.Triggers>
-            </Style>
-          </TextBlock.Style>
-        </TextBlock>
-      </StackPanel>
+        </StackPanel>
+      </Grid>
       <!-- The same slim footer as Settings: the secondary action as text, the primary filled at the right. -->
-      <Border Grid.Row="2" Padding="24,10,16,12" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,1,0,0">
+      <Border Grid.Row="2" Grid.Column="1" Padding="16,10,16,12" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,1,0,0">
         <Grid>
-        <TextBlock x:Name="DownloadReasonText" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource ColorNeutral400}" Text="Tick the box to download" />
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-          <Button x:Name="CancelButton" Style="{StaticResource GhostButton}" Margin="0,0,8,0" Height="32" Padding="12,0" Content="Cancel" Click="Cancel" />
-          <Button x:Name="RetryButton" Style="{StaticResource PrimaryButton}" Height="32" Padding="16,0" Content="Retry" Visibility="Collapsed" Click="Retry" />
-          <Button x:Name="DownloadButton" Style="{StaticResource PrimaryButton}" Height="32" Padding="16,0" Content="Download model" IsEnabled="False" Click="Download" />
-        </StackPanel>
+          <!-- Pulled left by 4 so its text sits on the content's edge, with the footer note; the padding keeps its hit area. -->
+          <Button x:Name="BackButton" Margin="-4,0,0,0" HorizontalAlignment="Left" Style="{StaticResource GhostButton}" Height="32" Padding="12,0" Content="Back" Click="Back" />
+          <TextBlock x:Name="FooterNoteText" Margin="8,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource ColorNeutral400}"
+                     Text="Quitting stops the download." />
+          <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button x:Name="QuitButton" Style="{StaticResource GhostButton}" Height="32" Padding="12,0" Content="Quit PrivateType" Click="Quit" />
+            <Button x:Name="CheckAgainButton" Margin="8,0,0,0" Height="32" Padding="16,0" Click="CheckAgain" />
+            <Button x:Name="GetZipButton" Margin="8,0,0,0" Style="{StaticResource PrimaryButton}" Height="32" Padding="16,0" Click="GetCompleteZip" />
+            <Button x:Name="ContinueButton" Margin="8,0,0,0" Style="{StaticResource PrimaryButton}" Height="32" Padding="16,0" Click="Continue" />
+            <Button x:Name="DownloadButton" Margin="8,0,0,0" Style="{StaticResource PrimaryButton}" Height="32" Padding="16,0" IsEnabled="False" Click="Download" />
+            <Button x:Name="DownloadAgainButton" Margin="8,0,0,0" Style="{StaticResource PrimaryButton}" Height="32" Padding="16,0" Click="DownloadAgain" />
+          </StackPanel>
         </Grid>
       </Border>
     </Grid>

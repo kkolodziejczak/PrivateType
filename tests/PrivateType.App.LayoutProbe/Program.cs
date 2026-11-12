@@ -230,6 +230,9 @@ static void VerifySettingsVersion(Window window)
 
 static void VerifyModelTermsLinkAndSharedCopy(Window window)
 {
+    // The terms are on the review step.
+    ((System.Windows.Controls.Button)window.FindName("ContinueButton")).RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+    window.UpdateLayout();
     var link = window.FindName("ModelTermsLink") as System.Windows.Documents.Hyperlink
         ?? throw new InvalidOperationException("Model terms were not rendered as a hyperlink.");
     if (link.NavigateUri != new Uri("https://creativecommons.org/licenses/by/4.0/"))
