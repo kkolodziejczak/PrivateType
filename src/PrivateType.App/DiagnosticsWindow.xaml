@@ -77,7 +77,7 @@
         <TextBlock FontSize="13" Foreground="{DynamicResource ColorNeutral400}" TextWrapping="Wrap"
                    Text="Warnings, errors, and safe operational breadcrumbs stay in memory only until PrivateType closes. Audio and dictated text are never included." />
         <ListBox x:Name="Entries" Grid.Row="1" Margin="0,14,0,0" DisplayMemberPath="Display" ItemContainerStyle="{StaticResource EntryRow}"
-                 Background="Transparent" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,1,0,0"
+                 BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,1,0,0"
                  ScrollViewer.HorizontalScrollBarVisibility="Disabled" AutomationProperties.Name="Diagnostics entries" />
       </Grid>
       <!-- The same slim footer as Settings: Clear set apart on the left, Save report filled at the right. -->

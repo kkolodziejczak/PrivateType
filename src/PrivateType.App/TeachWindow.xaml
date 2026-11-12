@@ -32,8 +32,9 @@
                 <Trigger Property="IsChecked" Value="True">
                   <Setter TargetName="Chip" Property="Background" Value="{DynamicResource ColorAccent900}" />
                   <Setter TargetName="Chip" Property="BorderBrush" Value="{DynamicResource ColorAccent}" />
+                  <!-- An outline instead of the raised edge: the padding takes up the difference so the word stays on the line. -->
                   <Setter TargetName="Chip" Property="BorderThickness" Value="1.5" />
-                  <Setter TargetName="Chip" Property="RenderTransform"><Setter.Value><TranslateTransform Y="2" /></Setter.Value></Setter>
+                  <Setter TargetName="Chip" Property="Padding" Value="8.5,3.5,8.5,5.5" />
                   <Setter Property="Foreground" Value="{DynamicResource ColorAccent300}" />
                 </Trigger>
                 <Trigger Property="IsKeyboardFocused" Value="True">
@@ -44,6 +45,7 @@
                   <Setter TargetName="Chip" Property="Background" Value="Transparent" />
                   <Setter TargetName="Chip" Property="BorderBrush" Value="{DynamicResource ColorNeutral800}" />
                   <Setter TargetName="Chip" Property="BorderThickness" Value="1" />
+                  <Setter TargetName="Chip" Property="Padding" Value="9,4,9,6" />
                   <Setter TargetName="Label" Property="TextDecorations" Value="Strikethrough" />
                   <Setter Property="Foreground" Value="{DynamicResource ColorNeutral400}" />
                   <Setter Property="Cursor" Value="Arrow" />
@@ -109,7 +111,7 @@
             </Grid.ColumnDefinitions>
             <StackPanel>
               <TextBlock FontSize="12" Foreground="{DynamicResource ColorNeutral400}" Text="Write it as" />
-              <TextBox x:Name="DesiredBox" Margin="0,6,0,0" Height="34" Padding="9,0" MaxLength="120" FontFamily="{DynamicResource MonoFont}" FontSize="13"
+              <TextBox x:Name="DesiredBox" Margin="0,6,0,0" Height="34" Padding="8,0" MaxLength="120" FontFamily="{DynamicResource MonoFont}" FontSize="13"
                        TextChanged="DesiredChanged" PreviewKeyDown="DesiredKeyDown" AutomationProperties.Name="Write it as" />
             </StackPanel>
             <StackPanel Grid.Column="2">

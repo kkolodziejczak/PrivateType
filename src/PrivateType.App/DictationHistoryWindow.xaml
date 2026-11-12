@@ -78,8 +78,9 @@
       <Grid Grid.Row="1" Margin="0,4,0,0">
         <TextBlock x:Name="EmptyText" Margin="24,22,24,26" Foreground="{DynamicResource ColorNeutral400}" FontSize="13" TextWrapping="Wrap" TextAlignment="Center"
                    Visibility="Collapsed" AutomationProperties.LiveSetting="Polite" />
-        <!-- A flat mono list: hairlines between rows, a tinted selected row, the focus ring only for keyboard focus, the remove key on hover and on the selected row. -->
-        <ListBox x:Name="EntriesList" Background="Transparent" BorderThickness="0" Padding="0" HorizontalContentAlignment="Stretch"
+        <!-- A flat mono list: hairlines between rows, a tinted selected row, the focus ring only for keyboard focus, the remove key on hover and on the selected row.
+             Each hairline sits above its row and the first row has none, so the last row ends on the footer's own line. -->
+        <ListBox x:Name="EntriesList" HorizontalContentAlignment="Stretch"
                  ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto"
                  AutomationProperties.Name="Recent dictations" KeyboardNavigation.TabNavigation="Once">
           <ListBox.ItemContainerStyle>
@@ -87,14 +88,16 @@
               <Setter Property="Padding" Value="0" />
               <Setter Property="Cursor" Value="Hand" />
               <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+              <Setter Property="BorderThickness" Value="0,1,0,0" />
               <Setter Property="AutomationProperties.Name" Value="{Binding Preview}" />
               <Setter Property="AutomationProperties.HelpText" Value="{Binding Details}" />
               <EventSetter Event="MouseLeftButtonUp" Handler="ChooseClickedEntry" />
               <Setter Property="Template">
                 <Setter.Value>
                   <ControlTemplate TargetType="ListBoxItem">
-                    <Grid x:Name="Row" Background="Transparent">
-                                            <Border Margin="16,0,10,0" Padding="0,10" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,0,0,1">
+                    <Grid Background="Transparent">
+                      <Border x:Name="Tint" Margin="6,2" CornerRadius="6" />
+                      <Border Margin="16,0,10,0" Padding="0,10" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="{TemplateBinding BorderThickness}">
                         <ContentPresenter />
                       </Border>
                       <Border x:Name="FocusRing" Margin="6,2" BorderBrush="{DynamicResource ColorAccent}" BorderThickness="1.5" CornerRadius="6"
@@ -102,10 +105,10 @@
                     </Grid>
                     <ControlTemplate.Triggers>
                       <Trigger Property="IsMouseOver" Value="True">
-                        <Setter TargetName="Row" Property="Background" Value="{DynamicResource ColorHairline}" />
+                        <Setter TargetName="Tint" Property="Background" Value="{DynamicResource ColorHairline}" />
                       </Trigger>
                       <Trigger Property="IsSelected" Value="True">
-                        <Setter TargetName="Row" Property="Background" Value="{DynamicResource ColorHairline}" />
+                        <Setter TargetName="Tint" Property="Background" Value="{DynamicResource ColorHairline}" />
                       </Trigger>
                       <Trigger Property="IsKeyboardFocused" Value="True">
                         <Setter TargetName="FocusRing" Property="Visibility" Value="Visible" />
@@ -114,6 +117,11 @@
                   </ControlTemplate>
                 </Setter.Value>
               </Setter>
+              <Style.Triggers>
+                <DataTrigger Binding="{Binding RelativeSource={RelativeSource PreviousData}}" Value="{x:Null}">
+                  <Setter Property="BorderThickness" Value="0" />
+                </DataTrigger>
+              </Style.Triggers>
             </Style>
           </ListBox.ItemContainerStyle>
           <ListBox.ItemTemplate>

@@ -236,7 +236,8 @@ public partial class DictationBubble : Window
 
         WaveformBars.Opacity = 0.7 + (level * 0.3);
         RecordingPulseRing.Opacity = level < 0.025 ? 0 : 0.12 + (level * 0.5);
-        var scale = 1 + (level * 0.24);
+        // At full level the ring grows 2 px on each side, staying 3 px inside the pill's 5 px padding.
+        var scale = 1 + (level * 4.0 / 44);
         RecordingPulseScale.ScaleX = scale;
         RecordingPulseScale.ScaleY = scale;
     }

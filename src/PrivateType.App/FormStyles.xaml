@@ -158,17 +158,20 @@
     <Setter Property="Template">
       <Setter.Value>
         <ControlTemplate TargetType="CheckBox">
+          <!-- The box sits on the label's first line, so a wrapped label hangs below it. -->
           <Grid Background="Transparent">
-            <Grid.ColumnDefinitions>
-              <ColumnDefinition Width="18" />
-              <ColumnDefinition Width="10" />
-              <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
-            <Border x:Name="CheckBoxBorder" Grid.Column="0" Width="18" Height="18" VerticalAlignment="Center" Background="{DynamicResource ColorBg}"
-                    BorderBrush="{DynamicResource ColorNeutral600}" BorderThickness="1.5" CornerRadius="4">
-              <Path x:Name="CheckMark" Data="M3.5,8.5 L6.5,11.5 L12.5,4.5" Stroke="{DynamicResource ColorBg}" StrokeThickness="2" StrokeLineJoin="Round" Visibility="Collapsed" />
-            </Border>
-            <ContentPresenter Grid.Column="2" VerticalAlignment="Center" RecognizesAccessKey="True" />
+            <Grid VerticalAlignment="Center">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="18" />
+                <ColumnDefinition Width="10" />
+                <ColumnDefinition Width="*" />
+              </Grid.ColumnDefinitions>
+              <Border x:Name="CheckBoxBorder" Grid.Column="0" Width="18" Height="18" VerticalAlignment="Top" Background="{DynamicResource ColorBg}"
+                      BorderBrush="{DynamicResource ColorNeutral600}" BorderThickness="1.5" CornerRadius="4">
+                <Path x:Name="CheckMark" Data="M3.5,8.5 L6.5,11.5 L12.5,4.5" Stroke="{DynamicResource ColorBg}" StrokeThickness="2" StrokeLineJoin="Round" Visibility="Collapsed" />
+              </Border>
+              <ContentPresenter Grid.Column="2" VerticalAlignment="Top" RecognizesAccessKey="True" />
+            </Grid>
           </Grid>
           <ControlTemplate.Triggers>
             <Trigger Property="IsChecked" Value="True">
@@ -233,11 +236,14 @@
     <Setter Property="CaretBrush" Value="{DynamicResource ColorText}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="VerticalContentAlignment" Value="Center" />
+    <!-- 1 border + 6 + the text host's own 2 puts the value 9 in, where a dropdown's value starts. -->
+    <Setter Property="Padding" Value="6,0" />
     <Setter Property="Template">
       <Setter.Value>
         <ControlTemplate TargetType="TextBox">
+          <!-- The text host applies Padding itself, so the frame does not. -->
           <Border x:Name="TextBoxBorder" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
-                  BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                  BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6">
             <ScrollViewer x:Name="PART_ContentHost" />
           </Border>
           <ControlTemplate.Triggers>
@@ -357,6 +363,26 @@
               <Setter TargetName="ToggleBorder" Property="Opacity" Value="0.45" />
             </Trigger>
           </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+  <!-- A list with no frame padding of its own, so its rows start and end on the page edge, in line with the dividers around them. -->
+  <Style TargetType="ListBox">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="ListBox">
+          <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+            <ScrollViewer Padding="{TemplateBinding Padding}" Focusable="False"
+                          CanContentScroll="{TemplateBinding ScrollViewer.CanContentScroll}"
+                          HorizontalScrollBarVisibility="{TemplateBinding ScrollViewer.HorizontalScrollBarVisibility}"
+                          VerticalScrollBarVisibility="{TemplateBinding ScrollViewer.VerticalScrollBarVisibility}">
+              <ItemsPresenter />
+            </ScrollViewer>
+          </Border>
         </ControlTemplate>
       </Setter.Value>
     </Setter>
@@ -567,8 +593,8 @@
     <Setter Property="FontFamily" Value="{DynamicResource MonoFont}" />
     <Setter Property="FontSize" Value="13" />
     <Setter Property="Height" Value="30" />
-    <!-- The text box applies its padding on both its frame and its text host, so 4 + 4 + 3 puts the text on the page edge at -11. -->
-    <Setter Property="Padding" Value="4,0" />
+    <!-- 1 border + 8 + the text host's own 2 puts the text on the page edge at -11. -->
+    <Setter Property="Padding" Value="8,0" />
     <Setter Property="Margin" Value="-11,0,0,0" />
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderBrush" Value="Transparent" />

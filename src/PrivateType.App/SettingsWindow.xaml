@@ -313,7 +313,7 @@
                   <TextBlock Style="{StaticResource RowLabel}" Text="Custom file" />
                   <TextBlock Style="{StaticResource InfoMark}" ToolTip="WAV or MP3, up to 3 seconds of playback. Copied into app storage when saved." />
                 </StackPanel>
-                <TextBox x:Name="CustomSoundPathText" Grid.Column="1" Height="30" Padding="8,0" IsReadOnly="True" FontFamily="{DynamicResource MonoFont}" FontSize="12" AutomationProperties.Name="Custom ready sound file" />
+                <TextBox x:Name="CustomSoundPathText" Grid.Column="1" Height="30" IsReadOnly="True" FontFamily="{DynamicResource MonoFont}" FontSize="12" AutomationProperties.Name="Custom ready sound file" />
                 <Button x:Name="BrowseSoundButton" Grid.Column="2" Margin="8,0,0,0" Content="Browse…" AutomationProperties.Name="Choose custom ready sound file" Click="BrowseSound" />
               </Grid>
               <TextBlock Style="{StaticResource RowHint}" Text="WAV or MP3, up to 3 seconds of playback. Copied into app storage when saved." />

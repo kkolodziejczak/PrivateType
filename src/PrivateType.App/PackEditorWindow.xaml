@@ -50,7 +50,7 @@
               <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
             <TextBlock Style="{StaticResource RowLabel}" Text="Name" />
-            <TextBox x:Name="NameBox" Grid.Column="1" Height="30" Padding="3.5,0" FontSize="13" MaxLength="80" AutomationProperties.Name="Pack name" />
+            <TextBox x:Name="NameBox" Grid.Column="1" Height="30" FontSize="13" MaxLength="80" AutomationProperties.Name="Pack name" />
           </Grid>
         </Border>
         <Border Style="{StaticResource TableRow}">
@@ -85,7 +85,7 @@
                       <ColumnDefinition Width="*" />
                       <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <TextBox Height="30" Padding="3.5,0" FontFamily="{DynamicResource MonoFont}" FontSize="13" MaxLength="120"
+                    <TextBox Height="30" FontFamily="{DynamicResource MonoFont}" FontSize="13" MaxLength="120"
                              Text="{Binding Phrase, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Pack phrase" />
                     <Button Grid.Column="1" Style="{StaticResource IconKeyButton}" Margin="8,0,0,0" VerticalAlignment="Center" Content="×" FontSize="14"
                             Tag="{Binding}" Click="RemovePhrase" ToolTip="Remove phrase" AutomationProperties.Name="Remove phrase" />

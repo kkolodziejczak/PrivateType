@@ -79,7 +79,7 @@
               <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
             <TextBlock Style="{StaticResource RowLabel}" Text="Name" />
-            <TextBox x:Name="NameBox" Grid.Column="1" Height="30" Padding="3.5,0" FontSize="13" MaxLength="80" TextChanged="InputChanged" AutomationProperties.Name="Pack name" />
+            <TextBox x:Name="NameBox" Grid.Column="1" Height="30" FontSize="13" MaxLength="80" TextChanged="InputChanged" AutomationProperties.Name="Pack name" />
           </Grid>
         </Border>
         <Border Style="{StaticResource TableRow}">
@@ -107,7 +107,7 @@
         </Border>
 
         <TextBlock x:Name="CountText" Style="{StaticResource GroupLabel}" Margin="0,18,0,4" />
-        <ListBox x:Name="PhraseList" MaxHeight="232" Background="Transparent" BorderThickness="0" Padding="0" ItemContainerStyle="{StaticResource PhraseRow}"
+        <ListBox x:Name="PhraseList" MaxHeight="232" ItemContainerStyle="{StaticResource PhraseRow}"
                  ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto" AutomationProperties.Name="Phrases in this pack" />
         <Border BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,1,0,0" Padding="0,10,0,0">
           <TextBlock Foreground="{DynamicResource ColorNeutral400}" FontSize="12" TextWrapping="Wrap"

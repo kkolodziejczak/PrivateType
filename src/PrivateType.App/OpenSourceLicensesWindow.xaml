@@ -55,7 +55,7 @@
         <TextBlock FontSize="13" Foreground="{DynamicResource ColorNeutral400}" TextWrapping="Wrap"
                    Text="PrivateType is MIT-licensed. Full notices for every bundled component are included with the portable app." />
         <!-- A real text field: the notices can be selected and copied. -->
-        <TextBox x:Name="Notices" Grid.Row="1" Margin="0,14,0,0" Padding="6,4" IsReadOnly="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"
+        <TextBox x:Name="Notices" Grid.Row="1" Margin="0,14,0,0" Padding="12,8" IsReadOnly="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"
                  VerticalContentAlignment="Top" FontFamily="{DynamicResource MonoFont}" FontSize="12" Foreground="{DynamicResource ColorNeutral400}"
                  AutomationProperties.Name="License notices" />
       </Grid>
