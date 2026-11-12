@@ -386,7 +386,7 @@ public partial class SettingsWindow : Window
         var label = historyShortcut?.Label ?? KeyChord.DefaultHistory.Label;
         var kept = HistoryRetentionBox.SelectedValue as string != DictationHistoryRetentions.Off;
         HistoryShortcutBox.IsEnabled = kept;
-        HistoryShortcutLabel.Opacity = kept ? 0.8 : 0.45;
+        HistoryShortcutLabel.Opacity = kept ? 1 : 0.45;
         HistoryShortcutBox.Opacity = kept ? 1 : 0.45;
         HistoryHint.Text = !kept
             ? $"No dictations are kept, and {label} is left to Windows and other apps."

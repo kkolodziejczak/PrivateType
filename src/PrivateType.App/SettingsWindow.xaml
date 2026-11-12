@@ -58,7 +58,7 @@
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
           </Grid.RowDefinitions>
-          <ScrollViewer x:Name="SettingsScrollViewer" Grid.Row="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="24,18,14,24" Focusable="False">
+          <ScrollViewer x:Name="SettingsScrollViewer" Grid.Row="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
             <ScrollViewer.Resources>
               <Style TargetType="ScrollBar">
                 <Setter Property="Width" Value="10" />
@@ -75,7 +75,7 @@
                 </Setter>
               </Style>
             </ScrollViewer.Resources>
-        <Grid>
+        <Grid Margin="24,18,16,32">
         <StackPanel x:Name="GeneralPage">
           <!-- The heart of the page: each shortcut drawn as the keys you hold, then the language it dictates in. -->
           <TextBlock Style="{StaticResource GroupLabel}" Margin="0,0,0,6" Text="DICTATE WITH" />
@@ -92,7 +92,7 @@
                   <TextBox x:Name="KeyBox" Grid.Column="0" Style="{StaticResource KeycapRecorder}" Margin="-4,0,0,0" Text="{Binding ShortcutLabel, Mode=OneWay}" PreviewKeyDown="RecordShortcut"
                            ToolTip="Click, then press Ctrl+Shift plus a key." AutomationProperties.Name="{Binding ShortcutLabel, StringFormat='Shortcut {0}'}" />
                   <TextBlock x:Name="Arrow" Grid.Column="1" Margin="8,0,6,0" VerticalAlignment="Center" FontSize="16" Foreground="{DynamicResource ColorNeutral600}" Text="→" />
-                  <ComboBox x:Name="LanguageBox" Grid.Column="2" Height="32" MinWidth="150" HorizontalAlignment="Left" ItemsSource="{Binding SupportedLanguages}" SelectedValuePath="LocaleCode"
+                  <ComboBox x:Name="LanguageBox" Grid.Column="2" Height="32" ItemsSource="{Binding SupportedLanguages}" SelectedValuePath="LocaleCode"
                             SelectedValue="{Binding LocaleCode, Mode=TwoWay}" IsTextSearchEnabled="True" TextSearch.TextPath="Label"
                             AutomationProperties.Name="Recognition language" MaxDropDownHeight="320">
                     <ComboBox.ItemTemplate>
@@ -212,7 +212,7 @@
                   <ColumnDefinition Width="*" />
                   <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <TextBlock x:Name="HistoryShortcutLabel" Style="{StaticResource RowLabel}" Opacity="0.8" Text="Picker shortcut" />
+                <TextBlock x:Name="HistoryShortcutLabel" Style="{StaticResource RowLabel}" Text="Picker shortcut" />
                 <TextBlock Grid.Column="1" Style="{StaticResource InfoMark}" ToolTip="{Binding Text, ElementName=HistoryHint}" />
                 <TextBox x:Name="HistoryShortcutBox" Grid.Column="3" Style="{StaticResource KeycapRecorder}" FontSize="12" Margin="0,0,-4,0"
                          ToolTip="Click, then press the new shortcut, for example Win+Shift+V." AutomationProperties.Name="Recent dictations shortcut"
