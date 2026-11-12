@@ -12,7 +12,7 @@ public partial class ModelSetupWindow : Window
 {
     // Each stopped state: a title for what happened, one line of why, and one line of what to do.
     internal const string MissingEngineHeading = "Speech engine missing";
-    internal const string MissingEngineCause = "This copy of PrivateType came without the speech engine it needs to dictate.";
+    internal const string MissingEngineCause = "This copy of PrivateType came without its speech engine.";
     internal const string MissingEngineStep = "Download the complete PrivateType portable ZIP, extract every file, and start PrivateType from that folder.";
     internal const string EngineCouldNotStartHeading = "Speech engine couldn't start";
     internal const string EngineCouldNotStartCause = "The speech engine is here, but Windows couldn't start it.";
@@ -124,8 +124,8 @@ public partial class ModelSetupWindow : Window
         var verifying = total > 0 && downloaded >= total;
         HeadingText.Text = verifying ? "Verifying the download…" : $"Downloading {downloaded / 1024d / 1024d:F0} of {total / 1024d / 1024d:F0} MiB";
         StatusText.Text = verifying
-            ? $"Checking that {ChosenModel.DisplayName} arrived complete. Dictation is ready as soon as this finishes."
-            : $"{ChosenModel.DisplayName}, checked once it's here. Dictation is ready as soon as that finishes.";
+            ? $"{ChosenModel.DisplayName} · ready to dictate once it's checked."
+            : $"{ChosenModel.DisplayName} · checked next, then ready to dictate.";
         NextStepText.Text = string.Empty;
         ConsentPanel.Visibility = Visibility.Collapsed;
         DownloadButton.Visibility = Visibility.Collapsed;

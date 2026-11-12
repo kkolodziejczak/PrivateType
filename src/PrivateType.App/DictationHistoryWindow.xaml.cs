@@ -83,7 +83,7 @@ public partial class DictationHistoryWindow : Window
     internal const string OffTitle = "Recent dictations are off";
     internal const string OffText = "Turn them on in Settings → Recent dictations.";
     internal const string EmptyTitleText = "No dictations yet";
-    internal const string EmptyListText = "Each finished dictation appears here, so you can paste it again.";
+    internal const string EmptyListText = "Each one appears here to paste again.";
 
     // The empty list names the first dictation shortcut as the keys to press.
     private string shortcutVerb = "Hold your dictation shortcut";

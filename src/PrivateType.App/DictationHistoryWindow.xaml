@@ -79,11 +79,11 @@
         <!-- Empty: what is (the title), then what to do, with the dictation shortcut drawn as the keys to press. -->
         <StackPanel x:Name="EmptyPanel" Margin="24,24,24,28" Visibility="Collapsed" AutomationProperties.LiveSetting="Polite">
           <TextBlock x:Name="EmptyTitle" HorizontalAlignment="Center" FontSize="15" FontWeight="SemiBold" />
-          <TextBlock x:Name="EmptyText" Margin="0,8,0,0" Foreground="{DynamicResource ColorNeutral400}" FontSize="13" TextWrapping="Wrap" TextAlignment="Center" LineHeight="24">
+          <TextBlock x:Name="EmptyText" Margin="0,8,0,0" Foreground="{DynamicResource ColorNeutral400}" FontSize="13" TextWrapping="Wrap" TextAlignment="Center">
             <Run x:Name="EmptyVerb" /><InlineUIContainer BaselineAlignment="Center"><ItemsControl x:Name="EmptyShortcutKeys" Margin="2,0" Focusable="False">
               <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
-                <DataTemplate><Border Style="{StaticResource HintKey}" Margin="2,0"><TextBlock Style="{StaticResource HintKeyLegend}" Text="{Binding Legend}" /></Border></DataTemplate>
+                <DataTemplate><Border Style="{StaticResource HintKey}" Margin="2,3"><TextBlock Style="{StaticResource HintKeyLegend}" LineHeight="NaN" Text="{Binding Legend}" /></Border></DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl></InlineUIContainer><Run x:Name="EmptyRest" />
           </TextBlock>
