@@ -211,15 +211,24 @@ internal static class SettingsModelProbe
                 && link.NavigateUri == SpeechModelCatalog.Parakeet.LicenseUri, "A new install must start on the recommended Parakeet, listed first, with its terms.");
             var badges = cards.Select(card => Descendants(card).OfType<TextBlock>().Any(text => text.Text == "RECOMMENDED" && text.IsVisible)).ToList();
             Require(badges.SequenceEqual([true, false]), "Only the recommended model carries the Recommended tag.");
-            // When to choose Nemotron is said on its own card: live words, phrase boosting and Asian languages.
-            var advice = Descendants(cards[1]).OfType<TextBlock>().Single(text => text.Text.Contains("Asian", StringComparison.Ordinal));
-            Require(advice.IsVisible && advice.Text.Contains("while you speak", StringComparison.Ordinal) && advice.Text.Contains("phrase boosting", StringComparison.Ordinal),
-                "Setup must say when to choose Nemotron instead.");
-            Require(advice.TranslatePoint(new Point(0, advice.ActualHeight), setup).Y <= setup.ActualHeight, "The advice must fit inside the setup window.");
+            // When to choose Nemotron is said on its own row: live words, your own phrases, and Asian languages.
+            var advice = Descendants(cards[1]).OfType<TextBlock>().Where(text => text.IsVisible).Select(text => text.Text).ToList();
+            Require(advice.Any(text => text.Contains("as you speak", StringComparison.Ordinal)) && advice.Any(text => text.Contains("your own phrases", StringComparison.Ordinal))
+                && advice.Any(text => text.Contains("Asian", StringComparison.Ordinal)), "Setup must say when to choose Nemotron instead.");
+            var lastAdvice = Descendants(cards[1]).OfType<TextBlock>().Last(text => text.IsVisible);
+            Require(lastAdvice.TranslatePoint(new Point(0, lastAdvice.ActualHeight), setup).Y <= setup.ActualHeight, "The advice must fit inside the setup window.");
             Capture(setup, outputDirectory, "model-consent-recommended.png");
 
+            // Consent is on the review step: ticked there, then Back and the other model clears it.
+            VisibleButton(setup, "Continue with Parakeet").RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
             terms.IsChecked = true;
+            Flush(setup);
+            Require(((Button)setup.FindName("DownloadButton")).IsEnabled, "Ticking the terms must allow the download.");
+            VisibleButton(setup, "Back").RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+            Flush(setup);
+            Require(cards[0].IsChecked == true && terms.IsChecked == true, "Back must keep the choice and the consent given for it.");
             cards[1].IsChecked = true;
+            VisibleButton(setup, "Continue with Nemotron").RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
             Flush(setup);
             Require(setup.ChosenModel.Id == SpeechModelCatalog.NemotronId, "Choosing a card must choose its model.");
             Require(link.NavigateUri == SpeechModelCatalog.Nemotron.LicenseUri, "Terms must follow the chosen model.");

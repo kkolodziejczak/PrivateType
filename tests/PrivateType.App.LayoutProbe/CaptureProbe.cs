@@ -195,14 +195,18 @@ internal static class CaptureProbe
 
     private static void ModelSetup(string output)
     {
-        Draw(Consent(SpeechModelCatalog.ParakeetId, ticked: false), output, "model-setup", "setup-consent");
-        Draw(Consent(SpeechModelCatalog.ParakeetId, ticked: true), output, "model-setup", "setup-consent-ticked");
-        Draw(Consent(SpeechModelCatalog.NemotronId, ticked: false), output, "model-setup", "setup-consent-nemotron");
-        Draw(Consent(SpeechModelCatalog.NemotronId, ticked: true), output, "model-setup", "setup-consent-nemotron-ticked");
-        // A portable-local copy has the longest storage note.
-        Draw(Consent(SpeechModelCatalog.ParakeetId, ticked: false, ModelStorageMode.Portable), output, "model-setup", "setup-consent-portable");
-        Draw(Consent(SpeechModelCatalog.NemotronId, ticked: false), output, "model-setup", "setup-consent-focus", window =>
+        // Step 1, choosing: as setup opens, with the other model chosen, and with keyboard focus on the second row while Parakeet stays chosen.
+        Draw(Setup(SpeechModelCatalog.ParakeetId), output, "model-setup", "setup-choose");
+        Draw(Setup(SpeechModelCatalog.NemotronId), output, "model-setup", "setup-choose-nemotron");
+        Draw(Setup(SpeechModelCatalog.ParakeetId), output, "model-setup", "setup-choose-focus", window =>
             FocusKeyboard(window, Descendants((ItemsControl)window.FindName("ModelChoices")).OfType<RadioButton>().ElementAt(1)));
+        // Step 2, reviewing: on arrival the box is empty; then ticked.
+        Draw(Review(SpeechModelCatalog.ParakeetId, ticked: false), output, "model-setup", "setup-review");
+        Draw(Review(SpeechModelCatalog.ParakeetId, ticked: true), output, "model-setup", "setup-review-ticked");
+        Draw(Review(SpeechModelCatalog.NemotronId, ticked: false), output, "model-setup", "setup-review-nemotron");
+        Draw(Review(SpeechModelCatalog.NemotronId, ticked: true), output, "model-setup", "setup-review-nemotron-ticked");
+        // A portable-local copy has the longest storage sentence: the tightest fit.
+        Draw(Review(SpeechModelCatalog.ParakeetId, ticked: false, ModelStorageMode.Portable), output, "model-setup", "setup-review-portable");
         // The app reports the chosen model's manifest size as the download total.
         var total = SpeechModelCatalog.Parakeet.Manifest.ExpectedBytes;
         var downloadStart = new ModelSetupWindow();
@@ -231,12 +235,20 @@ internal static class CaptureProbe
         Draw(couldNotStart, output, "model-setup", "setup-engine-start");
     }
 
-    private static ModelSetupWindow Consent(string modelId, bool ticked, ModelStorageMode storage = ModelStorageMode.Shared)
+    private static ModelSetupWindow Setup(string modelId, ModelStorageMode storage = ModelStorageMode.Shared)
     {
-        var consent = new ModelSetupWindow(modelId);
-        consent.ShowDownloadConsent(storage);
-        ((CheckBox)consent.FindName("TermsCheckBox")).IsChecked = ticked;
-        return consent;
+        var setup = new ModelSetupWindow(modelId);
+        setup.ShowDownloadConsent(storage);
+        return setup;
+    }
+
+    // Reached the way a person does: Continue on step 1, then the box ticked or not.
+    private static ModelSetupWindow Review(string modelId, bool ticked, ModelStorageMode storage = ModelStorageMode.Shared)
+    {
+        var review = Setup(modelId, storage);
+        ((Button)review.FindName("ContinueButton")).RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
+        ((CheckBox)review.FindName("TermsCheckBox")).IsChecked = ticked;
+        return review;
     }
 
     private static void History(string output)
