@@ -176,9 +176,9 @@ internal static class CaptureProbe
             }
 
             StopAnimations(window);
-            // Some windows place themselves where the pointer is; move away from it so nothing draws hovered.
-            window.Left = -20000;
-            window.Top = -20000;
+            // Some windows place themselves under the pointer; take the content out of hit testing so nothing draws hovered.
+            if (window.Content is UIElement content)
+                content.IsHitTestVisible = false;
             Flush(window);
             System.Windows.Input.Mouse.Synchronize();
             Flush(window);
