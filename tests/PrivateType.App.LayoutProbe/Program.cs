@@ -15,24 +15,41 @@ if (args.Length >= 3 && string.Equals(args[0], "--cache-worker", StringCompariso
     return;
 }
 
-var monitorPlacementOnly = args.Length == 1 && string.Equals(args[0], "--monitor-placement-only", StringComparison.OrdinalIgnoreCase);
-Exception? probeFailure = null;
-var thread = new Thread(() =>
+if (args.Length == 2 && string.Equals(args[0], "--capture", StringComparison.OrdinalIgnoreCase))
 {
-    try
+    RunOnStaThread(() =>
     {
-        RenderWindows(monitorPlacementOnly);
-    }
-    catch (Exception exception)
+        // Load only the theme: instantiating App would start a real PrivateType (hotkeys, tray, model load).
+        var application = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
+        application.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("/PrivateType;component/Theme.xaml", UriKind.Relative) });
+        CaptureProbe.Run(args[1]);
+    });
+    return;
+}
+
+var monitorPlacementOnly =args.Length == 1 && string.Equals(args[0], "--monitor-placement-only", StringComparison.OrdinalIgnoreCase);
+RunOnStaThread(() => RenderWindows(monitorPlacementOnly));
+
+static void RunOnStaThread(Action work)
+{
+    Exception? failure = null;
+    var thread = new Thread(() =>
     {
-        probeFailure = exception;
-    }
-}) { IsBackground = false };
-thread.SetApartmentState(ApartmentState.STA);
-thread.Start();
-thread.Join();
-if (probeFailure is not null)
-    throw probeFailure;
+        try
+        {
+            work();
+        }
+        catch (Exception exception)
+        {
+            failure = exception;
+        }
+    }) { IsBackground = false };
+    thread.SetApartmentState(ApartmentState.STA);
+    thread.Start();
+    thread.Join();
+    if (failure is not null)
+        throw failure;
+}
 
 static void RenderWindows(bool monitorPlacementOnly)
 {
