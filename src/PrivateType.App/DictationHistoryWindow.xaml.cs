@@ -80,37 +80,39 @@ public partial class DictationHistoryWindow : Window
 
     public event Action<DictationHistoryEntry>? Chosen;
 
-    internal const string OffTitle = "Recent dictations are off";
-    internal const string OffText = "Turn them on in Settings → Recent dictations.";
-    internal const string EmptyTitleText = "No dictations yet";
-    internal const string EmptyListText = "Each one appears here to paste again.";
+    // The empty list's titles say what the list is for; the line under each says what to do.
+    internal const string OffText = "Recent dictations are off";
+    internal const string OffStep = "Turn them on in Settings → Recent dictations.";
+    internal const string EmptyListText = "No dictations to paste yet";
 
     // The empty list names the first dictation shortcut as the keys to press.
     private string shortcutVerb = "Hold your dictation shortcut";
-    private string shortcutRest = " and speak. ";
+    private string shortcutRest = "and speak in any app.";
+    private string? shortcutLabel;
 
     private void ShowFirstShortcut(PortableSettings? settings)
     {
-        var first = settings?.Shortcuts.Count > 0 ? HotkeyCatalog.FromBindings(settings.Shortcuts)[0].Label : null;
+        var first = shortcutLabel = settings?.Shortcuts.Count > 0 ? HotkeyCatalog.FromBindings(settings.Shortcuts)[0].Label : null;
         var toggle = settings?.ShortcutMode == DictationShortcutModes.Toggle;
         shortcutVerb = (toggle ? "Press" : "Hold") + (first is null ? " your dictation shortcut" : string.Empty);
-        shortcutRest = toggle ? " and speak, then press it again. " : " and speak. ";
+        shortcutRest = toggle ? "and speak, then press it again." : "and speak in any app.";
         EmptyShortcutKeys.ItemsSource = KeycapLegendsConverter.Split(first);
     }
 
     internal int VisibleCount => EntriesList.Items.Count;
 
-    internal string? EmptyMessage => EmptyPanel.Visibility == Visibility.Visible ? (history.IsEnabled ? EmptyListText : OffText) : null;
+    internal string? EmptyMessage => EmptyPanel.Visibility == Visibility.Visible ? EmptyTitle.Text : null;
 
     // Off: the title says so and the line says where to turn it on. Empty: how to make the first dictation.
     private void ShowEmptyMessage()
     {
         var on = history.IsEnabled;
-        EmptyTitle.Text = on ? EmptyTitleText : OffTitle;
+        EmptyTitle.Text = on ? EmptyListText : OffText;
         EmptyVerb.Text = on ? shortcutVerb : string.Empty;
         EmptyShortcutKeys.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
-        EmptyRest.Text = on ? shortcutRest + EmptyListText : OffText;
-        AutomationProperties.SetName(EmptyPanel, $"{EmptyTitle.Text}. {EmptyVerb.Text} {EmptyRest.Text}");
+        EmptyRest.Text = on ? shortcutRest : OffStep;
+        var keys = on && shortcutLabel is not null ? $" {shortcutLabel}" : string.Empty;
+        AutomationProperties.SetName(EmptyPanel, $"{EmptyTitle.Text}. {EmptyVerb.Text}{keys} {EmptyRest.Text}");
     }
 
     internal void Refresh(int selectIndex)
