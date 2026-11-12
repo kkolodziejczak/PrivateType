@@ -27,7 +27,8 @@
       <!-- A small keycap that names a key in the footer hints. -->
       <Style x:Key="HintKey" TargetType="Border">
         <Setter Property="MinWidth" Value="24" />
-        <Setter Property="Padding" Value="5,1,5,1" />
+        <Setter Property="Height" Value="20" />
+        <Setter Property="Padding" Value="5,0" />
         <Setter Property="VerticalAlignment" Value="Center" />
         <Setter Property="CornerRadius" Value="4" />
         <Setter Property="Background" Value="{DynamicResource ColorKeycap}" />
@@ -36,12 +37,13 @@
       </Style>
       <Style x:Key="HintKeyLegend" TargetType="TextBlock">
         <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="VerticalAlignment" Value="Center" />
         <Setter Property="FontFamily" Value="{DynamicResource MonoFont}" />
         <Setter Property="FontSize" Value="11" />
         <Setter Property="Foreground" Value="{DynamicResource ColorText}" />
       </Style>
       <Style x:Key="HintAction" TargetType="TextBlock">
-        <Setter Property="Margin" Value="6,0,14,0" />
+        <Setter Property="Margin" Value="6,0,14,2" />
         <Setter Property="VerticalAlignment" Value="Center" />
         <Setter Property="FontSize" Value="12" />
         <Setter Property="Foreground" Value="{DynamicResource ColorNeutral400}" />
@@ -76,7 +78,7 @@
       <Grid Grid.Row="1" Margin="0,4,0,0">
         <TextBlock x:Name="EmptyText" Margin="24,22,24,26" Foreground="{DynamicResource ColorNeutral400}" FontSize="13" TextWrapping="Wrap" TextAlignment="Center"
                    Visibility="Collapsed" AutomationProperties.LiveSetting="Polite" />
-        <!-- A flat mono list: hairlines between rows, an accent bar on the selected row, the remove key on hover and on the selected row. -->
+        <!-- A flat mono list: hairlines between rows, a tinted selected row, the focus ring only for keyboard focus, the remove key on hover and on the selected row. -->
         <ListBox x:Name="EntriesList" Background="Transparent" BorderThickness="0" Padding="0" HorizontalContentAlignment="Stretch"
                  ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto"
                  AutomationProperties.Name="Recent dictations" KeyboardNavigation.TabNavigation="Once">
@@ -92,15 +94,10 @@
                 <Setter.Value>
                   <ControlTemplate TargetType="ListBoxItem">
                     <Grid x:Name="Row" Background="Transparent">
-                      <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="2" />
-                        <ColumnDefinition Width="*" />
-                      </Grid.ColumnDefinitions>
-                      <Border x:Name="SelectedBar" Margin="0,8" CornerRadius="1" Background="Transparent" />
-                      <Border Grid.Column="1" Margin="14,0,10,0" Padding="0,10" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,0,0,1">
+                                            <Border Margin="16,0,10,0" Padding="0,10" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,0,0,1">
                         <ContentPresenter />
                       </Border>
-                      <Border x:Name="FocusRing" Grid.ColumnSpan="2" Margin="4,2" BorderBrush="{DynamicResource ColorAccent}" BorderThickness="1.5" CornerRadius="6"
+                      <Border x:Name="FocusRing" Margin="6,2" BorderBrush="{DynamicResource ColorAccent}" BorderThickness="1.5" CornerRadius="6"
                               Visibility="Collapsed" IsHitTestVisible="False" />
                     </Grid>
                     <ControlTemplate.Triggers>
@@ -109,7 +106,6 @@
                       </Trigger>
                       <Trigger Property="IsSelected" Value="True">
                         <Setter TargetName="Row" Property="Background" Value="{DynamicResource ColorHairline}" />
-                        <Setter TargetName="SelectedBar" Property="Background" Value="{DynamicResource ColorAccent}" />
                       </Trigger>
                       <Trigger Property="IsKeyboardFocused" Value="True">
                         <Setter TargetName="FocusRing" Property="Visibility" Value="Visible" />
@@ -162,7 +158,7 @@
             <ColumnDefinition Width="Auto" />
           </Grid.ColumnDefinitions>
           <StackPanel Orientation="Horizontal">
-            <Border Style="{StaticResource HintKey}"><TextBlock Style="{StaticResource HintKeyLegend}" Text="↵" /></Border>
+            <Border Style="{StaticResource HintKey}"><TextBlock Style="{StaticResource HintKeyLegend}" Text="Enter" /></Border>
             <TextBlock Style="{StaticResource HintAction}" Text="paste" />
             <Border Style="{StaticResource HintKey}"><TextBlock Style="{StaticResource HintKeyLegend}" Text="Del" /></Border>
             <TextBlock Style="{StaticResource HintAction}" Text="remove" />

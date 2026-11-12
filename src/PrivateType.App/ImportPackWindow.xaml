@@ -69,7 +69,7 @@
               <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
             <TextBlock Style="{StaticResource RowLabel}" Text="File" />
-            <TextBlock x:Name="FileText" Grid.Column="1" Margin="9,0,0,0" Style="{StaticResource RowValue}" TextTrimming="CharacterEllipsis" />
+            <TextBlock x:Name="FileText" Grid.Column="1" Margin="10,0,0,0" Style="{StaticResource RowValue}" TextTrimming="CharacterEllipsis" />
           </Grid>
         </Border>
         <Border Style="{StaticResource TableRow}">
@@ -79,7 +79,7 @@
               <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
             <TextBlock Style="{StaticResource RowLabel}" Text="Name" />
-            <TextBox x:Name="NameBox" Grid.Column="1" Height="30" Padding="8,0" FontSize="13" MaxLength="80" TextChanged="InputChanged" AutomationProperties.Name="Pack name" />
+            <TextBox x:Name="NameBox" Grid.Column="1" Height="30" Padding="0" FontSize="13" MaxLength="80" TextChanged="InputChanged" AutomationProperties.Name="Pack name" />
           </Grid>
         </Border>
         <Border Style="{StaticResource TableRow}">
