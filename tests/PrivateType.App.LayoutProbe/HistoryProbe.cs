@@ -233,7 +233,12 @@ internal static class HistoryProbe
             Require(clipboard.IsChecked == false && clipboard.IsEnabled, "Clipboard history starts off and is available while pasting.");
             Require(hint.Text.Contains("Win+Shift+V", StringComparison.Ordinal), "The hint names the shortcut.");
             var shortcutBox = Find<TextBox>(window, "HistoryShortcutBox");
-            Require(shortcutBox.Text == "Win+Shift+V" && shortcutBox.IsEnabled && shortcutBox.ActualWidth is >= 128 and < 160, "The shortcut box shows the current shortcut at the width of the dictation shortcut boxes.");
+            // Shortcuts are drawn as keycaps sized to their keys, so the promise is the same keycap size as the dictation shortcuts, fully shown.
+            var dictationBox = Descendants(window).OfType<TextBox>().First(box => box.Name == "KeyBox");
+            Require(shortcutBox.Text == "Win+Shift+V" && shortcutBox.IsEnabled
+                && shortcutBox.FontSize == dictationBox.FontSize && Math.Abs(shortcutBox.ActualHeight - dictationBox.ActualHeight) < 0.5
+                && shortcutBox.ActualWidth + 0.5 >= shortcutBox.DesiredSize.Width - shortcutBox.Margin.Left - shortcutBox.Margin.Right,
+                "The shortcut box shows the whole current shortcut at the keycap size of the dictation shortcut boxes.");
             retention.BringIntoView();
             clipboardHint.BringIntoView();
             Flush(window);

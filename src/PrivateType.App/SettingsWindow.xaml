@@ -213,7 +213,7 @@
                   <TextBlock x:Name="HistoryShortcutLabel" Style="{StaticResource RowLabel}" Text="Picker shortcut" />
                   <TextBlock Style="{StaticResource InfoMark}" ToolTip="{Binding Text, ElementName=HistoryHint}" />
                 </StackPanel>
-                <TextBox x:Name="HistoryShortcutBox" Grid.Column="1" Style="{StaticResource KeycapRecorder}" FontSize="12" Margin="-4,0,0,0"
+                <TextBox x:Name="HistoryShortcutBox" Grid.Column="1" Style="{StaticResource KeycapRecorder}" Margin="-4,0,0,0"
                          ToolTip="Click, then press the new shortcut, for example Win+Shift+V." AutomationProperties.Name="Recent dictations shortcut"
                          GotKeyboardFocus="StartRecordingHistoryShortcut" LostKeyboardFocus="StopRecordingHistoryShortcut" />
               </Grid>
