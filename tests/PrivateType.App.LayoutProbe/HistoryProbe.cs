@@ -235,9 +235,14 @@ internal static class HistoryProbe
             var shortcutBox = Find<TextBox>(window, "HistoryShortcutBox");
             // Shortcuts are drawn as keycaps sized to their keys, so the promise is the same keycap size as the dictation shortcuts, fully shown.
             var dictationBox = Descendants(window).OfType<TextBox>().First(box => box.Name == "KeyBox");
+            var renderedWidth = shortcutBox.ActualWidth;
+            shortcutBox.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            var neededWidth = shortcutBox.DesiredSize.Width - shortcutBox.Margin.Left - shortcutBox.Margin.Right;
+            shortcutBox.InvalidateMeasure();
+            Flush(window);
             Require(shortcutBox.Text == "Win+Shift+V" && shortcutBox.IsEnabled
                 && shortcutBox.FontSize == dictationBox.FontSize && Math.Abs(shortcutBox.ActualHeight - dictationBox.ActualHeight) < 0.5
-                && shortcutBox.ActualWidth + 0.5 >= shortcutBox.DesiredSize.Width - shortcutBox.Margin.Left - shortcutBox.Margin.Right,
+                && renderedWidth + 0.5 >= neededWidth,
                 "The shortcut box shows the whole current shortcut at the keycap size of the dictation shortcut boxes.");
             retention.BringIntoView();
             clipboardHint.BringIntoView();
