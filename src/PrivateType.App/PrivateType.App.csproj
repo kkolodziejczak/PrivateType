@@ -18,6 +18,8 @@
     <Resource Include="Assets\PrivateType.listening.ico" />
     <EmbeddedResource Include="Assets\ModelReady.wav" LogicalName="PrivateType.ModelReady.wav" />
     <EmbeddedResource Include="Assets\Cues\*.wav" LogicalName="PrivateType.Cues.%(Filename)%(Extension)" />
+    <!-- Also read by Build-PortableRelease.ps1 to write THIRD-PARTY-NOTICES.txt. -->
+    <EmbeddedResource Include="Credits.json" LogicalName="PrivateType.Credits.json" />
   </ItemGroup>
   <!-- .engine is untracked, so a fresh checkout or worktree has none; an app built without it cannot load the model.
        The script does nothing when the pinned engine is already there. A configured engine root replaces the

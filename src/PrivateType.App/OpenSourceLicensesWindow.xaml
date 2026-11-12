@@ -1,7 +1,7 @@
 <Window x:Class="PrivateType.App.OpenSourceLicensesWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="PrivateType open-source licenses" Icon="/PrivateType;component/Assets/PrivateType.ready.ico" Width="620" Height="520" WindowStartupLocation="CenterOwner" WindowStyle="None" UseLayoutRounding="True"
+        Title="PrivateType open-source licenses" Icon="/PrivateType;component/Assets/PrivateType.ready.ico" Width="480" SizeToContent="Height" MaxHeight="640" WindowStartupLocation="CenterOwner" WindowStyle="None" UseLayoutRounding="True"
         AllowsTransparency="True" Background="Transparent" Foreground="{DynamicResource ColorText}"
         FontFamily="{DynamicResource AppFont}">
   <Window.Resources>
@@ -47,28 +47,21 @@
                   AutomationProperties.Name="Close" Click="Close" />
         </Grid>
       </Border>
-      <Grid Grid.Row="1" Margin="24,18,24,20">
-        <Grid.RowDefinitions>
-          <RowDefinition Height="Auto" />
-          <RowDefinition Height="*" />
-        </Grid.RowDefinitions>
-        <TextBlock x:Name="IntroText" FontSize="13" Foreground="{DynamicResource ColorNeutral400}" TextWrapping="Wrap" />
-        <!-- A real text field: the notices can be selected and copied. -->
-        <TextBox x:Name="Notices" Grid.Row="1" Margin="0,14,0,0" Padding="12,8" IsReadOnly="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"
-                 VerticalContentAlignment="Top" FontSize="12" Foreground="{DynamicResource ColorNeutral400}"
-                 AutomationProperties.Name="License notices" />
-        <!-- No notices beside this copy: say what is missing, and where the complete set comes from. -->
-        <StackPanel x:Name="MissingNoticesPanel" Grid.Row="1" Margin="0,0,0,24" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed">
-          <TextBlock HorizontalAlignment="Center" FontSize="15" FontWeight="SemiBold" Text="The notices aren't in this copy" />
-          <TextBlock Margin="0,8,0,0" MaxWidth="420" FontSize="13" Foreground="{DynamicResource ColorNeutral400}" TextAlignment="Center" TextWrapping="Wrap"
-                     Text="This copy has no licenses folder with THIRD-PARTY-NOTICES.txt. The complete PrivateType portable ZIP includes it, with every license text." />
-        </StackPanel>
-      </Grid>
-      <!-- The same slim footer as Settings: the secondary action as text, the primary filled at the right. -->
+      <!-- One page of credits. A read-only rich text box, so every line can be selected and copied; it scrolls when the
+           page is taller than the window may grow. The page margin is the document's, so the scrollbar sits at the edge. -->
+      <RichTextBox x:Name="CreditsPage" Grid.Row="1" IsReadOnly="True" Background="Transparent" BorderThickness="0" Padding="0"
+                   VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" FocusVisualStyle="{x:Null}"
+                   Foreground="{DynamicResource ColorText}" SelectionBrush="{DynamicResource ColorAccent}" SelectionOpacity="0.4"
+                   AutomationProperties.Name="What PrivateType is built with">
+        <FlowDocument x:Name="Page" PagePadding="28,22,28,20" FontFamily="{DynamicResource AppFont}" FontSize="13" />
+      </RichTextBox>
+      <!-- The same slim footer as Settings: the secondary action as text, the primary filled at the right. Each action is shown only when its target exists. -->
       <Border Grid.Row="2" Padding="24,10,16,12" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,1,0,0">
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-          <Button x:Name="OpenLicensesFolderButton" Style="{StaticResource GhostButton}" Margin="0,0,8,0" Height="32" Padding="12,0" Content="Open licenses folder" Click="OpenLicensesFolder" />
-          <Button Style="{StaticResource PrimaryButton}" Height="32" Padding="16,0" Content="Close" Click="Close" />
+          <Button Style="{StaticResource GhostButton}" Height="32" Padding="12,0" Content="Close" Click="Close" />
+          <Button x:Name="FullNoticesButton" Margin="8,0,0,0" Height="32" Padding="14,0" Content="Full notices" Click="OpenFullNotices" />
+          <Button x:Name="OpenLicenseTextsButton" Style="{StaticResource PrimaryButton}" Margin="8,0,0,0" Height="32" Padding="16,0" Content="Open license texts" Click="OpenLicenseTexts" />
+          <Button x:Name="GetCompleteZipButton" Style="{StaticResource PrimaryButton}" Margin="8,0,0,0" Height="32" Padding="16,0" Content="Get the complete ZIP" Click="GetCompleteZip" />
         </StackPanel>
       </Border>
     </Grid>

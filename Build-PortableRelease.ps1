@@ -27,6 +27,29 @@ function Copy-ReleaseFile {
     Copy-Item -LiteralPath $SourcePath -Destination $DestinationPath
 }
 
+# Wraps a notice at 80 columns; a bullet's later lines hang under its text.
+function Format-NoticeLines {
+    param(
+        [Parameter(Mandatory)] [string] $Text,
+        [string] $Indent = '  '
+    )
+
+    $lines = [System.Collections.Generic.List[string]]::new()
+    $line = ''
+    foreach ($word in $Text -split ' ') {
+        if ($line -and ($line.Length + 1 + $word.Length) -gt 80) {
+            $lines.Add($line)
+            $line = "$Indent$word"
+        } elseif ($line) {
+            $line += " $word"
+        } else {
+            $line = $word
+        }
+    }
+    if ($line) { $lines.Add($line) }
+    $lines
+}
+
 function Add-ReleaseNotices {
     param(
         [Parameter(Mandatory)] [string] $PublishDirectory,
@@ -48,35 +71,29 @@ function Add-ReleaseNotices {
     Copy-ReleaseFile (Join-Path $dotnetRoot 'LICENSE.txt') (Join-Path $licensesDirectory 'dotnet-LICENSE.txt')
     Copy-ReleaseFile (Join-Path $dotnetRoot 'ThirdPartyNotices.txt') (Join-Path $licensesDirectory 'dotnet-THIRD-PARTY-NOTICES.txt')
 
-    @'
-PrivateType third-party notices
-================================
-
-PrivateType source and maintainer-owned assets are available under the MIT License
-in PrivateType-MIT.txt. Components included in this portable release remain under
-their own terms. This folder contains the full texts and notices used for the
-shipped build:
-
-* NeMo-Speech.cpp 0.2.0, NVIDIA's unmodified Windows x64 Vulkan release
-  (nemo-speech-0.2.0-windows-x86_64-vulkan.zip, SHA-256
-  edf15a04ba98740aa0ab75ae4681ac7ad0a488b22b35ce2cbebd10590bb1c1e1):
-  Apache-2.0 license, NVIDIA NOTICE, and the licenses NVIDIA ships for ggml,
-  llama.cpp, cpp-httplib, miniaudio, Abseil, Protocol Buffers, SentencePiece,
-  and utf8-range, in the NeMo-Speech.cpp folder. The Microsoft Visual C++
-  runtime libraries in engine\bin are redistributed as part of that release.
-* Vulkan loader 1.4.328.1 (engine\bin\vulkan-1.dll), unmodified, from LunarG's
-  VulkanRT-X64-1.4.328.1-Components.zip (SHA-256
-  293efbb2c11e60429df7770f40e3c5c811a7fa42af81de0cc41e8718ddb2b373): MIT and
-  Apache-2.0, in VulkanRT-License.txt.
-* NAudio 2.2.1: MIT.
-* The spoken cue recordings were generated with Kokoro-82M by hexgrad
-  (Apache-2.0, https://huggingface.co/hexgrad/Kokoro-82M); no model is included.
-* Self-contained .NET runtime: .NET Library License and accompanying notices.
-
-The NVIDIA speech models are not included in this ZIP. They are downloaded
-separately by the user and are governed by their own terms: OpenMDW-1.1
-(Nemotron) and CC-BY-4.0 (Parakeet).
-'@ | Set-Content -LiteralPath (Join-Path $licensesDirectory 'THIRD-PARTY-NOTICES.txt') -Encoding utf8
+    # The components are the app's own Credits.json, which the Licenses window shows, so the two can't drift.
+    $credits = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'src\PrivateType.App\Credits.json') -Raw -Encoding utf8 | ConvertFrom-Json
+    $components = foreach ($component in $credits.components) {
+        $entry = "* $($component.name)"
+        if ($component.maker) { $entry += " $($component.maker)" }
+        $entry += ", $($component.release): $($component.license). $($component.role)"
+        if ($component.includes) { $entry += " $($component.includes)" }
+        if ($component.texts) { $entry += " License texts: $($component.texts)." }
+        Format-NoticeLines $entry
+    }
+    $models = @($credits.models | ForEach-Object { "$($_.license) ($($_.name))" })
+    $modelTerms = if ($models.Count -gt 1) { ($models[0..($models.Count - 2)] -join ', ') + " and $($models[-1])" } else { $models -join '' }
+    $notices = @(
+        'PrivateType third-party notices'
+        '================================'
+        ''
+        'PrivateType source and maintainer-owned assets are available under the MIT License'
+        'in PrivateType-MIT.txt. Components included in this portable release remain under'
+        'their own terms. This folder contains the full texts and notices used for the'
+        'shipped build:'
+        ''
+    ) + $components + @('') + (Format-NoticeLines -Indent '' "The NVIDIA speech models are not included in this ZIP. They are downloaded separately by the user and are governed by their own terms: $modelTerms.")
+    $notices -join [Environment]::NewLine | Set-Content -LiteralPath (Join-Path $licensesDirectory 'THIRD-PARTY-NOTICES.txt') -Encoding utf8
 }
 
 if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
