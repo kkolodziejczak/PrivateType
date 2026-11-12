@@ -8,7 +8,7 @@ internal static class DiagnosticTitles
     {
         // A dictation's problems: the key adds the detail that decides what happened.
         ["injection.skipped reason=empty-transcript"] = ("No words were recognized, so nothing was typed", null),
-        ["injection.skipped reason=target-ineligible"] = ("The text wasn't typed: the window you dictated into changed or can't take text", null),
+        ["injection.skipped reason=target-ineligible"] = ("Text not typed: the target window changed or can't take text", null),
         ["session.failed phase=created"] = ("The speech engine couldn't start this dictation", null),
         ["session.failed phase=capture.start"] = ("The microphone couldn't start recording", null),
         ["session.failed phase=recording"] = ("Dictation stopped while recording", null),

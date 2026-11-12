@@ -128,7 +128,15 @@
         <Border x:Name="Latest" Grid.Row="1" Padding="16,14" Background="{DynamicResource ColorNeutral900}" CornerRadius="8"
                 AutomationProperties.Name="{Binding SpokenName}">
           <StackPanel>
-            <StackPanel Orientation="Horizontal">
+            <!-- A problem's mark, word and time; a neutral panel has none of them and carries its mark beside the title instead. -->
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+              <StackPanel.Style>
+                <Style TargetType="StackPanel">
+                  <Style.Triggers>
+                    <DataTrigger Binding="{Binding IsProblem}" Value="False"><Setter Property="Visibility" Value="Collapsed" /></DataTrigger>
+                  </Style.Triggers>
+                </Style>
+              </StackPanel.Style>
               <ContentControl VerticalAlignment="Center" Content="{Binding Severity}" ContentTemplate="{StaticResource SeverityMark}" Focusable="False" />
               <TextBlock Margin="6,0,0,0" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold" Text="{Binding Word}">
                 <TextBlock.Style>
@@ -142,7 +150,18 @@
               </TextBlock>
               <TextBlock Margin="6,0,0,0" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource ColorNeutral400}" Typography.NumeralAlignment="Tabular" Text="{Binding ShortTime}" />
             </StackPanel>
-            <TextBlock Margin="0,6,0,0" FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap" Text="{Binding Title}" />
+            <DockPanel>
+              <ContentControl Margin="0,0,10,0" VerticalAlignment="Center" Content="{Binding Severity}" ContentTemplate="{StaticResource SeverityMark}" Focusable="False">
+                <ContentControl.Style>
+                  <Style TargetType="ContentControl">
+                    <Style.Triggers>
+                      <DataTrigger Binding="{Binding IsProblem}" Value="True"><Setter Property="Visibility" Value="Collapsed" /></DataTrigger>
+                    </Style.Triggers>
+                  </Style>
+                </ContentControl.Style>
+              </ContentControl>
+              <TextBlock FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap" Text="{Binding Title}" />
+            </DockPanel>
             <TextBlock Margin="0,4,0,0" FontSize="13" Foreground="{DynamicResource ColorNeutral400}" TextWrapping="Wrap" Text="{Binding NextStep}">
               <TextBlock.Style>
                 <Style TargetType="TextBlock">
@@ -196,7 +215,7 @@
                     <RowDefinition Height="Auto" />
                   </Grid.RowDefinitions>
                   <ContentControl Margin="0,2,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" Content="{Binding Severity}" ContentTemplate="{StaticResource SeverityMark}" Focusable="False" />
-                  <TextBlock Grid.Column="1" Margin="0,1,0,0" VerticalAlignment="Top" FontFamily="{DynamicResource MonoFont}" FontSize="12" Foreground="{DynamicResource ColorNeutral400}" Text="{Binding Time}" />
+                  <TextBlock Grid.Column="1" Margin="0,2,0,0" VerticalAlignment="Top" FontFamily="{DynamicResource MonoFont}" FontSize="12" Foreground="{DynamicResource ColorNeutral400}" Text="{Binding Time}" />
                   <TextBlock x:Name="Title" Grid.Column="2" VerticalAlignment="Top" FontSize="13" TextWrapping="Wrap" Foreground="{DynamicResource ColorNeutral400}">
                     <Run FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource ColorDanger}" Text="{Binding ErrorWord, Mode=OneWay}" /><Run Text="{Binding Title, Mode=OneWay}" />
                   </TextBlock>
