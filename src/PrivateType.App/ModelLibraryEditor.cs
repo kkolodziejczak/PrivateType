@@ -65,7 +65,7 @@ internal sealed class ModelLibraryEditor : INotifyPropertyChanged
         get
         {
             var model = Rows.FirstOrDefault(row => row.IsSelected)?.Model;
-            return model is null || model.UsesVocabularyBoost ? string.Empty : $"{ShortName(model)} doesn't boost phrases; fixes after dictation still apply.";
+            return model is null || model.UsesVocabularyBoost ? string.Empty : $"{ShortName(model)} doesn't boost phrases. Fixes still apply.";
         }
     }
 

@@ -511,7 +511,7 @@
   </Style>
 
   <!-- The settings grid: every label starts at the page edge and every control starts at the end of this column. -->
-  <GridLength x:Key="SettingsLabelColumn">240</GridLength>
+  <GridLength x:Key="SettingsLabelColumn">200</GridLength>
   <!-- A dropdown in the settings grid: its text starts exactly at the control column. -->
   <Style x:Key="ValuePicker" TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
     <Setter Property="Height" Value="32" />
@@ -567,8 +567,9 @@
     <Setter Property="FontFamily" Value="{DynamicResource MonoFont}" />
     <Setter Property="FontSize" Value="13" />
     <Setter Property="Height" Value="30" />
-    <Setter Property="Padding" Value="9,0" />
-    <Setter Property="Margin" Value="-10,0,0,0" />
+    <!-- The text box applies its padding on both its frame and its text host, so 4 + 4 + 3 puts the text on the page edge at -11. -->
+    <Setter Property="Padding" Value="4,0" />
+    <Setter Property="Margin" Value="-11,0,0,0" />
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderBrush" Value="Transparent" />
     <Style.Triggers>

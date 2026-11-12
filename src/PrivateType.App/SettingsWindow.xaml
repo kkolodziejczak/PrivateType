@@ -282,7 +282,7 @@
                   <TextBlock Style="{StaticResource InfoMark}" ToolTip="0% mutes the ready sound and spoken cues." />
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal">
-                  <Slider x:Name="ReadyVolumeSlider" Style="{StaticResource SoundVolumeSlider}" Width="160" Margin="-4,0,0,0" Minimum="0" Maximum="100" TickFrequency="1" IsSnapToTickEnabled="True" SmallChange="5" LargeChange="10" ValueChanged="ReadyVolumeChanged" VerticalAlignment="Center" AutomationProperties.Name="Ready sound volume" />
+                  <Slider x:Name="ReadyVolumeSlider" Style="{StaticResource SoundVolumeSlider}" Width="140" Margin="-4,0,0,0" Minimum="0" Maximum="100" TickFrequency="1" IsSnapToTickEnabled="True" SmallChange="5" LargeChange="10" ValueChanged="ReadyVolumeChanged" VerticalAlignment="Center" AutomationProperties.Name="Ready sound volume" />
                   <TextBlock x:Name="ReadyVolumeText" Margin="12,0,0,0" Style="{StaticResource RowValue}" Text="80%" />
                 </StackPanel>
               </Grid>
@@ -458,7 +458,7 @@
           </ItemsControl>
           <Button x:Name="AddPhraseButton" Style="{StaticResource GhostKeyButton}" Margin="0,8,0,0" HorizontalAlignment="Left" Content="+ Add phrase" Click="AddVocabularyPhrase" />
 
-          <TextBlock Style="{StaticResource GroupLabel}" Margin="0,30,0,4" Text="AFTER DICTATION" />
+          <TextBlock Style="{StaticResource GroupLabel}" Text="AFTER DICTATION" />
           <Border Style="{StaticResource TableRow}">
             <StackPanel>
               <CheckBox x:Name="CorrectAfterDictationBox" Style="{StaticResource GridSwitchRow}" Content="Fix phrases after dictation" IsChecked="{Binding CorrectAfterDictation, Mode=TwoWay}"
@@ -503,7 +503,7 @@
           </ItemsControl>
           <Button x:Name="AddCorrectionButton" Style="{StaticResource GhostKeyButton}" Margin="0,8,0,0" HorizontalAlignment="Left" Content="+ Add correction" Click="AddCorrection" />
 
-          <Grid Margin="0,30,0,4">
+          <Grid Margin="0,22,0,4">
             <TextBlock Style="{StaticResource GroupLabel}" Margin="0" VerticalAlignment="Center" Text="PACKS" />
             <StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
               <CheckBox x:Name="ShowAllPacksBox" Margin="0,0,12,0" VerticalAlignment="Center" FontSize="12" Content="Show all packs" IsChecked="{Binding ShowAllPacks, Mode=TwoWay}"
@@ -613,7 +613,7 @@
             </StackPanel>
           </Border>
 
-          <TextBlock Style="{StaticResource GroupLabel}" Margin="0,30,0,4" Text="PROCESSING" />
+          <TextBlock Style="{StaticResource GroupLabel}" Text="PROCESSING" />
           <Border Style="{StaticResource TableRow}">
             <StackPanel>
               <Grid>
