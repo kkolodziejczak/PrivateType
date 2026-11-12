@@ -104,7 +104,7 @@ internal sealed class ModelLibraryEditor : INotifyPropertyChanged
         }
         catch (Exception exception)
         {
-            row.Error = $"Download failed: {exception.Message}";
+            row.Error = $"Download failed: {exception.Message.TrimEnd('.')}. Select Download to try again.";
         }
         finally
         {
@@ -218,7 +218,9 @@ internal sealed class ModelLibraryEditor : INotifyPropertyChanged
         public string StatusText => IsDeleting
             ? "Deleting…"
             : IsDownloading
-            ? $"Downloading… {downloadedBytes / 1024d / 1024d:F0} of {Model.Manifest.ExpectedBytes / 1024d / 1024d:F0} MiB"
+            ? downloadedBytes >= Model.Manifest.ExpectedBytes
+                ? "Verifying…"
+                : $"Downloading {downloadedBytes / 1024d / 1024d:F0} of {Model.Manifest.ExpectedBytes / 1024d / 1024d:F0} MiB"
             : !IsPresent
                 ? "Not downloaded"
                 : IsSelected && IsActive
@@ -230,6 +232,9 @@ internal sealed class ModelLibraryEditor : INotifyPropertyChanged
                             : "Downloaded";
 
         public string StatusChip => StatusText.ToUpperInvariant();
+
+        // While it downloads: what the person does once it is here.
+        public string DownloadNextStep => $"When it's here, select Use to switch to {ShortName}.";
 
         public string DownloadName => $"Download {Name}";
         public string UseName => $"Use {Name}";

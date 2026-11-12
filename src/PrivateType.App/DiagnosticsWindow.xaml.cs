@@ -9,7 +9,13 @@ public partial class DiagnosticsWindow : Window
 {
     private readonly InMemoryDiagnostics diagnostics;
     public DiagnosticsWindow(InMemoryDiagnostics diagnostics) { InitializeComponent(); this.diagnostics = diagnostics; Refresh(); }
-    private void Refresh() => Entries.ItemsSource = diagnostics.Snapshot().Select(entry => new { Display = $"{entry.Timestamp:HH:mm:ss}  {entry.Severity,-11} {entry.EventName} {string.Join(" ", entry.Details.Select(pair => $"{pair.Key}={pair.Value}"))}" }).DefaultIfEmpty(new { Display = "No diagnostics this session." }).ToArray();
+    private void Refresh()
+    {
+        var entries = diagnostics.Snapshot();
+        Entries.ItemsSource = entries.Select(entry => new { Display = $"{entry.Timestamp:HH:mm:ss}  {entry.Severity,-11} {entry.EventName} {string.Join(" ", entry.Details.Select(pair => $"{pair.Key}={pair.Value}"))}" }).ToArray();
+        Entries.Visibility = entries.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
+        EmptyPanel.Visibility = entries.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+    }
     private string Report() => JsonSerializer.Serialize(new { schemaVersion = 1, generatedAt = DateTimeOffset.UtcNow, entries = diagnostics.Snapshot() }, new JsonSerializerOptions { WriteIndented = true, Converters = { new JsonStringEnumConverter() } });
     private void CopyReport(object sender, RoutedEventArgs e) => System.Windows.Clipboard.SetText(Report());
     private void SaveReport(object sender, RoutedEventArgs e)

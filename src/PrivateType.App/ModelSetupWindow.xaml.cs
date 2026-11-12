@@ -10,10 +10,15 @@ namespace PrivateType.App;
 
 public partial class ModelSetupWindow : Window
 {
-    internal const string MissingEngineHeading = "Local speech engine missing";
-    internal const string MissingEngineStatus = "This copy of PrivateType does not include the local speech engine.\n\nDownload and extract the complete PrivateType portable ZIP, or configure the engine when running from source.";
-    internal const string EngineCouldNotStartHeading = "Local speech engine could not start";
-    internal const string EngineCouldNotStartStatus = "The local speech engine is present but could not start.\n\nInstall the Microsoft Visual C++ Redistributable (x64), then select Retry.";
+    // Each stopped state: a title for what happened, one line of why, and one line of what to do.
+    internal const string MissingEngineHeading = "Speech engine missing";
+    internal const string MissingEngineCause = "This copy of PrivateType came without the speech engine it needs to dictate.";
+    internal const string MissingEngineStep = "Download the complete PrivateType portable ZIP, extract every file, and start PrivateType from that folder.";
+    internal const string EngineCouldNotStartHeading = "Speech engine couldn't start";
+    internal const string EngineCouldNotStartCause = "The speech engine is here, but Windows couldn't start it.";
+    internal const string EngineCouldNotStartStep = "Install the Microsoft Visual C++ Redistributable (x64), then select Retry.";
+    internal const string FailureHeading = "Model setup stopped";
+    internal const string FailureStep = "Select Retry to start again. If you're offline, connect first.";
     internal const string SharedStorageNotice = "Stays on this computer, shared with other PrivateType versions on this Windows account.";
     internal const string PortableStorageNotice = "Portable-local mode: this copy uses its existing app\\models folder and does not use the shared cache.";
     private SpeechModelDefinition chosenModel;
@@ -73,8 +78,7 @@ public partial class ModelSetupWindow : Window
 
     internal void ShowMissingEnginePrerequisite(ModelStorageMode storageMode)
     {
-        HeadingText.Text = MissingEngineHeading;
-        StatusText.Text = MissingEngineStatus;
+        ShowStopped(MissingEngineHeading, MissingEngineCause, MissingEngineStep);
         ShowPrerequisiteActions(storageMode);
     }
 
@@ -82,8 +86,7 @@ public partial class ModelSetupWindow : Window
 
     internal void ShowEngineStartPrerequisite(ModelStorageMode storageMode)
     {
-        HeadingText.Text = EngineCouldNotStartHeading;
-        StatusText.Text = EngineCouldNotStartStatus;
+        ShowStopped(EngineCouldNotStartHeading, EngineCouldNotStartCause, EngineCouldNotStartStep);
         ShowPrerequisiteActions(storageMode);
     }
 
@@ -92,7 +95,6 @@ public partial class ModelSetupWindow : Window
         SetStorageMode(storageMode);
         ConsentPanel.Visibility = Visibility.Collapsed;
         ProgressBar.Visibility = Visibility.Collapsed;
-        ProgressCaption.Text = "The model will not download until the local speech engine is ready.";
         DownloadButton.Visibility = Visibility.Collapsed;
         RetryButton.Visibility = Visibility.Visible;
         ShowDownloadReadiness();
@@ -104,10 +106,10 @@ public partial class ModelSetupWindow : Window
     {
         HeadingText.Text = "Download local dictation";
         StatusText.Text = "Download the local speech model before using dictation.";
+        NextStepText.Text = string.Empty;
         SetStorageMode(storageMode);
         ConsentPanel.Visibility = Visibility.Visible;
         ProgressBar.Visibility = Visibility.Collapsed;
-        ProgressCaption.Text = string.Empty;
         DownloadButton.Visibility = Visibility.Visible;
         RetryButton.Visibility = Visibility.Collapsed;
         ShowDownloadReadiness();
@@ -118,28 +120,39 @@ public partial class ModelSetupWindow : Window
 
     internal void ShowProgress(long downloaded, long total, ModelStorageMode storageMode)
     {
-        HeadingText.Text = "Preparing local dictation";
-        StatusText.Text = $"Downloading and verifying {ChosenModel.DisplayName}…";
+        // One phase at a time: the download counts up, then the finished file is checked before first use.
+        var verifying = total > 0 && downloaded >= total;
+        HeadingText.Text = verifying ? "Verifying the download…" : $"Downloading {downloaded / 1024d / 1024d:F0} of {total / 1024d / 1024d:F0} MiB";
+        StatusText.Text = verifying
+            ? $"Checking that {ChosenModel.DisplayName} arrived complete. Dictation is ready as soon as this finishes."
+            : $"{ChosenModel.DisplayName}, checked once it's here. Dictation is ready as soon as that finishes.";
+        NextStepText.Text = string.Empty;
         ConsentPanel.Visibility = Visibility.Collapsed;
         DownloadButton.Visibility = Visibility.Collapsed;
         ShowDownloadReadiness();
         ProgressBar.Visibility = Visibility.Visible;
         SetStorageMode(storageMode);
-        ProgressCaption.Text = $"{downloaded / 1024d / 1024d:F0} MiB of {total / 1024d / 1024d:F0} MiB";
         ProgressBar.Value = total == 0 ? 0 : Math.Min(100, downloaded * 100d / total);
         ProgressBar.BeginAnimation(OpacityProperty, new DoubleAnimation(1, 0.75, TimeSpan.FromSeconds(0.8)) { AutoReverse = true, RepeatBehavior = RepeatBehavior.Forever });
     }
 
     public void ShowFailure(string message)
     {
-        StatusText.Text = $"Setup failed: {message}";
-        ProgressCaption.Text = string.Empty;
+        // The partial download is discarded, so the bar goes with it.
+        ShowStopped(FailureHeading, message, FailureStep);
         ProgressBar.BeginAnimation(OpacityProperty, null);
-        ProgressBar.Opacity = 1;
+        ProgressBar.Visibility = Visibility.Collapsed;
         RetryButton.Visibility = Visibility.Visible;
         DownloadButton.Visibility = Visibility.Collapsed;
         ShowDownloadReadiness();
         CancelButton.Content = "Close";
+    }
+
+    private void ShowStopped(string heading, string cause, string step)
+    {
+        HeadingText.Text = heading;
+        StatusText.Text = cause;
+        NextStepText.Text = step;
     }
 
     public void CloseAfterSuccess() { completed = true; Close(); }

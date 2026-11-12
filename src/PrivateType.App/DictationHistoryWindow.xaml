@@ -76,8 +76,18 @@
       </Border>
 
       <Grid Grid.Row="1" Margin="0,4,0,0">
-        <TextBlock x:Name="EmptyText" Margin="24,22,24,26" Foreground="{DynamicResource ColorNeutral400}" FontSize="13" TextWrapping="Wrap" TextAlignment="Center"
-                   Visibility="Collapsed" AutomationProperties.LiveSetting="Polite" />
+        <!-- Empty: what is (the title), then what to do, with the dictation shortcut drawn as the keys to press. -->
+        <StackPanel x:Name="EmptyPanel" Margin="24,24,24,28" Visibility="Collapsed" AutomationProperties.LiveSetting="Polite">
+          <TextBlock x:Name="EmptyTitle" HorizontalAlignment="Center" FontSize="15" FontWeight="SemiBold" />
+          <TextBlock x:Name="EmptyText" Margin="0,8,0,0" Foreground="{DynamicResource ColorNeutral400}" FontSize="13" TextWrapping="Wrap" TextAlignment="Center" LineHeight="24">
+            <Run x:Name="EmptyVerb" /><InlineUIContainer BaselineAlignment="Center"><ItemsControl x:Name="EmptyShortcutKeys" Margin="2,0" Focusable="False">
+              <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate><Border Style="{StaticResource HintKey}" Margin="2,0"><TextBlock Style="{StaticResource HintKeyLegend}" Text="{Binding Legend}" /></Border></DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl></InlineUIContainer><Run x:Name="EmptyRest" />
+          </TextBlock>
+        </StackPanel>
         <!-- A flat mono list: hairlines between rows, a tinted selected row, the focus ring only for keyboard focus, the remove key on hover and on the selected row.
              Each hairline sits above its row and the first row has none, so the last row ends on the footer's own line. -->
         <ListBox x:Name="EntriesList" HorizontalContentAlignment="Stretch"

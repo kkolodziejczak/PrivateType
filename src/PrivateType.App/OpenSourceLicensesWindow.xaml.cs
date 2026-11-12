@@ -17,15 +17,16 @@ public partial class OpenSourceLicensesWindow : Window
     {
         InitializeComponent();
         this.licensesDirectory = licensesDirectory;
-        Notices.Text = ReadNotices();
+        ShowNotices();
     }
 
-    private string ReadNotices()
+    private void ShowNotices()
     {
         var noticePath = Path.Combine(licensesDirectory, "THIRD-PARTY-NOTICES.txt");
-        return File.Exists(noticePath)
-            ? File.ReadAllText(noticePath)
-            : "PrivateType is MIT-licensed. A portable release includes the complete third-party notices and license texts in its licenses folder. Build a portable release to inspect the complete bundle.";
+        var found = File.Exists(noticePath);
+        Notices.Text = found ? File.ReadAllText(noticePath) : string.Empty;
+        Notices.Visibility = found ? Visibility.Visible : Visibility.Collapsed;
+        MissingNoticesPanel.Visibility = found ? Visibility.Collapsed : Visibility.Visible;
     }
 
     private void OpenLicensesFolder(object sender, RoutedEventArgs e)

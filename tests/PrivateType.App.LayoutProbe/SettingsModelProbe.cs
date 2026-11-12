@@ -74,7 +74,7 @@ internal static class SettingsModelProbe
             Click(window, VisibleButton(window, "Download Parakeet TDT 0.6B v3"));
             store.PendingProgress!.Report(300L * 1024 * 1024);
             Flush(window);
-            Require(parakeet.IsDownloading && parakeet.StatusText.StartsWith("Downloading… 300 of 681 MiB", StringComparison.Ordinal), $"Progress must be shown; got '{parakeet.StatusText}'.");
+            Require(parakeet.IsDownloading && parakeet.StatusText.StartsWith("Downloading 300 of 681 MiB", StringComparison.Ordinal), $"Progress must be shown; got '{parakeet.StatusText}'.");
             Require(VisibleButtons(window).Contains("Cancel Parakeet TDT 0.6B v3 download"), "A running download must offer Cancel.");
             Capture(window, outputDirectory, "settings-model-downloading.png");
             Click(window, (Button)window.FindName("SaveSettingsButton"));

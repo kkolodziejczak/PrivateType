@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Windows;
+using System.Windows.Automation;
 using System.Windows.Interop;
 using System.Windows.Threading;
 using PrivateType.Core;
@@ -20,11 +21,12 @@ public partial class DictationHistoryWindow : Window
     private readonly DispatcherTimer foregroundWatch = new() { Interval = TimeSpan.FromMilliseconds(250) };
     private bool closing;
 
-    internal DictationHistoryWindow(DictationHistory history, TimeProvider clock, Func<nint>? foregroundWindow = null)
+    internal DictationHistoryWindow(DictationHistory history, TimeProvider clock, Func<nint>? foregroundWindow = null, PortableSettings? settings = null)
     {
         InitializeComponent();
         this.history = history;
         this.clock = clock;
+        ShowFirstShortcut(settings);
         this.foregroundWindow = foregroundWindow ?? NativeMethods.GetForegroundWindow;
         dismissal = new HistoryDismissal(this.foregroundWindow());
         Refresh(selectIndex: 0);
@@ -78,12 +80,38 @@ public partial class DictationHistoryWindow : Window
 
     public event Action<DictationHistoryEntry>? Chosen;
 
-    internal const string OffText = "Recent dictations are off. Turn them on in Settings → Recent dictations.";
-    internal const string EmptyListText = "No dictations yet. Finished dictations appear here, so you can paste one again after switching windows.";
+    internal const string OffTitle = "Recent dictations are off";
+    internal const string OffText = "Turn them on in Settings → Recent dictations.";
+    internal const string EmptyTitleText = "No dictations yet";
+    internal const string EmptyListText = "Each finished dictation appears here, so you can paste it again.";
+
+    // The empty list names the first dictation shortcut as the keys to press.
+    private string shortcutVerb = "Hold your dictation shortcut";
+    private string shortcutRest = " and speak. ";
+
+    private void ShowFirstShortcut(PortableSettings? settings)
+    {
+        var first = settings?.Shortcuts.Count > 0 ? HotkeyCatalog.FromBindings(settings.Shortcuts)[0].Label : null;
+        var toggle = settings?.ShortcutMode == DictationShortcutModes.Toggle;
+        shortcutVerb = (toggle ? "Press" : "Hold") + (first is null ? " your dictation shortcut" : string.Empty);
+        shortcutRest = toggle ? " and speak, then press it again. " : " and speak. ";
+        EmptyShortcutKeys.ItemsSource = KeycapLegendsConverter.Split(first);
+    }
 
     internal int VisibleCount => EntriesList.Items.Count;
 
-    internal string? EmptyMessage => EmptyText.Visibility == Visibility.Visible ? EmptyText.Text : null;
+    internal string? EmptyMessage => EmptyPanel.Visibility == Visibility.Visible ? (history.IsEnabled ? EmptyListText : OffText) : null;
+
+    // Off: the title says so and the line says where to turn it on. Empty: how to make the first dictation.
+    private void ShowEmptyMessage()
+    {
+        var on = history.IsEnabled;
+        EmptyTitle.Text = on ? EmptyTitleText : OffTitle;
+        EmptyVerb.Text = on ? shortcutVerb : string.Empty;
+        EmptyShortcutKeys.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
+        EmptyRest.Text = on ? shortcutRest + EmptyListText : OffText;
+        AutomationProperties.SetName(EmptyPanel, $"{EmptyTitle.Text}. {EmptyVerb.Text} {EmptyRest.Text}");
+    }
 
     internal void Refresh(int selectIndex)
     {
@@ -91,9 +119,9 @@ public partial class DictationHistoryWindow : Window
         var items = history.Snapshot().Select(entry => DictationHistoryItem.From(entry, now, TimeZoneInfo.Local)).ToArray();
         EntriesList.ItemsSource = items;
         EntriesList.Visibility = items.Length == 0 ? Visibility.Collapsed : Visibility.Visible;
-        EmptyText.Visibility = items.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
+        EmptyPanel.Visibility = items.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
         KeyHintText.Visibility = EntriesList.Visibility;
-        EmptyText.Text = history.IsEnabled ? EmptyListText : OffText;
+        ShowEmptyMessage();
         ClearAllButton.IsEnabled = items.Length > 0;
         if (items.Length > 0)
             EntriesList.SelectedIndex = Math.Clamp(selectIndex, 0, items.Length - 1);
