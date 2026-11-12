@@ -53,9 +53,26 @@ internal sealed class ModelLibraryEditor : INotifyPropertyChanged
         {
             selectedId = value;
             Notify();
+            Notify(nameof(BoostNotice));
+            Notify(nameof(HasBoostNotice));
             Refresh();
         }
     }
+
+    // The vocabulary page says so when the chosen model does not boost phrases while it listens.
+    public string BoostNotice
+    {
+        get
+        {
+            var model = Rows.FirstOrDefault(row => row.IsSelected)?.Model;
+            return model is null || model.UsesVocabularyBoost ? string.Empty : $"{ShortName(model)} doesn't boost phrases. Fixes still apply.";
+        }
+    }
+
+    public bool HasBoostNotice => BoostNotice.Length > 0;
+
+    // The family name leads a model row; the full technical name follows it as metadata.
+    internal static string ShortName(SpeechModelDefinition model) => model.DisplayName.Split(' ')[0];
 
     public bool IsBusy => Rows.Any(row => row.IsDownloading || row.IsDeleting);
 
@@ -149,8 +166,11 @@ internal sealed class ModelLibraryEditor : INotifyPropertyChanged
 
         public SpeechModelDefinition Model { get; } = model;
         public string Name => Model.DisplayName;
+        public string ShortName => ModelLibraryEditor.ShortName(Model);
         public string Summary => Model.Summary;
         public string Details => $"{SpeechModelCatalog.SizeLabel(Model)} · {Model.LicenseName} model terms";
+        public string SizeText => $"{Model.Manifest.ExpectedBytes / 1024d / 1024d:F0} MiB";
+        public string TechnicalLine => $"{Name} · {Model.LicenseName}";
         public Uri LicenseUri => Model.LicenseUri;
         public CancellationTokenSource? Cancellation { get; private set; }
         public bool IsDownloading => Cancellation is not null;
@@ -209,6 +229,8 @@ internal sealed class ModelLibraryEditor : INotifyPropertyChanged
                             ? "In use until you save"
                             : "Downloaded";
 
+        public string StatusChip => StatusText.ToUpperInvariant();
+
         public string DownloadName => $"Download {Name}";
         public string UseName => $"Use {Name}";
         public string DeleteName => $"Delete {Name}";
@@ -233,11 +255,12 @@ internal sealed class ModelLibraryEditor : INotifyPropertyChanged
             downloadedBytes = downloaded;
             Notify(nameof(ProgressPercent));
             Notify(nameof(StatusText));
+            Notify(nameof(StatusChip));
         }
 
         internal void Refresh()
         {
-            foreach (var name in new[] { nameof(IsPresent), nameof(IsDownloading), nameof(IsDeleting), nameof(IsSelected), nameof(CanDownload), nameof(CanUse), nameof(CanDelete), nameof(StatusText), nameof(ProgressPercent) })
+            foreach (var name in new[] { nameof(IsPresent), nameof(IsDownloading), nameof(IsDeleting), nameof(IsSelected), nameof(CanDownload), nameof(CanUse), nameof(CanDelete), nameof(StatusText), nameof(StatusChip), nameof(ProgressPercent) })
                 Notify(name);
         }
 

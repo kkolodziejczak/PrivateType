@@ -99,8 +99,8 @@ Some Win combinations, such as `Win+L`, are kept by Windows and can't be used.
 
 Dictations are kept in memory only and are never written to disk.
 
-**Show pasted dictations in Win+V clipboard history** (off by default) lets
-pasted text appear in Windows clipboard history. Windows keeps those entries
+**Show in clipboard history** (off by default) lets pasted dictations
+appear in Windows clipboard history (Win+V). Windows keeps those entries
 until you clear them or restart, and other clipboard tools can read them.
 Cloud clipboard skips dictated text either way. This setting is available only
 with **Pasting**.
@@ -324,7 +324,7 @@ In **Teach from last dictation**:
 
 | Key | What it does |
 | --- | --- |
-| `Enter` (in the spelling box) | Add the fix |
+| `Enter` (in **Write it as**) | Add the fix |
 | `Esc` | Clear the selected words; press again to close |
 
 ## Other buttons

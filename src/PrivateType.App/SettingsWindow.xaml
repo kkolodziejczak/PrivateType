@@ -58,7 +58,7 @@
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
           </Grid.RowDefinitions>
-          <ScrollViewer x:Name="SettingsScrollViewer" Grid.Row="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
+          <ScrollViewer x:Name="SettingsScrollViewer" Grid.Row="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False" ScrollChanged="ShowScrollFade">
             <ScrollViewer.Resources>
               <Style TargetType="ScrollBar">
                 <Setter Property="Width" Value="10" />
@@ -75,7 +75,8 @@
                 </Setter>
               </Style>
             </ScrollViewer.Resources>
-        <Grid Margin="24,18,16,32">
+        <Grid Margin="24,18,16,28">
+        <!-- Every page is one grid: labels start at the page edge, controls start at the end of SettingsLabelColumn. -->
         <StackPanel x:Name="GeneralPage">
           <!-- The heart of the page: each shortcut drawn as the keys you hold, then the language it dictates in. -->
           <TextBlock Style="{StaticResource GroupLabel}" Margin="0,0,0,6" Text="DICTATE WITH" />
@@ -84,15 +85,14 @@
               <DataTemplate>
                 <Grid x:Name="ShortcutRow" MinHeight="54" Background="Transparent">
                   <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="{StaticResource SettingsLabelColumn}" />
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                   </Grid.ColumnDefinitions>
                   <TextBox x:Name="KeyBox" Grid.Column="0" Style="{StaticResource KeycapRecorder}" Margin="-4,0,0,0" Text="{Binding ShortcutLabel, Mode=OneWay}" PreviewKeyDown="RecordShortcut"
                            ToolTip="Click, then press Ctrl+Shift plus a key." AutomationProperties.Name="{Binding ShortcutLabel, StringFormat='Shortcut {0}'}" />
-                  <TextBlock x:Name="Arrow" Grid.Column="1" Margin="6,0,2,0" VerticalAlignment="Center" FontSize="16" Foreground="{DynamicResource ColorNeutral600}" Text="→" />
-                  <ComboBox x:Name="LanguageBox" Grid.Column="2" Height="32" ItemsSource="{Binding SupportedLanguages}" SelectedValuePath="LocaleCode"
+                  <TextBlock x:Name="Arrow" Grid.Column="0" Margin="0,0,10,0" HorizontalAlignment="Right" VerticalAlignment="Center" FontSize="16" Foreground="{DynamicResource ColorNeutral600}" Text="→" />
+                  <ComboBox x:Name="LanguageBox" Grid.Column="1" Style="{StaticResource ValuePicker}" ItemsSource="{Binding SupportedLanguages}" SelectedValuePath="LocaleCode"
                             SelectedValue="{Binding LocaleCode, Mode=TwoWay}" IsTextSearchEnabled="True" TextSearch.TextPath="Label"
                             AutomationProperties.Name="Recognition language" MaxDropDownHeight="320">
                     <ComboBox.ItemTemplate>
@@ -101,9 +101,9 @@
                       </DataTemplate>
                     </ComboBox.ItemTemplate>
                   </ComboBox>
-                  <TextBlock x:Name="RecordHint" Grid.Column="1" Grid.ColumnSpan="2" Margin="12,0,0,0" VerticalAlignment="Center" FontSize="13" Foreground="{DynamicResource ColorNeutral400}"
+                  <TextBlock x:Name="RecordHint" Grid.Column="1" Grid.ColumnSpan="2" VerticalAlignment="Center" FontSize="13" Foreground="{DynamicResource ColorNeutral400}"
                              Text="Press Ctrl+Shift + a key" Visibility="Collapsed" />
-                  <Button x:Name="RemoveButton" Grid.Column="3" Style="{StaticResource GhostButton}" Width="28" Height="28" Padding="0" Content="×" FontSize="17" Opacity="0"
+                  <Button x:Name="RemoveButton" Grid.Column="2" Style="{StaticResource GhostButton}" Width="28" Height="28" Padding="0" Content="×" FontSize="17" Opacity="0"
                           Tag="{Binding}" Click="RemoveBinding"
                           ToolTip="{Binding ShortcutLabel, StringFormat='Remove {0} shortcut'}" AutomationProperties.Name="{Binding ShortcutLabel, StringFormat='Remove {0} shortcut'}" />
                 </Grid>
@@ -124,19 +124,18 @@
             </ItemsControl.ItemTemplate>
           </ItemsControl>
           <Button Style="{StaticResource GhostKeyButton}" Margin="0,6,0,0" HorizontalAlignment="Left" Content="+ Add shortcut" Click="AddBinding" />
-          <TextBlock Margin="0,12,0,0" FontSize="12" Foreground="{DynamicResource ColorNeutral400}" TextWrapping="Wrap"
-                     Text="Click the keys, then press Ctrl+Shift plus a letter, number, or function key." />
+          <TextBlock Style="{StaticResource PageNote}" Margin="0,12,0,0" Text="Click the keys, then press Ctrl+Shift plus a letter, number, or function key." />
 
           <!-- Everything else: one quiet row per setting. -->
           <TextBlock Style="{StaticResource GroupLabel}" Margin="0,30,0,4" Text="INPUT" />
           <Border Style="{StaticResource TableRow}">
             <Grid>
               <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="{StaticResource SettingsLabelColumn}" />
                 <ColumnDefinition Width="*" />
               </Grid.ColumnDefinitions>
               <TextBlock Style="{StaticResource RowLabel}" Text="Microphone" />
-              <ComboBox x:Name="MicrophoneBox" Grid.Column="1" Margin="16,0,0,0" Height="32" HorizontalAlignment="Right" AutomationProperties.Name="Microphone" SelectedValuePath="Id">
+              <ComboBox x:Name="MicrophoneBox" Grid.Column="1" Style="{StaticResource ValuePicker}" AutomationProperties.Name="Microphone" SelectedValuePath="Id">
                 <ComboBox.ItemTemplate>
                   <DataTemplate>
                     <TextBlock Foreground="{DynamicResource ColorText}" Text="{Binding DisplayName}" TextTrimming="CharacterEllipsis" />
@@ -148,11 +147,11 @@
           <Border Style="{StaticResource TableRow}">
             <Grid>
               <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="{StaticResource SettingsLabelColumn}" />
                 <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
               </Grid.ColumnDefinitions>
               <TextBlock Style="{StaticResource RowLabel}" Text="Shortcut behavior" />
-              <ComboBox x:Name="ShortcutModeBox" Grid.Column="1" Height="32" SelectedValuePath="Id" AutomationProperties.Name="Shortcut behavior">
+              <ComboBox x:Name="ShortcutModeBox" Grid.Column="1" Style="{StaticResource ValuePicker}" SelectedValuePath="Id" AutomationProperties.Name="Shortcut behavior">
                 <ComboBox.ItemTemplate>
                   <DataTemplate>
                     <TextBlock Foreground="{DynamicResource ColorText}" Text="{Binding Label}" />
@@ -165,14 +164,14 @@
             <StackPanel>
               <Grid>
                 <Grid.ColumnDefinitions>
-                  <ColumnDefinition Width="Auto" />
-                  <ColumnDefinition Width="Auto" />
+                  <ColumnDefinition Width="{StaticResource SettingsLabelColumn}" />
                   <ColumnDefinition Width="*" />
-                  <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <TextBlock Style="{StaticResource RowLabel}" Text="Insert text by" />
-                <TextBlock Grid.Column="1" Style="{StaticResource InfoMark}" ToolTip="{Binding Text, ElementName=InsertionModeHint}" />
-                <ComboBox x:Name="InsertionModeBox" Grid.Column="3" Height="32" SelectedValuePath="Id" AutomationProperties.Name="Insert text by"
+                <StackPanel Orientation="Horizontal">
+                  <TextBlock Style="{StaticResource RowLabel}" Text="Insert text by" />
+                  <TextBlock Style="{StaticResource InfoMark}" ToolTip="{Binding Text, ElementName=InsertionModeHint}" />
+                </StackPanel>
+                <ComboBox x:Name="InsertionModeBox" Grid.Column="1" Style="{StaticResource ValuePicker}" SelectedValuePath="Id" AutomationProperties.Name="Insert text by"
                           SelectionChanged="InsertionModeChanged">
                   <ComboBox.ItemTemplate>
                     <DataTemplate>
@@ -189,11 +188,11 @@
           <Border Style="{StaticResource TableRow}">
             <Grid>
               <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="{StaticResource SettingsLabelColumn}" />
                 <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
               </Grid.ColumnDefinitions>
               <TextBlock Style="{StaticResource RowLabel}" Text="Keep dictations" />
-              <ComboBox x:Name="HistoryRetentionBox" Grid.Column="1" Height="32" SelectedValuePath="Id" AutomationProperties.Name="Keep recent dictations"
+              <ComboBox x:Name="HistoryRetentionBox" Grid.Column="1" Style="{StaticResource ValuePicker}" SelectedValuePath="Id" AutomationProperties.Name="Keep recent dictations"
                         SelectionChanged="HistoryOptionChanged">
                 <ComboBox.ItemTemplate>
                   <DataTemplate>
@@ -207,14 +206,14 @@
             <StackPanel>
               <Grid>
                 <Grid.ColumnDefinitions>
-                  <ColumnDefinition Width="Auto" />
-                  <ColumnDefinition Width="Auto" />
+                  <ColumnDefinition Width="{StaticResource SettingsLabelColumn}" />
                   <ColumnDefinition Width="*" />
-                  <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <TextBlock x:Name="HistoryShortcutLabel" Style="{StaticResource RowLabel}" Text="Picker shortcut" />
-                <TextBlock Grid.Column="1" Style="{StaticResource InfoMark}" ToolTip="{Binding Text, ElementName=HistoryHint}" />
-                <TextBox x:Name="HistoryShortcutBox" Grid.Column="3" Style="{StaticResource KeycapRecorder}" FontSize="12" Margin="0,0,-4,0"
+                <StackPanel Orientation="Horizontal">
+                  <TextBlock x:Name="HistoryShortcutLabel" Style="{StaticResource RowLabel}" Text="Picker shortcut" />
+                  <TextBlock Style="{StaticResource InfoMark}" ToolTip="{Binding Text, ElementName=HistoryHint}" />
+                </StackPanel>
+                <TextBox x:Name="HistoryShortcutBox" Grid.Column="1" Style="{StaticResource KeycapRecorder}" FontSize="12" Margin="-4,0,0,0"
                          ToolTip="Click, then press the new shortcut, for example Win+Shift+V." AutomationProperties.Name="Recent dictations shortcut"
                          GotKeyboardFocus="StartRecordingHistoryShortcut" LostKeyboardFocus="StopRecordingHistoryShortcut" />
               </Grid>
@@ -223,8 +222,8 @@
           </Border>
           <Border Style="{StaticResource TableRow}">
             <StackPanel>
-              <CheckBox x:Name="ClipboardHistoryCheckBox" Style="{StaticResource SwitchRow}"
-                        Content="Show pasted dictations in Win+V clipboard history"
+              <CheckBox x:Name="ClipboardHistoryCheckBox" Style="{StaticResource GridSwitchRow}"
+                        Content="Show in clipboard history"
                         AutomationProperties.Name="Show pasted dictations in Windows clipboard history" Checked="HistoryOptionChanged" Unchecked="HistoryOptionChanged" />
               <TextBlock x:Name="ClipboardHistoryHint" Style="{StaticResource RowHint}" />
             </StackPanel>
@@ -233,19 +232,19 @@
           <TextBlock Style="{StaticResource GroupLabel}" Text="STARTUP" />
           <Border Style="{StaticResource TableRow}">
             <StackPanel>
-              <CheckBox x:Name="StartWithWindowsCheckBox" Style="{StaticResource SwitchRow}" Content="Start PrivateType with Windows" AutomationProperties.Name="Start PrivateType with Windows" />
-              <TextBlock x:Name="StartWithWindowsHint" Margin="0,0,0,8" FontSize="12" Foreground="{DynamicResource ColorNeutral400}" TextWrapping="Wrap" Visibility="Collapsed"
+              <CheckBox x:Name="StartWithWindowsCheckBox" Style="{StaticResource GridSwitchRow}" Content="Start PrivateType with Windows" AutomationProperties.Name="Start PrivateType with Windows" />
+              <TextBlock x:Name="StartWithWindowsHint" Style="{StaticResource PageNote}" Margin="0,0,0,8" Visibility="Collapsed"
                          Text="Only a copy from the portable ZIP can change this. This one was built from source." />
             </StackPanel>
           </Border>
           <Border Style="{StaticResource TableRow}">
             <Grid>
               <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="{StaticResource SettingsLabelColumn}" />
                 <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
               </Grid.ColumnDefinitions>
               <TextBlock Style="{StaticResource RowLabel}" Text="Unload model after" />
-              <ComboBox x:Name="IdleTimeoutBox" Grid.Column="1" Height="32" SelectedValuePath="Minutes" AutomationProperties.Name="Unload model after">
+              <ComboBox x:Name="IdleTimeoutBox" Grid.Column="1" Style="{StaticResource ValuePicker}" SelectedValuePath="Minutes" AutomationProperties.Name="Unload model after">
                 <ComboBox.ItemTemplate>
                   <DataTemplate>
                     <TextBlock Foreground="{DynamicResource ColorText}" Text="{Binding Label}" />
@@ -259,31 +258,33 @@
           <Border Style="{StaticResource TableRow}">
             <Grid>
               <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="{StaticResource SettingsLabelColumn}" />
                 <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="Auto" />
               </Grid.ColumnDefinitions>
               <TextBlock Style="{StaticResource RowLabel}" Text="Ready sound" ToolTip="Plays when the microphone is listening and you can speak." />
-              <ComboBox x:Name="ReadySoundBox" Grid.Column="1" Height="32" SelectedValuePath="Id" AutomationProperties.Name="Ready sound" SelectionChanged="ReadySoundChanged">
-                <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Label}" Foreground="{DynamicResource ColorText}" /></DataTemplate></ComboBox.ItemTemplate>
-              </ComboBox>
-              <Button x:Name="PreviewSoundButton" Grid.Column="2" Margin="8,0,0,0" Style="{StaticResource IconKeyButton}" Content="▶" ToolTip="Preview" AutomationProperties.Name="Preview ready sound" Click="PreviewSound" />
+              <StackPanel Grid.Column="1" Orientation="Horizontal">
+                <ComboBox x:Name="ReadySoundBox" Style="{StaticResource ValuePicker}" SelectedValuePath="Id" AutomationProperties.Name="Ready sound" SelectionChanged="ReadySoundChanged">
+                  <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Label}" Foreground="{DynamicResource ColorText}" /></DataTemplate></ComboBox.ItemTemplate>
+                </ComboBox>
+                <Button x:Name="PreviewSoundButton" Margin="8,0,0,0" Style="{StaticResource IconKeyButton}" Content="▶" ToolTip="Preview" AutomationProperties.Name="Preview ready sound" Click="PreviewSound" />
+              </StackPanel>
             </Grid>
           </Border>
           <Border Style="{StaticResource TableRow}">
             <StackPanel>
               <Grid>
                 <Grid.ColumnDefinitions>
-                  <ColumnDefinition Width="Auto" />
-                  <ColumnDefinition Width="Auto" />
+                  <ColumnDefinition Width="{StaticResource SettingsLabelColumn}" />
                   <ColumnDefinition Width="*" />
-                  <ColumnDefinition Width="160" />
-                  <ColumnDefinition Width="44" />
                 </Grid.ColumnDefinitions>
-                <TextBlock Style="{StaticResource RowLabel}" Text="Volume" />
-                <TextBlock Grid.Column="1" Style="{StaticResource InfoMark}" ToolTip="0% mutes the ready sound and spoken cues." />
-                <Slider x:Name="ReadyVolumeSlider" Style="{StaticResource SoundVolumeSlider}" Grid.Column="3" Minimum="0" Maximum="100" TickFrequency="1" IsSnapToTickEnabled="True" SmallChange="5" LargeChange="10" ValueChanged="ReadyVolumeChanged" VerticalAlignment="Center" AutomationProperties.Name="Ready sound volume" />
-                <TextBlock x:Name="ReadyVolumeText" Grid.Column="4" Style="{StaticResource RowValue}" Text="80%" TextAlignment="Right" />
+                <StackPanel Orientation="Horizontal">
+                  <TextBlock Style="{StaticResource RowLabel}" Text="Volume" />
+                  <TextBlock Style="{StaticResource InfoMark}" ToolTip="0% mutes the ready sound and spoken cues." />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                  <Slider x:Name="ReadyVolumeSlider" Style="{StaticResource SoundVolumeSlider}" Width="140" Margin="-4,0,0,0" Minimum="0" Maximum="100" TickFrequency="1" IsSnapToTickEnabled="True" SmallChange="5" LargeChange="10" ValueChanged="ReadyVolumeChanged" VerticalAlignment="Center" AutomationProperties.Name="Ready sound volume" />
+                  <TextBlock x:Name="ReadyVolumeText" Margin="12,0,0,0" Style="{StaticResource RowValue}" Text="80%" />
+                </StackPanel>
               </Grid>
               <TextBlock Style="{StaticResource RowHint}" Text="0% mutes the ready sound and spoken cues." />
             </StackPanel>
@@ -303,15 +304,16 @@
             <StackPanel>
               <Grid>
                 <Grid.ColumnDefinitions>
-                  <ColumnDefinition Width="Auto" />
-                  <ColumnDefinition Width="Auto" />
+                  <ColumnDefinition Width="{StaticResource SettingsLabelColumn}" />
                   <ColumnDefinition Width="*" />
                   <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <TextBlock Style="{StaticResource RowLabel}" Text="Custom file" />
-                <TextBlock Grid.Column="1" Style="{StaticResource InfoMark}" ToolTip="WAV or MP3, up to 3 seconds of playback. Copied into app storage when saved." />
-                <TextBox x:Name="CustomSoundPathText" Grid.Column="2" Margin="16,0,0,0" Height="30" Padding="8,0" IsReadOnly="True" FontFamily="{DynamicResource MonoFont}" FontSize="12" AutomationProperties.Name="Custom ready sound file" />
-                <Button x:Name="BrowseSoundButton" Grid.Column="3" Margin="8,0,0,0" Content="Browse…" AutomationProperties.Name="Choose custom ready sound file" Click="BrowseSound" />
+                <StackPanel Orientation="Horizontal">
+                  <TextBlock Style="{StaticResource RowLabel}" Text="Custom file" />
+                  <TextBlock Style="{StaticResource InfoMark}" ToolTip="WAV or MP3, up to 3 seconds of playback. Copied into app storage when saved." />
+                </StackPanel>
+                <TextBox x:Name="CustomSoundPathText" Grid.Column="1" Height="30" Padding="8,0" IsReadOnly="True" FontFamily="{DynamicResource MonoFont}" FontSize="12" AutomationProperties.Name="Custom ready sound file" />
+                <Button x:Name="BrowseSoundButton" Grid.Column="2" Margin="8,0,0,0" Content="Browse…" AutomationProperties.Name="Choose custom ready sound file" Click="BrowseSound" />
               </Grid>
               <TextBlock Style="{StaticResource RowHint}" Text="WAV or MP3, up to 3 seconds of playback. Copied into app storage when saved." />
             </StackPanel>
@@ -329,18 +331,19 @@
             <StackPanel>
               <Grid>
                 <Grid.ColumnDefinitions>
-                  <ColumnDefinition Width="Auto" />
-                  <ColumnDefinition Width="Auto" />
+                  <ColumnDefinition Width="{StaticResource SettingsLabelColumn}" />
                   <ColumnDefinition Width="*" />
-                  <ColumnDefinition Width="Auto" />
-                  <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <TextBlock Style="{StaticResource RowLabel}" Text="Spoken cues" />
-                <TextBlock Grid.Column="1" Style="{StaticResource InfoMark}" ToolTip="Says “Loading model” while the model loads and “Transcribing” while Parakeet finishes your text. Uses the volume above." />
-                <ComboBox x:Name="SpokenCueVoiceBox" Grid.Column="3" Height="32" SelectedValuePath="Id" AutomationProperties.Name="Spoken cues" SelectionChanged="SpokenCueVoiceChanged">
-                  <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Label}" Foreground="{DynamicResource ColorText}" /></DataTemplate></ComboBox.ItemTemplate>
-                </ComboBox>
-                <Button x:Name="PreviewSpokenCueButton" Grid.Column="4" Margin="8,0,0,0" Style="{StaticResource IconKeyButton}" Content="▶" ToolTip="Preview" AutomationProperties.Name="Preview spoken cue" Click="PreviewSpokenCue" />
+                <StackPanel Orientation="Horizontal">
+                  <TextBlock Style="{StaticResource RowLabel}" Text="Spoken cues" />
+                  <TextBlock Style="{StaticResource InfoMark}" ToolTip="Says “Loading model” while the model loads and “Transcribing” while Parakeet finishes your text. Uses the volume above." />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                  <ComboBox x:Name="SpokenCueVoiceBox" Style="{StaticResource ValuePicker}" SelectedValuePath="Id" AutomationProperties.Name="Spoken cues" SelectionChanged="SpokenCueVoiceChanged">
+                    <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Label}" Foreground="{DynamicResource ColorText}" /></DataTemplate></ComboBox.ItemTemplate>
+                  </ComboBox>
+                  <Button x:Name="PreviewSpokenCueButton" Margin="8,0,0,0" Style="{StaticResource IconKeyButton}" Content="▶" ToolTip="Preview" AutomationProperties.Name="Preview spoken cue" Click="PreviewSpokenCue" />
+                </StackPanel>
               </Grid>
               <TextBlock Style="{StaticResource RowHint}"
                          Text="Says &#x201C;Loading model&#x201D; while the model loads and &#x201C;Transcribing&#x201D; while Parakeet finishes your text. Uses the volume above." />
@@ -352,138 +355,169 @@
             <StackPanel>
               <Grid>
                 <Grid.ColumnDefinitions>
-                  <ColumnDefinition Width="Auto" />
-                  <ColumnDefinition Width="Auto" />
+                  <ColumnDefinition Width="{StaticResource SettingsLabelColumn}" />
                   <ColumnDefinition Width="*" />
-                  <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <TextBlock Style="{StaticResource RowLabel}" Text="Settings from another copy" />
-                <TextBlock Grid.Column="1" Style="{StaticResource InfoMark}" ToolTip="Choose the folder of another PrivateType copy. You'll see what will be copied before anything changes." />
-                <Button x:Name="ImportFromCopyButton" Grid.Column="3" Content="Import…" Click="ImportFromCopy"
+                <StackPanel Orientation="Horizontal">
+                  <TextBlock Style="{StaticResource RowLabel}" Text="Settings from another copy" />
+                  <TextBlock Style="{StaticResource InfoMark}" ToolTip="Choose the folder of another PrivateType copy. You'll see what will be copied before anything changes." />
+                </StackPanel>
+                <Button x:Name="ImportFromCopyButton" Grid.Column="1" HorizontalAlignment="Left" Content="Import…" Click="ImportFromCopy"
                         AutomationProperties.Name="Import settings from another copy" />
               </Grid>
               <TextBlock Style="{StaticResource RowHint}"
                          Text="Choose the folder of another PrivateType copy. You'll see what will be copied before anything changes." />
             </StackPanel>
           </Border>
+          <!-- The table closes with a hairline, so the end of the page reads as an end. -->
+          <Border Style="{StaticResource TableRow}" MinHeight="0" Padding="0" />
         </StackPanel>
         <StackPanel x:Name="VocabularyPage" Visibility="Collapsed">
-          <TextBlock FontWeight="SemiBold" FontSize="16" Text="Vocabulary" />
-          <TextBlock Margin="0,4,0,0" Foreground="{DynamicResource ColorText}" Opacity="0.7" FontSize="13" TextWrapping="Wrap"
-                     Text="Help the local model recognize names, acronyms, and specialist terms. Type each word or phrase exactly as it should be written." />
-          <Grid Margin="0,18,0,0">
-            <Grid.ColumnDefinitions>
-              <ColumnDefinition Width="*" />
-              <ColumnDefinition Width="260" />
-            </Grid.ColumnDefinitions>
-            <Grid.RowDefinitions>
-              <RowDefinition Height="Auto" />
-              <RowDefinition Height="10" />
-              <RowDefinition Height="Auto" />
-            </Grid.RowDefinitions>
-            <TextBlock VerticalAlignment="Center" FontSize="13" Foreground="{DynamicResource ColorText}" Opacity="0.8" Text="Language" />
-            <ComboBox x:Name="VocabularyScopeBox" Grid.Column="1" Height="36" Padding="8,0" ItemsSource="{Binding Scopes}" SelectedValuePath="Code"
-                      SelectedValue="{Binding Scope, Mode=TwoWay}" IsTextSearchEnabled="True" TextSearch.TextPath="DisplayName" MaxDropDownHeight="320"
-                      AutomationProperties.Name="Vocabulary language">
-              <ComboBox.ItemTemplate>
-                <DataTemplate>
-                  <TextBlock Foreground="{DynamicResource ColorText}" Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
-                </DataTemplate>
-              </ComboBox.ItemTemplate>
-            </ComboBox>
-            <TextBlock Grid.Row="2" VerticalAlignment="Center" FontSize="13" Foreground="{DynamicResource ColorText}" Opacity="0.8" Text="Strength" />
-            <ComboBox x:Name="VocabularyStrengthBox" Grid.Row="2" Grid.Column="1" Height="36" Padding="8,0" ItemsSource="{Binding Strengths}" SelectedValuePath="Id"
-                      SelectedValue="{Binding Strength, Mode=TwoWay}" AutomationProperties.Name="Vocabulary strength">
-              <ComboBox.ItemTemplate>
-                <DataTemplate>
-                  <TextBlock Foreground="{DynamicResource ColorText}" Text="{Binding Label}" />
-                </DataTemplate>
-              </ComboBox.ItemTemplate>
-            </ComboBox>
-          </Grid>
-          <TextBlock Margin="0,10,0,0" Foreground="{DynamicResource ColorText}" Opacity="0.55" FontSize="12" TextWrapping="Wrap" Text="{Binding ScopeHint}" />
-          <TextBlock Margin="0,4,0,0" Foreground="{DynamicResource ColorText}" Opacity="0.55" FontSize="12" TextWrapping="Wrap"
-                     Text="Strength applies to every phrase. Stronger settings help rare words more but can also insert them where they were not said." />
-          <Grid Margin="0,22,0,0">
-            <TextBlock VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold" Opacity="0.7" Text="YOUR PHRASES" />
-            <Button x:Name="ExportPhrasesButton" HorizontalAlignment="Right" FontSize="12" Padding="10,5" Content="Export…" Click="ExportPersonalPhrases"
+          <!-- Shown only when the chosen model cannot boost phrases while it listens. -->
+          <Border Margin="0,0,0,18" Padding="12,8,8,8" CornerRadius="6" Background="{DynamicResource ColorNeutral900}"
+                  Visibility="{Binding DataContext.HasBoostNotice, ElementName=ModelPage, Converter={StaticResource BoolToVisibility}}">
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+              </Grid.ColumnDefinitions>
+              <TextBlock x:Name="BoostNoticeText" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource ColorText}" TextWrapping="Wrap" Text="{Binding DataContext.BoostNotice, ElementName=ModelPage}" />
+              <Button Grid.Column="1" Margin="12,0,4,0" VerticalAlignment="Center" Style="{StaticResource TextLinkButton}" Content="Change model" Click="OpenModelPage" AutomationProperties.Name="Change speech model" />
+            </Grid>
+          </Border>
+          <Grid Margin="0,0,0,4">
+            <TextBlock Style="{StaticResource GroupLabel}" Margin="0" VerticalAlignment="Center" Text="YOUR PHRASES" />
+            <Button x:Name="ExportPhrasesButton" HorizontalAlignment="Right" Style="{StaticResource GhostButton}" FontSize="12" Padding="8,4" Content="Export…" Click="ExportPersonalPhrases"
                     IsEnabled="{Binding HasVisiblePhrases}" AutomationProperties.Name="Export your phrases" />
           </Grid>
-          <Border x:Name="VocabularyEmptyState" Margin="0,10,0,0" Padding="12" Background="{DynamicResource ColorBg}" BorderBrush="{DynamicResource ColorDivider}" BorderThickness="1" CornerRadius="8"
-                  Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVisibility}}">
-            <TextBlock Foreground="{DynamicResource ColorText}" Opacity="0.8" FontSize="13" TextWrapping="Wrap" Text="{Binding EmptyText}" />
+          <Border Style="{StaticResource TableRow}">
+            <StackPanel>
+              <Grid>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="{StaticResource SettingsLabelColumn}" />
+                  <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Style="{StaticResource RowLabel}" Text="Language" />
+                <ComboBox x:Name="VocabularyScopeBox" Grid.Column="1" Style="{StaticResource ValuePicker}" ItemsSource="{Binding Scopes}" SelectedValuePath="Code"
+                          SelectedValue="{Binding Scope, Mode=TwoWay}" IsTextSearchEnabled="True" TextSearch.TextPath="DisplayName" MaxDropDownHeight="320"
+                          AutomationProperties.Name="Vocabulary language">
+                  <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                      <TextBlock Foreground="{DynamicResource ColorText}" Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
+                    </DataTemplate>
+                  </ComboBox.ItemTemplate>
+                </ComboBox>
+              </Grid>
+              <TextBlock Style="{StaticResource PageNote}" Margin="0,0,0,6" Text="{Binding ScopeHint}" />
+            </StackPanel>
           </Border>
-          <ItemsControl x:Name="VocabularyList" Margin="0,10,0,0" ItemsSource="{Binding Visible}" KeyboardNavigation.TabNavigation="Continue">
+          <Border Style="{StaticResource TableRow}">
+            <StackPanel>
+              <Grid>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="{StaticResource SettingsLabelColumn}" />
+                  <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Orientation="Horizontal">
+                  <TextBlock Style="{StaticResource RowLabel}" Text="Strength" />
+                  <TextBlock Style="{StaticResource InfoMark}" ToolTip="{Binding Text, ElementName=StrengthHint}" />
+                </StackPanel>
+                <ComboBox x:Name="VocabularyStrengthBox" Grid.Column="1" Style="{StaticResource ValuePicker}" ItemsSource="{Binding Strengths}" SelectedValuePath="Id"
+                          SelectedValue="{Binding Strength, Mode=TwoWay}" AutomationProperties.Name="Vocabulary strength">
+                  <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                      <TextBlock Foreground="{DynamicResource ColorText}" Text="{Binding Label}" />
+                    </DataTemplate>
+                  </ComboBox.ItemTemplate>
+                </ComboBox>
+              </Grid>
+              <TextBlock x:Name="StrengthHint" Style="{StaticResource RowHint}"
+                         Text="Strength applies to every phrase. Stronger settings help rare words more but can also insert them where they were not said." />
+            </StackPanel>
+          </Border>
+          <!-- The phrases: a flat mono list; each row shows its field and × on hover. -->
+          <Border x:Name="VocabularyEmptyState" Style="{StaticResource TableRow}" Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVisibility}}">
+            <TextBlock Style="{StaticResource PageNote}" Margin="0,6" Text="{Binding EmptyText}" />
+          </Border>
+          <ItemsControl x:Name="VocabularyList" ItemsSource="{Binding Visible}" KeyboardNavigation.TabNavigation="Continue">
             <ItemsControl.ItemTemplate>
               <DataTemplate>
-                <Grid Margin="0,0,0,8">
-                  <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                  </Grid.ColumnDefinitions>
-                  <TextBox Height="31" Padding="9,0" MaxLength="120" Text="{Binding Phrase, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Vocabulary phrase" />
-                  <Button Grid.Column="1" Margin="8,0,0,0" Content="—" Tag="{Binding}" Click="RemoveVocabularyPhrase" FontSize="12" Width="31" Height="31" Padding="0"
-                          ToolTip="Remove phrase" AutomationProperties.Name="Remove phrase" />
-                </Grid>
+                <Border Style="{StaticResource TableRow}" MinHeight="36" Padding="0,3" Background="Transparent">
+                  <Grid>
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="*" />
+                      <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBox Style="{StaticResource ListField}" MaxLength="120" Text="{Binding Phrase, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Vocabulary phrase" />
+                    <Button Grid.Column="1" Margin="8,0,0,0" Style="{StaticResource RowRemoveButton}" Tag="{Binding}" Click="RemoveVocabularyPhrase"
+                            ToolTip="Remove phrase" AutomationProperties.Name="Remove phrase" />
+                  </Grid>
+                </Border>
               </DataTemplate>
             </ItemsControl.ItemTemplate>
           </ItemsControl>
-          <Button x:Name="AddPhraseButton" Style="{StaticResource GhostButton}" Margin="0,4,0,0" Width="136" HorizontalAlignment="Left" Content="+ Add phrase" Click="AddVocabularyPhrase" />
-          <TextBlock Margin="0,22,0,0" FontSize="12" FontWeight="SemiBold" Opacity="0.7" Text="AFTER DICTATION" />
-          <CheckBox x:Name="CorrectAfterDictationBox" Margin="0,10,0,0" Content="Fix phrases after dictation" IsChecked="{Binding CorrectAfterDictation, Mode=TwoWay}"
-                    AutomationProperties.Name="Fix phrases after dictation" />
-          <TextBlock Margin="0,6,0,0" Foreground="{DynamicResource ColorText}" Opacity="0.55" FontSize="12" TextWrapping="Wrap"
-                     Text="When you release the shortcut, spoken forms of your phrases, such as “three D printing” for 3D printing, and the wordings below are rewritten before the text is inserted. This works in every language; numbers and letters are recognized in English and Polish." />
-          <Grid Margin="0,12,0,0" Visibility="{Binding HasVisibleCorrections, Converter={StaticResource BoolToVisibility}}">
+          <Button x:Name="AddPhraseButton" Style="{StaticResource GhostKeyButton}" Margin="0,8,0,0" HorizontalAlignment="Left" Content="+ Add phrase" Click="AddVocabularyPhrase" />
+
+          <TextBlock Style="{StaticResource GroupLabel}" Text="AFTER DICTATION" />
+          <Border Style="{StaticResource TableRow}">
+            <StackPanel>
+              <CheckBox x:Name="CorrectAfterDictationBox" Style="{StaticResource GridSwitchRow}" Content="Fix phrases after dictation" IsChecked="{Binding CorrectAfterDictation, Mode=TwoWay}"
+                        AutomationProperties.Name="Fix phrases after dictation" />
+              <TextBlock Style="{StaticResource PageNote}" Margin="0,0,0,8"
+                         Text="When you release the shortcut, spoken forms of your phrases, such as “three D printing” for 3D printing, and the wordings below are rewritten before the text is inserted. This works in every language; numbers and letters are recognized in English and Polish." />
+            </StackPanel>
+          </Border>
+          <Grid Margin="0,8,0,0" Visibility="{Binding HasVisibleCorrections, Converter={StaticResource BoolToVisibility}}">
             <Grid.ColumnDefinitions>
               <ColumnDefinition Width="*" />
               <ColumnDefinition Width="28" />
               <ColumnDefinition Width="*" />
-              <ColumnDefinition Width="39" />
+              <ColumnDefinition Width="36" />
             </Grid.ColumnDefinitions>
-            <TextBlock FontSize="12" Opacity="0.7" Text="Heard as" />
-            <TextBlock Grid.Column="2" FontSize="12" Opacity="0.7" Text="Write as" />
+            <TextBlock Style="{StaticResource GroupLabel}" Margin="0,0,0,4" Text="HEARD" />
+            <TextBlock Grid.Column="2" Style="{StaticResource GroupLabel}" Margin="0,0,0,4" Text="WRITE" />
           </Grid>
-          <Border x:Name="CorrectionsEmptyState" Margin="0,10,0,0" Padding="12" Background="{DynamicResource ColorBg}" BorderBrush="{DynamicResource ColorDivider}" BorderThickness="1" CornerRadius="8"
-                  Visibility="{Binding HasNoVisibleCorrections, Converter={StaticResource BoolToVisibility}}">
-            <TextBlock Foreground="{DynamicResource ColorText}" Opacity="0.8" FontSize="13" TextWrapping="Wrap" Text="{Binding CorrectionsEmptyText}" />
+          <Border x:Name="CorrectionsEmptyState" Style="{StaticResource TableRow}" Visibility="{Binding HasNoVisibleCorrections, Converter={StaticResource BoolToVisibility}}">
+            <TextBlock Style="{StaticResource PageNote}" Margin="0,6" Text="{Binding CorrectionsEmptyText}" />
           </Border>
-          <ItemsControl x:Name="CorrectionList" Margin="0,6,0,0" ItemsSource="{Binding VisibleCorrections}" KeyboardNavigation.TabNavigation="Continue">
+          <ItemsControl x:Name="CorrectionList" ItemsSource="{Binding VisibleCorrections}" KeyboardNavigation.TabNavigation="Continue">
             <ItemsControl.ItemTemplate>
               <DataTemplate>
-                <Grid Margin="0,0,0,8">
-                  <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="28" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                  </Grid.ColumnDefinitions>
-                  <TextBox Height="31" Padding="9,0" MaxLength="120" Text="{Binding Heard, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Heard as" />
-                  <TextBlock Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.6" Text="→" />
-                  <TextBox Grid.Column="2" Height="31" Padding="9,0" MaxLength="120" Text="{Binding Phrase, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Write as" />
-                  <Button Grid.Column="3" Margin="8,0,0,0" Content="—" Tag="{Binding}" Click="RemoveCorrection" FontSize="12" Width="31" Height="31" Padding="0"
-                          ToolTip="Remove correction" AutomationProperties.Name="Remove correction" />
-                </Grid>
+                <Border Style="{StaticResource TableRow}" MinHeight="36" Padding="0,3" Background="Transparent">
+                  <Grid>
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="*" />
+                      <ColumnDefinition Width="28" />
+                      <ColumnDefinition Width="*" />
+                      <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBox Style="{StaticResource ListField}" MaxLength="120" Text="{Binding Heard, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Heard as" />
+                    <TextBlock Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource ColorNeutral600}" Text="→" />
+                    <TextBox Grid.Column="2" Style="{StaticResource ListField}" MaxLength="120" Text="{Binding Phrase, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Write as" />
+                    <Button Grid.Column="3" Margin="8,0,0,0" Style="{StaticResource RowRemoveButton}" Tag="{Binding}" Click="RemoveCorrection"
+                            ToolTip="Remove correction" AutomationProperties.Name="Remove correction" />
+                  </Grid>
+                </Border>
               </DataTemplate>
             </ItemsControl.ItemTemplate>
           </ItemsControl>
-          <Button x:Name="AddCorrectionButton" Style="{StaticResource GhostButton}" Margin="0,4,0,0" Width="160" HorizontalAlignment="Left" Content="+ Add correction" Click="AddCorrection" />
-          <Grid Margin="0,22,0,0">
-            <TextBlock VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold" Opacity="0.7" Text="PACKS" />
+          <Button x:Name="AddCorrectionButton" Style="{StaticResource GhostKeyButton}" Margin="0,8,0,0" HorizontalAlignment="Left" Content="+ Add correction" Click="AddCorrection" />
+
+          <Grid Margin="0,22,0,4">
+            <TextBlock Style="{StaticResource GroupLabel}" Margin="0" VerticalAlignment="Center" Text="PACKS" />
             <StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
-              <CheckBox x:Name="ShowAllPacksBox" Margin="0,0,12,0" VerticalAlignment="Center" Content="Show all packs" IsChecked="{Binding ShowAllPacks, Mode=TwoWay}"
+              <CheckBox x:Name="ShowAllPacksBox" Margin="0,0,12,0" VerticalAlignment="Center" FontSize="12" Content="Show all packs" IsChecked="{Binding ShowAllPacks, Mode=TwoWay}"
                         AutomationProperties.Name="Show packs for every language" />
-              <Button x:Name="ImportPackButton" FontSize="12" Padding="10,5" Content="Import pack…" Click="ImportPack" AutomationProperties.Name="Import vocabulary pack" />
+              <Button x:Name="ImportPackButton" FontSize="12" Padding="10,4" Content="Import pack…" Click="ImportPack" AutomationProperties.Name="Import vocabulary pack" />
             </StackPanel>
           </Grid>
-          <Border x:Name="PacksEmptyState" Margin="0,10,0,0" Padding="12" Background="{DynamicResource ColorBg}" BorderBrush="{DynamicResource ColorDivider}" BorderThickness="1" CornerRadius="8"
-                  Visibility="{Binding HasNoVisiblePacks, Converter={StaticResource BoolToVisibility}}">
-            <TextBlock Foreground="{DynamicResource ColorText}" Opacity="0.8" FontSize="13" TextWrapping="Wrap" Text="{Binding PacksEmptyText}" />
+          <Border x:Name="PacksEmptyState" Style="{StaticResource TableRow}" Visibility="{Binding HasNoVisiblePacks, Converter={StaticResource BoolToVisibility}}">
+            <TextBlock Style="{StaticResource PageNote}" Margin="0,6" Text="{Binding PacksEmptyText}" />
           </Border>
-          <ItemsControl x:Name="PackList" Margin="0,10,0,0" ItemsSource="{Binding VisiblePacks}" KeyboardNavigation.TabNavigation="Continue">
+          <ItemsControl x:Name="PackList" ItemsSource="{Binding VisiblePacks}" KeyboardNavigation.TabNavigation="Continue">
             <ItemsControl.ItemTemplate>
               <DataTemplate>
-                <Border Margin="0,0,0,8" Padding="12,10" Background="{DynamicResource ColorBg}" BorderBrush="{DynamicResource ColorDivider}" BorderThickness="1" CornerRadius="8">
+                <Border Style="{StaticResource TableRow}" Padding="0,8">
                   <Grid>
                     <Grid.ColumnDefinitions>
                       <ColumnDefinition Width="*" />
@@ -491,111 +525,128 @@
                     </Grid.ColumnDefinitions>
                     <StackPanel VerticalAlignment="Center">
                       <CheckBox IsChecked="{Binding IsEnabled, Mode=TwoWay}" AutomationProperties.Name="{Binding ToggleName}">
-                        <TextBlock FontWeight="SemiBold" Text="{Binding Name}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Name}" />
+                        <TextBlock FontSize="13" FontWeight="SemiBold" Text="{Binding Name}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Name}" />
                       </CheckBox>
-                      <TextBlock Margin="28,4,0,0" FontSize="12" Opacity="0.6" Text="{Binding Summary}" TextTrimming="CharacterEllipsis" />
+                      <TextBlock Style="{StaticResource PageNote}" Margin="28,2,0,0" Text="{Binding Summary}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
                     </StackPanel>
                     <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center" Orientation="Horizontal">
-                      <Button Margin="0,0,6,0" FontSize="12" Padding="10,5" Content="Edit" Tag="{Binding}" Click="EditPack" AutomationProperties.Name="Edit pack" />
-                      <Button Margin="0,0,6,0" FontSize="12" Padding="10,5" Content="Export…" Tag="{Binding}" Click="ExportPack" AutomationProperties.Name="Export pack" />
-                      <Button FontSize="12" Padding="10,5" Content="Remove…" Tag="{Binding}" Click="RemovePack" AutomationProperties.Name="Remove pack" />
+                      <Button Style="{StaticResource GhostButton}" FontSize="12" Padding="8,4" Content="Edit" Tag="{Binding}" Click="EditPack" AutomationProperties.Name="Edit pack" />
+                      <Button Style="{StaticResource GhostButton}" FontSize="12" Padding="8,4" Content="Export…" Tag="{Binding}" Click="ExportPack" AutomationProperties.Name="Export pack" />
+                      <Button Style="{StaticResource GhostButton}" FontSize="12" Padding="8,4" Content="Remove…" Tag="{Binding}" Click="RemovePack" AutomationProperties.Name="Remove pack" />
                     </StackPanel>
                   </Grid>
                 </Border>
               </DataTemplate>
             </ItemsControl.ItemTemplate>
           </ItemsControl>
-          <TextBlock x:Name="VocabularyBudgetText" Margin="0,14,0,0" Foreground="{DynamicResource ColorText}" Opacity="0.55" FontSize="12" TextWrapping="Wrap" Text="{Binding BudgetText}" />
-          <TextBlock Margin="0,4,0,0" Foreground="{DynamicResource ColorText}" Opacity="0.55" FontSize="12" TextWrapping="Wrap"
+          <Border Style="{StaticResource TableRow}" MinHeight="0" Padding="0" />
+          <TextBlock x:Name="VocabularyBudgetText" Style="{StaticResource PageNote}" Margin="0,14,0,0" Text="{Binding BudgetText}" />
+          <TextBlock Style="{StaticResource PageNote}" Margin="0,4,0,0"
                      Text="Phrases stay on this computer unless you export them, and are only given to the local speech engine." />
         </StackPanel>
         <StackPanel x:Name="ModelPage" Visibility="Collapsed">
-          <TextBlock FontWeight="SemiBold" FontSize="16" Text="Speech model" />
-          <TextBlock Margin="0,4,0,0" Foreground="{DynamicResource ColorText}" Opacity="0.7" FontSize="13" TextWrapping="Wrap"
+          <TextBlock Style="{StaticResource GroupLabel}" Margin="0,0,0,4" Text="SPEECH MODEL" />
+          <TextBlock Style="{StaticResource PageNote}" Margin="0,0,0,10"
                      Text="Download the models you want to try, choose which one PrivateType uses, and delete the ones you no longer need. Downloading a model accepts its terms." />
-          <ItemsControl x:Name="ModelList" Margin="0,14,0,0" ItemsSource="{Binding Rows}" KeyboardNavigation.TabNavigation="Continue">
+          <!-- One table row per model: short name, size and status first; the technical name and terms as a dim mono line. -->
+          <ItemsControl x:Name="ModelList" ItemsSource="{Binding Rows}" KeyboardNavigation.TabNavigation="Continue">
             <ItemsControl.ItemTemplate>
               <DataTemplate>
-                <Border Margin="0,0,0,10" Padding="14,12" Background="{DynamicResource ColorBg}" BorderThickness="1" CornerRadius="8">
-                  <Border.Style>
-                    <Style TargetType="Border">
-                      <Setter Property="BorderBrush" Value="{DynamicResource ColorDivider}" />
-                      <Style.Triggers>
-                        <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                          <Setter Property="BorderBrush" Value="{DynamicResource ColorAccent}" />
-                        </DataTrigger>
-                      </Style.Triggers>
-                    </Style>
-                  </Border.Style>
-                  <StackPanel>
-                    <Grid>
-                      <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                      </Grid.ColumnDefinitions>
-                      <StackPanel VerticalAlignment="Center">
-                        <TextBlock FontWeight="SemiBold" FontSize="14" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
-                        <TextBlock Margin="0,3,0,0" FontSize="12" Foreground="{DynamicResource ColorAccent300}" Text="{Binding StatusText}" AutomationProperties.LiveSetting="Polite" />
-                      </StackPanel>
-                      <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center" Orientation="Horizontal">
-                        <Button Margin="6,0,0,0" FontSize="12" Padding="10,5" Content="Download" Tag="{Binding}" Click="DownloadModel"
-                                Visibility="{Binding CanDownload, Converter={StaticResource BoolToVisibility}}" AutomationProperties.Name="{Binding DownloadName}" />
-                        <Button Margin="6,0,0,0" FontSize="12" Padding="10,5" Content="Cancel" Tag="{Binding}" Click="CancelModelDownload"
-                                Visibility="{Binding IsDownloading, Converter={StaticResource BoolToVisibility}}" AutomationProperties.Name="{Binding CancelName}" />
-                        <Button Margin="6,0,0,0" FontSize="12" Padding="10,5" Style="{StaticResource PrimaryButton}" Content="Use" Tag="{Binding}" Click="UseModel"
-                                Visibility="{Binding CanUse, Converter={StaticResource BoolToVisibility}}" AutomationProperties.Name="{Binding UseName}" />
-                        <Button Margin="6,0,0,0" FontSize="12" Padding="10,5" Content="Delete…" Tag="{Binding}" Click="DeleteModel"
-                                Visibility="{Binding CanDelete, Converter={StaticResource BoolToVisibility}}" AutomationProperties.Name="{Binding DeleteName}" />
-                      </StackPanel>
-                    </Grid>
-                    <ProgressBar Margin="0,10,0,0" Height="6" Minimum="0" Maximum="100" Value="{Binding ProgressPercent, Mode=OneWay}"
-                                 Visibility="{Binding IsDownloading, Converter={StaticResource BoolToVisibility}}" />
-                    <TextBlock Margin="0,8,0,0" FontSize="12" Opacity="0.75" TextWrapping="Wrap" Text="{Binding Summary}" />
-                    <TextBlock Margin="0,6,0,0" FontSize="12" Opacity="0.55" TextWrapping="Wrap">
-                      <Run Text="{Binding Details, Mode=OneWay}" /><Run Text=" · " /><Hyperlink NavigateUri="{Binding LicenseUri}" RequestNavigate="OpenModelTerms" Foreground="{DynamicResource ColorAccent300}">Terms</Hyperlink>
-                    </TextBlock>
-                    <TextBlock Margin="0,6,0,0" FontSize="12" Foreground="{DynamicResource ColorAccent300}" TextWrapping="Wrap" Text="{Binding Error}"
-                               Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}" />
-                  </StackPanel>
+                <Border Style="{StaticResource TableRow}" Padding="0,10">
+                  <Grid>
+                    <Rectangle Width="2" Margin="-12,2,0,2" HorizontalAlignment="Left" RadiusX="1" RadiusY="1" Fill="{DynamicResource ColorAccent}"
+                               Visibility="{Binding IsSelected, Converter={StaticResource BoolToVisibility}}" />
+                    <StackPanel>
+                      <Grid>
+                        <Grid.ColumnDefinitions>
+                          <ColumnDefinition Width="Auto" />
+                          <ColumnDefinition Width="Auto" />
+                          <ColumnDefinition Width="*" />
+                          <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock VerticalAlignment="Center" FontSize="14" FontWeight="SemiBold" Text="{Binding ShortName}" />
+                        <TextBlock Grid.Column="1" Margin="10,1,0,0" Style="{StaticResource RowValue}" Text="{Binding SizeText}" />
+                        <StackPanel Grid.Column="3" Margin="12,0,0,0" VerticalAlignment="Center" Orientation="Horizontal">
+                          <Border>
+                            <Border.Style>
+                              <Style TargetType="Border" BasedOn="{StaticResource StatusChip}">
+                                <Style.Triggers>
+                                  <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                    <Setter Property="BorderBrush" Value="{DynamicResource ColorAccent700}" />
+                                    <Setter Property="TextElement.Foreground" Value="{DynamicResource ColorAccent400}" />
+                                  </DataTrigger>
+                                </Style.Triggers>
+                              </Style>
+                            </Border.Style>
+                            <TextBlock FontFamily="{DynamicResource MonoFont}" Text="{Binding StatusChip}" ToolTip="{Binding StatusText}"
+                                       AutomationProperties.Name="{Binding StatusText}" AutomationProperties.LiveSetting="Polite" />
+                          </Border>
+                          <Button Margin="8,0,0,0" FontSize="12" Padding="10,4" Content="Download" Tag="{Binding}" Click="DownloadModel"
+                                  Visibility="{Binding CanDownload, Converter={StaticResource BoolToVisibility}}" AutomationProperties.Name="{Binding DownloadName}" />
+                          <Button Margin="8,0,0,0" FontSize="12" Padding="8,4" Style="{StaticResource GhostButton}" Content="Cancel" Tag="{Binding}" Click="CancelModelDownload"
+                                  Visibility="{Binding IsDownloading, Converter={StaticResource BoolToVisibility}}" AutomationProperties.Name="{Binding CancelName}" />
+                          <Button Margin="8,0,0,0" FontSize="12" Padding="10,4" Content="Use" Tag="{Binding}" Click="UseModel"
+                                  Visibility="{Binding CanUse, Converter={StaticResource BoolToVisibility}}" AutomationProperties.Name="{Binding UseName}" />
+                          <Button Margin="4,0,0,0" FontSize="12" Padding="8,4" Style="{StaticResource GhostButton}" Content="Delete…" Tag="{Binding}" Click="DeleteModel"
+                                  Visibility="{Binding CanDelete, Converter={StaticResource BoolToVisibility}}" AutomationProperties.Name="{Binding DeleteName}" />
+                        </StackPanel>
+                      </Grid>
+                      <TextBlock Margin="0,4,0,0" FontFamily="{DynamicResource MonoFont}" FontSize="11" Foreground="{DynamicResource ColorNeutral600}" TextWrapping="Wrap">
+                        <Run Text="{Binding TechnicalLine, Mode=OneWay}" /><Run Text=" · " /><Hyperlink NavigateUri="{Binding LicenseUri}" RequestNavigate="OpenModelTerms" Foreground="{DynamicResource ColorNeutral400}">terms</Hyperlink>
+                      </TextBlock>
+                      <ProgressBar Margin="0,8,0,0" Height="4" Minimum="0" Maximum="100" Value="{Binding ProgressPercent, Mode=OneWay}"
+                                   Visibility="{Binding IsDownloading, Converter={StaticResource BoolToVisibility}}" />
+                      <TextBlock Style="{StaticResource PageNote}" Margin="0,6,0,0" Text="{Binding Summary}" />
+                      <TextBlock Margin="0,6,0,0" FontSize="12" Foreground="{DynamicResource ColorWarning}" TextWrapping="Wrap" Text="{Binding Error}"
+                                 Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}" />
+                    </StackPanel>
+                  </Grid>
                 </Border>
               </DataTemplate>
             </ItemsControl.ItemTemplate>
           </ItemsControl>
-          <CheckBox x:Name="OfflinePreviewCheckBox" Margin="0,6,0,0" AutomationProperties.Name="Show a live preview with Parakeet">
+          <Border Style="{StaticResource TableRow}">
             <StackPanel>
-              <TextBlock FontWeight="SemiBold" FontSize="14" Text="Show a live preview with Parakeet" />
-              <TextBlock Margin="0,3,0,0" FontSize="12" Opacity="0.6" TextWrapping="Wrap"
+              <CheckBox x:Name="OfflinePreviewCheckBox" Style="{StaticResource GridSwitchRow}" Content="Live preview with Parakeet" AutomationProperties.Name="Show a live preview with Parakeet" />
+              <TextBlock Style="{StaticResource PageNote}" Margin="0,0,0,8"
                          Text="Re-transcribes about once a second while you hold the shortcut, so you can spot mistakes early. Uses more CPU while you speak; the inserted text still comes from one pass on release." />
             </StackPanel>
-          </CheckBox>
-          <TextBlock Margin="0,18,0,0" FontWeight="SemiBold" FontSize="14" Text="Processing" />
-          <Grid Margin="0,10,0,0">
-            <Grid.ColumnDefinitions>
-              <ColumnDefinition Width="*" />
-              <ColumnDefinition Width="240" />
-            </Grid.ColumnDefinitions>
-            <TextBlock VerticalAlignment="Center" FontSize="13" Foreground="{DynamicResource ColorText}" Opacity="0.8" Text="Run model on" />
-            <ComboBox x:Name="ModelDeviceBox" Grid.Column="1" Height="36" Padding="8,0" SelectedValuePath="Id" AutomationProperties.Name="Run model on">
-              <ComboBox.ItemTemplate>
-                <DataTemplate>
-                  <TextBlock Foreground="{DynamicResource ColorText}" Text="{Binding Label}" />
-                </DataTemplate>
-              </ComboBox.ItemTemplate>
-            </ComboBox>
-          </Grid>
-          <StackPanel x:Name="ModelDeviceStatusPanel" Margin="0,10,0,0" Orientation="Horizontal">
-            <Ellipse x:Name="ModelDeviceStatusDot" Width="8" Height="8" Margin="2,0,8,0" VerticalAlignment="Center" Fill="{DynamicResource ColorNeutral400}" />
-            <TextBlock x:Name="ModelDeviceStatusText" FontSize="13" Foreground="{DynamicResource ColorText}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
-          </StackPanel>
-          <TextBlock Margin="0,6,0,0" FontSize="12" Opacity="0.6" TextWrapping="Wrap"
-                     Text="Automatic uses a graphics card when one is available — much faster, but uses more battery. Choose Processor only to save battery. Changes apply the next time the model loads." />
-          <TextBlock Margin="0,16,0,0" Foreground="{DynamicResource ColorText}" Opacity="0.55" FontSize="12" TextWrapping="Wrap" Text="{Binding StorageText}" />
-          <TextBlock Margin="0,4,0,0" Foreground="{DynamicResource ColorText}" Opacity="0.55" FontSize="12" TextWrapping="Wrap"
+          </Border>
+
+          <TextBlock Style="{StaticResource GroupLabel}" Text="PROCESSING" />
+          <Border Style="{StaticResource TableRow}">
+            <StackPanel>
+              <Grid>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="{StaticResource SettingsLabelColumn}" />
+                  <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Style="{StaticResource RowLabel}" Text="Run model on" />
+                <ComboBox x:Name="ModelDeviceBox" Grid.Column="1" Style="{StaticResource ValuePicker}" SelectedValuePath="Id" AutomationProperties.Name="Run model on">
+                  <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                      <TextBlock Foreground="{DynamicResource ColorText}" Text="{Binding Label}" />
+                    </DataTemplate>
+                  </ComboBox.ItemTemplate>
+                </ComboBox>
+              </Grid>
+              <StackPanel x:Name="ModelDeviceStatusPanel" Margin="0,4,0,4" Orientation="Horizontal">
+                <Ellipse x:Name="ModelDeviceStatusDot" Width="8" Height="8" Margin="0,0,8,0" VerticalAlignment="Center" Fill="{DynamicResource ColorNeutral400}" />
+                <TextBlock x:Name="ModelDeviceStatusText" FontSize="13" Foreground="{DynamicResource ColorText}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
+              </StackPanel>
+              <TextBlock Style="{StaticResource PageNote}" Margin="0,2,0,8"
+                         Text="Automatic uses a graphics card when one is available — much faster, but uses more battery. Choose Processor only to save battery. Changes apply the next time the model loads." />
+            </StackPanel>
+          </Border>
+          <Border Style="{StaticResource TableRow}" MinHeight="0" Padding="0" />
+          <TextBlock Style="{StaticResource PageNote}" Margin="0,14,0,0" Text="{Binding StorageText}" />
+          <TextBlock Style="{StaticResource PageNote}" Margin="0,4,0,0"
                      Text="Models run on this computer. Your voice is processed locally." />
-        </StackPanel>        </Grid>
+        </StackPanel>
+        </Grid>
           </ScrollViewer>
-          <!-- The page fades into the footer instead of being cut off. -->
-          <Rectangle Grid.Row="0" Height="20" Margin="0,0,12,0" VerticalAlignment="Bottom" IsHitTestVisible="False">
+          <!-- More page below: it fades into the footer. At the end the fade goes, so the page visibly stops. -->
+          <Rectangle x:Name="ScrollFade" Grid.Row="0" Height="32" Margin="0,0,12,0" VerticalAlignment="Bottom" IsHitTestVisible="False">
             <Rectangle.Fill>
               <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
                 <GradientStop Offset="0" Color="#001B1C20" />
