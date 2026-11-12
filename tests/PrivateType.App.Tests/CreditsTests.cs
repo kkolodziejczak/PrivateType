@@ -44,7 +44,7 @@ public sealed class CreditsTests
     [Fact]
     public void Opens_the_releases_page_for_the_complete_zip_in_the_default_browser()
     {
-        var startInfo = OpenSourceLicensesWindow.CompleteZipBrowserStartInfo();
+        var startInfo = ProjectLinks.CompleteZipBrowserStartInfo();
 
         Assert.Equal("https://github.com/kkolodziejczak/privatetype/releases", startInfo.FileName);
         Assert.True(startInfo.UseShellExecute);

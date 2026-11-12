@@ -65,7 +65,7 @@
           <Button Style="{StaticResource GhostButton}" Height="32" Padding="12,0" Content="Close" Click="Close" />
           <Button x:Name="FullNoticesButton" Margin="8,0,0,0" Height="32" Padding="14,0" Content="Full notices" Click="OpenFullNotices" />
           <Button x:Name="OpenLicenseTextsButton" Style="{StaticResource PrimaryButton}" Margin="8,0,0,0" Height="32" Padding="16,0" Content="Open license texts" Click="OpenLicenseTexts" />
-          <Button x:Name="GetCompleteZipButton" Style="{StaticResource PrimaryButton}" Margin="8,0,0,0" Height="32" Padding="16,0" Content="Get the complete ZIP" Click="GetCompleteZip" />
+          <Button x:Name="GetCompleteZipButton" Style="{StaticResource PrimaryButton}" Margin="8,0,0,0" Height="32" Padding="16,0" Click="GetCompleteZip" />
         </StackPanel>
       </Border>
     </Grid>

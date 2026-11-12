@@ -18,7 +18,7 @@ public partial class ModelSetupWindow : Window
     // Each stopped state: a title for what happened, one line of why, and one line of what to do.
     internal const string MissingEngineHeading = "Speech engine missing";
     internal const string MissingEngineCause = "This copy of PrivateType came without its speech engine.";
-    internal const string MissingEngineStep = $"{GetCompleteZipAction}, extract every file, and start PrivateType from that folder.";
+    internal const string MissingEngineStep = $"{ProjectLinks.GetCompleteZipAction}, extract every file, and start PrivateType from that folder.";
     internal const string EngineCouldNotStartHeading = "Speech engine couldn't start";
     internal const string EngineCouldNotStartCause = "The speech engine is here, but Windows couldn't start it.";
     internal const string EngineCouldNotStartStep = $"Install the Microsoft Visual C++ Redistributable (x64), then select {CheckAgainAction}.";
@@ -26,9 +26,6 @@ public partial class ModelSetupWindow : Window
     internal const string CheckAgainAction = "Check again";
     internal const string DownloadAgainAction = "Download again";
     internal const string QuitAction = "Quit PrivateType";
-    internal const string GetCompleteZipAction = "Get the complete ZIP";
-    // Where the complete portable ZIP is published; every screen that sends the person for it links here.
-    internal const string CompleteZipAddress = "https://github.com/kkolodziejczak/privatetype/releases";
     internal const string FailureHeading = "Download interrupted";
     internal const string DroppedConnectionCause = "The connection dropped before the model finished downloading.";
     internal const string UnfinishedDownloadCause = "The model didn't finish downloading.";
@@ -56,7 +53,7 @@ public partial class ModelSetupWindow : Window
             .ToArray();
         QuitButton.Content = QuitAction;
         CheckAgainButton.Content = CheckAgainAction;
-        GetZipButton.Content = GetCompleteZipAction;
+        GetZipButton.Content = ProjectLinks.GetCompleteZipAction;
         DownloadAgainButton.Content = DownloadAgainAction;
         ShowChosenModel();
         SetStorageMode(ModelStorageMode.Shared);
@@ -327,7 +324,7 @@ public partial class ModelSetupWindow : Window
         e.Handled = true;
     }
 
-    private void GetCompleteZip(object sender, RoutedEventArgs e) => Process.Start(new ProcessStartInfo(CompleteZipAddress) { UseShellExecute = true });
+    private void GetCompleteZip(object sender, RoutedEventArgs e) => ProjectLinks.GetCompleteZip();
     private void Quit(object sender, RoutedEventArgs e) => CancelRequested?.Invoke();
     private void CloseWindow(object sender, RoutedEventArgs e) => Close();
     private void DragWindow(object sender, System.Windows.Input.MouseButtonEventArgs e) { if (e.LeftButton == System.Windows.Input.MouseButtonState.Pressed) DragMove(); }

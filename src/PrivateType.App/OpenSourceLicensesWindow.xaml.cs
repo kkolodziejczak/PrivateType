@@ -29,6 +29,7 @@ public partial class OpenSourceLicensesWindow : Window
         // An action that could open nothing is not offered.
         FullNoticesButton.Visibility = File.Exists(NoticesPath) ? Visibility.Visible : Visibility.Collapsed;
         OpenLicenseTextsButton.Visibility = hasFolder ? Visibility.Visible : Visibility.Collapsed;
+        GetCompleteZipButton.Content = ProjectLinks.GetCompleteZipAction;
         GetCompleteZipButton.Visibility = hasFolder ? Visibility.Collapsed : Visibility.Visible;
     }
 
@@ -107,9 +108,7 @@ public partial class OpenSourceLicensesWindow : Window
 
     private void OpenLicenseTexts(object sender, RoutedEventArgs e) => OpenIfPresent(licensesDirectory, Directory.Exists(licensesDirectory));
 
-    private void GetCompleteZip(object sender, RoutedEventArgs e) => Process.Start(CompleteZipBrowserStartInfo());
-
-    internal static ProcessStartInfo CompleteZipBrowserStartInfo() => new(ProjectLinks.Releases.AbsoluteUri) { UseShellExecute = true };
+    private void GetCompleteZip(object sender, RoutedEventArgs e) => ProjectLinks.GetCompleteZip();
 
     private static void OpenIfPresent(string path, bool present)
     {
