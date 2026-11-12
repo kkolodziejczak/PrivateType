@@ -48,12 +48,15 @@
         </Grid>
       </Border>
       <!-- One page of credits. A read-only rich text box, so every line can be selected and copied; it scrolls when the
-           page is taller than the window may grow. The page margin is the document's, so the scrollbar sits at the edge. -->
+           page is taller than the window may grow. The rich text box keeps its document's padding at 5,0,5,0 whatever is set,
+           so the page margin (28,22,28,20) is the page section's own margin on top of it, and the scrollbar stays at the edge. -->
       <RichTextBox x:Name="CreditsPage" Grid.Row="1" IsReadOnly="True" Background="Transparent" BorderThickness="0" Padding="0"
                    VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" FocusVisualStyle="{x:Null}"
                    Foreground="{DynamicResource ColorText}" SelectionBrush="{DynamicResource ColorAccent}" SelectionOpacity="0.4"
                    AutomationProperties.Name="What PrivateType is built with">
-        <FlowDocument x:Name="Page" PagePadding="28,22,28,20" FontFamily="{DynamicResource AppFont}" FontSize="13" />
+        <FlowDocument PagePadding="5,0,5,0" FontFamily="{DynamicResource AppFont}" FontSize="13">
+          <Section x:Name="Page" Margin="23,22,23,20" />
+        </FlowDocument>
       </RichTextBox>
       <!-- The same slim footer as Settings: the secondary action as text, the primary filled at the right. Each action is shown only when its target exists. -->
       <Border Grid.Row="2" Padding="24,10,16,12" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,1,0,0">
