@@ -323,7 +323,8 @@ internal static class CaptureProbe
 
             StopAnimations(window);
             // Some windows place themselves under the pointer; take the content out of hit testing so nothing draws hovered.
-            if (window.Content is UIElement content)
+            // An open dropdown holds the mouse capture and would close without it, so its window keeps hit testing; it is off screen.
+            if (window.Content is UIElement content && System.Windows.Input.Mouse.Captured is null)
                 content.IsHitTestVisible = false;
             foreach (var popup in Descendants(window).OfType<Popup>().Where(popup => popup.Child is not null))
                 popup.Child.IsHitTestVisible = false;
