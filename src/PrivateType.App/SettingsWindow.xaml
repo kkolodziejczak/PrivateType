@@ -91,7 +91,7 @@
                   </Grid.ColumnDefinitions>
                   <TextBox x:Name="KeyBox" Grid.Column="0" Style="{StaticResource KeycapRecorder}" Margin="-4,0,0,0" Text="{Binding ShortcutLabel, Mode=OneWay}" PreviewKeyDown="RecordShortcut"
                            ToolTip="Click, then press Ctrl+Shift plus a key." AutomationProperties.Name="{Binding ShortcutLabel, StringFormat='Shortcut {0}'}" />
-                  <TextBlock x:Name="Arrow" Grid.Column="0" Margin="0,0,14,0" HorizontalAlignment="Right" VerticalAlignment="Center" FontSize="16" Foreground="{DynamicResource ColorNeutral600}" Text="→" />
+                  <TextBlock x:Name="Arrow" Grid.Column="0" Margin="0,0,10,0" HorizontalAlignment="Right" VerticalAlignment="Center" FontSize="16" Foreground="{DynamicResource ColorNeutral600}" Text="→" />
                   <ComboBox x:Name="LanguageBox" Grid.Column="1" Style="{StaticResource ValuePicker}" ItemsSource="{Binding SupportedLanguages}" SelectedValuePath="LocaleCode"
                             SelectedValue="{Binding LocaleCode, Mode=TwoWay}" IsTextSearchEnabled="True" TextSearch.TextPath="Label"
                             AutomationProperties.Name="Recognition language" MaxDropDownHeight="320">
@@ -223,7 +223,7 @@
           <Border Style="{StaticResource TableRow}">
             <StackPanel>
               <CheckBox x:Name="ClipboardHistoryCheckBox" Style="{StaticResource GridSwitchRow}"
-                        Content="Show in Win+V clipboard history"
+                        Content="Show in clipboard history"
                         AutomationProperties.Name="Show pasted dictations in Windows clipboard history" Checked="HistoryOptionChanged" Unchecked="HistoryOptionChanged" />
               <TextBlock x:Name="ClipboardHistoryHint" Style="{StaticResource RowHint}" />
             </StackPanel>

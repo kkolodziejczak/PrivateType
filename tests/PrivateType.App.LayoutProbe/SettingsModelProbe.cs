@@ -67,6 +67,7 @@ internal static class SettingsModelProbe
             Require(nemotron.StatusText == "In use" && !nemotron.CanDelete && !nemotron.CanUse, "The model in use must not offer Use or Delete.");
             Require(parakeet.StatusText == "Not downloaded" && parakeet.CanDownload && !parakeet.CanUse, "A missing model must offer only Download.");
             Require(VisibleButtons(window).Contains("Download Parakeet TDT 0.6B v3"), "The Download button must be visible and named for the model.");
+            Require(nemotron.ShortName == "Nemotron" && nemotron.StatusChip == "IN USE" && !models.HasBoostNotice, "A model row leads with its short name and status, and a boosting model needs no vocabulary notice.");
             RequireNoClipping(window);
             Capture(window, outputDirectory, "settings-model.png");
 
@@ -90,6 +91,7 @@ internal static class SettingsModelProbe
 
             Click(window, VisibleButton(window, "Use Parakeet TDT 0.6B v3"));
             Require(models.SelectedId == SpeechModelCatalog.ParakeetId && parakeet.StatusText.StartsWith("Selected", StringComparison.Ordinal), "Use must select the model until save.");
+            Require(models.HasBoostNotice && models.BoostNotice.StartsWith("Parakeet", StringComparison.Ordinal), "The vocabulary page must say when the chosen model does not boost phrases.");
             Require(nemotron.StatusText == "In use until you save" && !nemotron.CanDelete && nemotron.CanUse, "The model still in use must stay undeletable but selectable.");
             Require(!parakeet.CanDelete, "The selected model must not be deletable.");
             Capture(window, outputDirectory, "settings-model-selected.png");
