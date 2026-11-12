@@ -53,7 +53,7 @@ internal static class DocsScreenshotProbe
         {
             ShowInTaskbar = false,
             SizeToContent = SizeToContent.Manual,
-            Width = 620,
+            Width = 660,
             Height = PageHeight
         };
         window.Show();

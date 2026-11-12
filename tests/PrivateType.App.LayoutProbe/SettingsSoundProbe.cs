@@ -35,7 +35,7 @@ internal static class SettingsSoundProbe
         };
         var window = CreateWindow(settings);
         window.SizeToContent = SizeToContent.Manual;
-        window.Width = 620;
+        window.Width = 660;
         window.Height = height;
         window.Show();
         try
