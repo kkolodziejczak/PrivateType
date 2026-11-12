@@ -599,6 +599,8 @@
                       </TextBlock>
                       <ProgressBar Margin="0,8,0,0" Height="4" Minimum="0" Maximum="100" Value="{Binding ProgressPercent, Mode=OneWay}"
                                    Visibility="{Binding IsDownloading, Converter={StaticResource BoolToVisibility}}" />
+                      <TextBlock Margin="0,6,0,0" FontSize="12" Foreground="{DynamicResource ColorText}" TextWrapping="Wrap" Text="{Binding DownloadNextStep, Mode=OneWay}"
+                                 Visibility="{Binding IsDownloading, Converter={StaticResource BoolToVisibility}}" />
                       <TextBlock Style="{StaticResource PageNote}" Margin="0,6,0,0" Text="{Binding Summary}" />
                       <TextBlock Margin="0,6,0,0" FontSize="12" Foreground="{DynamicResource ColorWarning}" TextWrapping="Wrap" Text="{Binding Error}"
                                  Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}" />

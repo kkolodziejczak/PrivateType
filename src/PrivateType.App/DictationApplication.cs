@@ -903,7 +903,7 @@ internal sealed class DictationApplication : IDisposable
 
         var foreground = new Win32ForegroundTarget();
         var target = foreground.Capture();
-        var window = new DictationHistoryWindow(history, TimeProvider.System);
+        var window = new DictationHistoryWindow(history, TimeProvider.System, settings: settings);
         window.Chosen += entry => _ = PasteFromHistoryAsync(entry.Text, foreground, target);
         window.Closed += (_, _) =>
         {

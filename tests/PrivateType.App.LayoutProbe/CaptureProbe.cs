@@ -187,7 +187,7 @@ internal static class CaptureProbe
         clock.Now = Now;
         history.Add(new FinalizedDictation("Short note.", "auto"));
         Draw(new DictationHistoryWindow(history, clock, () => 100), output, "history", "history-list");
-        Draw(new DictationHistoryWindow(new DictationHistory(clock), clock, () => 100), output, "history", "history-empty");
+        Draw(new DictationHistoryWindow(new DictationHistory(clock), clock, () => 100, Sample), output, "history", "history-empty");
     }
 
     private static void Teach(string output)

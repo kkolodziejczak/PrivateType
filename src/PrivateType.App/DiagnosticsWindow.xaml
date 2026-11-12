@@ -79,6 +79,12 @@
         <ListBox x:Name="Entries" Grid.Row="1" Margin="0,14,0,0" DisplayMemberPath="Display" ItemContainerStyle="{StaticResource EntryRow}"
                  BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,1,0,0"
                  ScrollViewer.HorizontalScrollBarVisibility="Disabled" AutomationProperties.Name="Diagnostics entries" />
+        <!-- Nothing logged yet: what that means, and when to come back. Save, Copy and Clear stay available. -->
+        <StackPanel x:Name="EmptyPanel" Grid.Row="1" Margin="0,0,0,24" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed">
+          <TextBlock HorizontalAlignment="Center" FontSize="15" FontWeight="SemiBold" Text="Nothing logged this session" />
+          <TextBlock Margin="0,8,0,0" MaxWidth="400" FontSize="13" Foreground="{DynamicResource ColorNeutral400}" TextAlignment="Center" TextWrapping="Wrap"
+                     Text="If dictation goes wrong, come back here before you close PrivateType and save the report." />
+        </StackPanel>
       </Grid>
       <!-- The same slim footer as Settings: Clear set apart on the left, Save report filled at the right. -->
       <Border Grid.Row="2" Padding="16,10,16,12" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,1,0,0">
