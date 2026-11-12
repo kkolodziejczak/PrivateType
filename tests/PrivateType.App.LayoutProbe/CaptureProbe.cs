@@ -366,9 +366,10 @@ internal static class CaptureProbe
             var child = (FrameworkElement)popup.Child;
             var owner = (FrameworkElement)VisualTreeHelper.GetParent(popup);
             var origin = owner.TranslatePoint(new Point(0, owner.ActualHeight + child.Margin.Top), window);
-            var size = new Size(child.ActualWidth, child.ActualHeight);
-            var brush = new VisualBrush(child) { Stretch = Stretch.None, AlignmentX = AlignmentX.Left, AlignmentY = AlignmentY.Top, ViewboxUnits = BrushMappingMode.Absolute, Viewbox = new Rect(size) };
-            context.DrawRectangle(brush, null, new Rect(new Point(Backdrop + origin.X, Backdrop + origin.Y), size));
+            // The brush maps the child's own drawing, which can sit off its layout origin, onto the same place below the owner.
+            var bounds = Rect.Union(VisualTreeHelper.GetContentBounds(child), VisualTreeHelper.GetDescendantBounds(child));
+            var brush = new VisualBrush(child) { Stretch = Stretch.None, ViewboxUnits = BrushMappingMode.Absolute, Viewbox = bounds };
+            context.DrawRectangle(brush, null, new Rect(Backdrop + origin.X + bounds.X, Backdrop + origin.Y + bounds.Y, bounds.Width, bounds.Height));
         }
     }
 
