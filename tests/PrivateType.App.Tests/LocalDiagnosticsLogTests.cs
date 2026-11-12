@@ -46,18 +46,34 @@ public sealed class LocalDiagnosticsLogTests
     public void Shows_an_entry_on_the_persons_clock_and_names_it_for_a_screen_reader()
     {
         var log = new InMemoryDiagnostics();
-        log.Record(new DictationDiagnostic("session-1", new DateTimeOffset(2026, 10, 2, 11, 58, 7, TimeSpan.Zero), "cue.skipped", new Dictionary<string, string>
+        log.Record(new DictationDiagnostic("session-1", new DateTimeOffset(2026, 10, 2, 11, 58, 7, TimeSpan.Zero), "injection.skipped", new Dictionary<string, string>
         {
-            ["source"] = "ready",
-            ["reason"] = "muted"
+            ["reason"] = "empty-transcript"
         }));
         var twoHoursAhead = TimeZoneInfo.CreateCustomTimeZone("test", TimeSpan.FromHours(2), "test", "test");
 
         var row = DiagnosticRow.From(log.Snapshot().Single(), twoHoursAhead);
 
         Assert.Equal("13:58:07", row.Time);
-        Assert.Equal("Warning", row.Level);
-        Assert.Equal("cue.skipped source=ready reason=muted", row.Message);
-        Assert.Equal("Warning, 13:58, cue skipped, source ready, reason muted", row.SpokenName);
+        Assert.Equal(DiagnosticSeverity.Warning, row.Severity);
+        Assert.Equal("No words were recognized, so nothing was typed", row.Title);
+        Assert.Equal("injection.skipped reason=empty-transcript", row.Raw);
+        Assert.Equal("Warning, 13:58, No words were recognized, so nothing was typed, injection.skipped reason=empty-transcript", row.SpokenName);
+    }
+
+    [Fact]
+    public void Titles_an_unknown_event_by_its_name_and_keeps_an_errors_type_and_code_in_the_raw_line()
+    {
+        var log = new InMemoryDiagnostics();
+        log.Record(new DictationDiagnostic("application", DateTimeOffset.UtcNow, "cue.skipped", new Dictionary<string, string> { ["source"] = "ready" }));
+        log.Record(new DictationDiagnostic("e8802c", DateTimeOffset.UtcNow, "session.failed", new Dictionary<string, string> { ["phase"] = "capture.start" }, new InvalidOperationException("synthetic")));
+
+        var rows = log.Snapshot().Select(entry => DiagnosticRow.From(entry, TimeZoneInfo.Utc)).ToArray();
+
+        Assert.Equal("The microphone couldn't start recording", rows[0].Title);
+        Assert.Equal(DiagnosticSeverity.Error, rows[0].Severity);
+        Assert.Equal("session.failed phase=capture.start InvalidOperationException 0x80131509", rows[0].Raw);
+        Assert.Equal("cue skipped", rows[1].Title);
+        Assert.Null(rows[1].NextStep);
     }
 }
