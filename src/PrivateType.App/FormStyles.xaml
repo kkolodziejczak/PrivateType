@@ -605,6 +605,25 @@
       </DataTrigger>
     </Style.Triggers>
   </Style>
+  <!-- The warning mark: a 16 px stroked triangle with an exclamation, beside a sentence that says the same in words.
+       Like the info mark, its stroke and stem lie on multiples of 0.8, whole pixels at 125 %. -->
+  <Style x:Key="WarningMark" TargetType="ContentControl">
+    <Setter Property="Width" Value="16" />
+    <Setter Property="Height" Value="16" />
+    <Setter Property="Focusable" Value="False" />
+    <Setter Property="Foreground" Value="{DynamicResource ColorWarning}" />
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="ContentControl">
+          <Grid>
+            <Path Stroke="{TemplateBinding Foreground}" StrokeThickness="1.6" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                  Data="M8,1.6 L15.2,14.4 H0.8 Z M8,6.4 V9.6" />
+            <Ellipse Width="1.9" Height="1.9" Margin="0,8,0,0" Fill="{TemplateBinding Foreground}" />
+          </Grid>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
   <!-- The ⓘ after a row label: its tooltip carries the row's explanation for pointer users. -->
   <!-- A 16 px stroked circle-i inside a 24 × 24 target that also takes keyboard focus and then shows the same tip.
        Its stroke and radius are multiples of 0.8, one pixel at 125 %, so the ring and the stem lie on whole pixels there. -->

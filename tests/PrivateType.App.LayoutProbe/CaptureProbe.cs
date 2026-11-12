@@ -376,7 +376,7 @@ internal static class CaptureProbe
         Draw(new OpenSourceLicensesWindow(), output, "licenses", "licenses");
         Draw(new OpenSourceLicensesWindow(BundledLicenses(everyFile: false)), output, "licenses", "licenses-bundled");
         Draw(new OpenSourceLicensesWindow(BundledLicenses(everyFile: false)), output, "licenses", "licenses-bundled-end",
-            window => ((TextBox)window.FindName("Notices")).ScrollToEnd());
+            window => ((RichTextBox)window.FindName("CreditsPage")).ScrollToEnd());
         Draw(new OpenSourceLicensesWindow(BundledLicenses(everyFile: true)), output, "licenses", "licenses-bundled-full");
     }
 
@@ -471,17 +471,15 @@ internal static class CaptureProbe
         return diagnostics;
     }
 
-    // The licenses folder a portable release ships. The notices are the text in the release script; with every file, the
-    // other license texts lie beside them under the names the release uses: PrivateType's own license in full, and a
-    // short stand-in for each text the release copies from a package or the engine.
+    // The licenses folder a portable release ships. The window shows the app's own credits and only opens the notices, so
+    // they are a stand-in; with every file, the other license texts lie beside them under the names the release uses:
+    // PrivateType's own license in full, and a short stand-in for each text the release copies from a package or the engine.
     private static string BundledLicenses(bool everyFile, [CallerFilePath] string source = "")
     {
         var repository = Path.Combine(Path.GetDirectoryName(source)!, "..", "..");
-        var script = File.ReadAllText(Path.Combine(repository, "Build-PortableRelease.ps1")).Replace("\r\n", "\n");
-        var start = script.IndexOf("@'\nPrivateType third-party notices", StringComparison.Ordinal) + 3;
-        var end = script.IndexOf("\n'@ | Set-Content", start, StringComparison.Ordinal);
         var folder = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), everyFile ? "privatetype-capture-licenses-full" : "privatetype-capture-licenses")).FullName;
-        File.WriteAllText(Path.Combine(folder, "THIRD-PARTY-NOTICES.txt"), script[start..end]);
+        File.WriteAllText(Path.Combine(folder, OpenSourceLicensesWindow.NoticesFileName),
+            "Stand-in for the capture: the release writes the notices here from Credits.json.");
         if (!everyFile)
             return folder;
 

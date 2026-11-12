@@ -1,0 +1,52 @@
+{
+  "_about": "What the portable release is declared to contain. The Licenses window shows it as credits, and Build-PortableRelease.ps1 writes THIRD-PARTY-NOTICES.txt from it, so the two can't drift. name, maker and license appear in both; release and texts only in the notices; group only in the window.",
+  "components": [
+    {
+      "group": "Speech",
+      "name": "NeMo-Speech.cpp",
+      "maker": "by NVIDIA",
+      "release": "0.2.0, the unmodified Windows x64 Vulkan release nemo-speech-0.2.0-windows-x86_64-vulkan.zip (SHA-256 edf15a04ba98740aa0ab75ae4681ac7ad0a488b22b35ce2cbebd10590bb1c1e1)",
+      "role": "Turns your speech into text on this computer.",
+      "license": "Apache-2.0",
+      "includes": "It includes ggml, llama.cpp, cpp-httplib, miniaudio, Abseil, Protocol Buffers, SentencePiece and utf8-range under their own licenses, and Microsoft's Visual C++ runtime libraries.",
+      "texts": "NVIDIA's LICENSE and NOTICE, and the licenses NVIDIA ships for the libraries it includes, in the NeMo-Speech.cpp folder"
+    },
+    {
+      "group": "Graphics",
+      "name": "Vulkan loader",
+      "maker": "from LunarG",
+      "release": "1.4.328.1, engine\\bin\\vulkan-1.dll unmodified from VulkanRT-X64-1.4.328.1-Components.zip (SHA-256 293efbb2c11e60429df7770f40e3c5c811a7fa42af81de0cc41e8718ddb2b373)",
+      "role": "Lets the speech engine use the graphics card.",
+      "license": "MIT and Apache-2.0",
+      "texts": "VulkanRT-License.txt"
+    },
+    {
+      "group": "Audio",
+      "name": "NAudio",
+      "release": "2.2.1",
+      "role": "Captures the microphone and plays the sound cues.",
+      "license": "MIT",
+      "texts": "NAudio-MIT.txt"
+    },
+    {
+      "group": "Runtime",
+      "name": ".NET runtime",
+      "release": "self-contained",
+      "role": "Runs the app.",
+      "license": ".NET Library License",
+      "texts": "dotnet-LICENSE.txt and dotnet-THIRD-PARTY-NOTICES.txt"
+    },
+    {
+      "group": "Spoken cues",
+      "name": "Kokoro-82M",
+      "maker": "by hexgrad",
+      "release": "https://huggingface.co/hexgrad/Kokoro-82M",
+      "role": "Generated the spoken cue recordings. No model is included.",
+      "license": "Apache-2.0"
+    }
+  ],
+  "models": [
+    { "name": "Parakeet", "license": "CC-BY-4.0" },
+    { "name": "Nemotron", "license": "OpenMDW-1.1" }
+  ]
+}
