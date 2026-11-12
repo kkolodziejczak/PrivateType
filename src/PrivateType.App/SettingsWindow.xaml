@@ -225,7 +225,8 @@
               <CheckBox x:Name="ClipboardHistoryCheckBox" Style="{StaticResource GridSwitchRow}"
                         Content="Show in clipboard history"
                         AutomationProperties.Name="Show pasted dictations in Windows clipboard history" Checked="HistoryOptionChanged" Unchecked="HistoryOptionChanged" />
-              <TextBlock x:Name="ClipboardHistoryHint" Style="{StaticResource RowHint}" />
+              <!-- Always shown: it says what other apps can read, and the switch it explains cannot take focus while typing. -->
+              <TextBlock x:Name="ClipboardHistoryHint" Style="{StaticResource RowHint}" Visibility="Visible" />
             </StackPanel>
           </Border>
 
