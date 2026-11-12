@@ -202,7 +202,10 @@ public partial class ModelSetupWindow : Window
         GetZipButton.Visibility = Shown(view == SetupView.EngineMissing);
         CheckAgainButton.Visibility = Shown(view is SetupView.EngineMissing or SetupView.EngineCouldNotStart);
         // Missing engine: getting the ZIP is the way forward, checking again is beside it. A stopped engine: checking again is the way forward.
-        CheckAgainButton.Style = view == SetupView.EngineCouldNotStart ? (Style)FindResource("PrimaryButton") : null;
+        if (view == SetupView.EngineCouldNotStart)
+            CheckAgainButton.Style = (Style)FindResource("PrimaryButton");
+        else
+            CheckAgainButton.ClearValue(StyleProperty);
         ShowDownloadReadiness();
         if (!changed)
             return;
