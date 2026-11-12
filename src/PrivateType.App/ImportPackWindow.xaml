@@ -79,7 +79,7 @@
               <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
             <TextBlock Style="{StaticResource RowLabel}" Text="Name" />
-            <TextBox x:Name="NameBox" Grid.Column="1" Height="30" Padding="0" FontSize="13" MaxLength="80" TextChanged="InputChanged" AutomationProperties.Name="Pack name" />
+            <TextBox x:Name="NameBox" Grid.Column="1" Height="30" Padding="3.5,0" FontSize="13" MaxLength="80" TextChanged="InputChanged" AutomationProperties.Name="Pack name" />
           </Grid>
         </Border>
         <Border Style="{StaticResource TableRow}">

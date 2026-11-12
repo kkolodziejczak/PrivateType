@@ -111,6 +111,7 @@ internal static class SettingsPackProbe
             ((ComboBox)window.FindName("ScopeBox")).SelectedValue = "en";
             Flush(window);
             Require(import.IsEnabled, "Import must enable once a language is chosen.");
+            Require(window.ActualHeight < 520, $"A three-phrase preview must keep the dialog compact (was {window.ActualHeight:0}).");
             Capture(window, outputDirectory, "import-pack-preview.png");
 
             name.Text = "Software development";
@@ -160,6 +161,7 @@ internal static class SettingsPackProbe
         {
             Flush(preview);
             Require(((TextBlock)preview.FindName("SummaryText")).Text.StartsWith("4 phrases will be written.", StringComparison.Ordinal), "Export must start with every phrase ticked.");
+            Require(preview.ActualHeight < 420, $"Four phrases must keep the export dialog compact (was {preview.ActualHeight:0}).");
             Capture(preview, outputDirectory, "export-review.png");
         }
         finally
