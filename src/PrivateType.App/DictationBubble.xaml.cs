@@ -15,6 +15,8 @@ public partial class DictationBubble : Window
 {
     internal const bool RecordingWaveformBlinks = false;
     internal const int SpectrumBarCount = 44;
+    // The live level is drawn as a few bars, each the loudest of its group of spectrum bins.
+    internal const int MeterBarCount = 5;
     internal const string ModelLoadingTitle = "Loading local model…";
     internal const string ModelLoadingHint = "This may take a few seconds. Keep holding to dictate.";
     internal const string FinalizingTitle = "Transcribing…";
@@ -32,7 +34,8 @@ public partial class DictationBubble : Window
     private const nint HtClient = 1;
     private const nint HtTransparent = -1;
     private readonly AdaptiveAudioMeter adaptiveAudioMeter = new();
-    private readonly List<ScaleTransform> waveformScales = [];
+    private readonly List<ScaleTransform> meterScales = [];
+    private IReadOnlyList<ShortcutBinding> shortcuts = [];
     private readonly double[] smoothedSpectrum = new double[SpectrumBarCount];
     private bool active;
     private bool recordingIndicatorVisible;
@@ -106,13 +109,15 @@ public partial class DictationBubble : Window
         active = false;
         recordingVisualsActive = false;
         StopRecordingIndicator();
+        shortcuts = settings.Shortcuts;
         BubbleShell.Opacity = OpacityForReadyState(modelLoaded);
-        ApplyReadyVisuals();
+        ApplyReadyVisuals(modelLoaded);
         SetWidthAroundCenter(ReadyWidth);
         Hint.Text = DescribeBindings(settings.Shortcuts);
         Hint.Visibility = Visibility.Collapsed;
         WaveformBars.Visibility = Visibility.Collapsed;
         TranscriptViewport.Visibility = Visibility.Collapsed;
+        UpdateScrim();
     }
 
     // Shows the bubble where the text will go: the monitor of the window being dictated into.
@@ -169,16 +174,17 @@ public partial class DictationBubble : Window
         active = true;
         recordingVisualsActive = true;
         BubbleShell.Opacity = 1;
-        ApplyRecordingVisuals();
+        ApplyRecordingVisuals(localeCode);
         ResetAudioVisuals();
         SetWidthAroundCenter(ActiveWidth, selectedWorkArea);
         StartRecordingIndicator();
         Hint.Visibility = Visibility.Collapsed;
         WaveformBars.Visibility = Visibility.Visible;
-        Transcript.FontSize = 14;
-        Transcript.Opacity = 0.92;
+        Transcript.FontSize = 15;
+        Transcript.Opacity = 1;
         SetTranscript(string.Empty);
         TranscriptViewport.Visibility = Visibility.Visible;
+        UpdateScrim();
         ClampToWorkAreaAfterLayout(selectedWorkArea);
     }
 
@@ -189,12 +195,13 @@ public partial class DictationBubble : Window
         recordingVisualsActive = false;
         StopRecordingIndicator();
         BubbleShell.Opacity = 1;
-        ApplyExpandedVisuals(ModelLoadingTitle, "ColorAccent900", "ColorAccent300", "ColorAccent300");
+        ApplyExpandedVisuals(ModelLoadingTitle);
         SetWidthAroundCenter(ActiveWidth);
         Hint.Text = toggleMode ? ModelLoadingToggleHint : ModelLoadingHint;
         Hint.Visibility = Visibility.Visible;
         WaveformBars.Visibility = Visibility.Collapsed;
         TranscriptViewport.Visibility = Visibility.Collapsed;
+        UpdateScrim();
         ClampToWorkAreaAfterLayout();
     }
 
@@ -211,11 +218,20 @@ public partial class DictationBubble : Window
 
         meter = adaptiveAudioMeter.Normalize(meter);
         var level = Math.Clamp(meter.Level, 0, 1);
-        for (var index = 0; index < waveformScales.Count; index++)
+        for (var index = 0; index < smoothedSpectrum.Length; index++)
         {
             var target = index < meter.Spectrum.Count ? Math.Clamp(meter.Spectrum[index], 0, 1) : 0;
             smoothedSpectrum[index] += (target - smoothedSpectrum[index]) * 0.68;
-            waveformScales[index].ScaleY = Math.Max(0.08, smoothedSpectrum[index]);
+        }
+
+        for (var bar = 0; bar < meterScales.Count; bar++)
+        {
+            var start = bar * SpectrumBarCount / MeterBarCount;
+            var end = (bar + 1) * SpectrumBarCount / MeterBarCount;
+            var loudest = 0.0;
+            for (var bin = start; bin < end; bin++)
+                loudest = Math.Max(loudest, smoothedSpectrum[bin]);
+            meterScales[bar].ScaleY = Math.Max(0.15, loudest);
         }
 
         WaveformBars.Opacity = 0.7 + (level * 0.3);
@@ -234,13 +250,14 @@ public partial class DictationBubble : Window
         recordingVisualsActive = false;
         StopRecordingIndicator();
         BubbleShell.Opacity = 1;
-        ApplyExpandedVisuals(FinalizingTitle, "ColorAccent900", "ColorAccent300", "ColorAccent300");
+        ApplyExpandedVisuals(FinalizingTitle);
         SetWidthAroundCenter(ActiveWidth);
         WaveformBars.Visibility = Visibility.Collapsed;
         TranscriptViewport.Visibility = string.IsNullOrEmpty(Transcript.Text) ? Visibility.Collapsed : Visibility.Visible;
         Hint.Text = FinalizingHint;
         Hint.Visibility = string.IsNullOrEmpty(Transcript.Text) ? Visibility.Visible : Visibility.Collapsed;
         Transcript.Opacity = 0.7;
+        UpdateScrim();
         ClampToWorkAreaAfterLayout();
     }
 
@@ -256,9 +273,10 @@ public partial class DictationBubble : Window
         Hint.Visibility = Visibility.Collapsed;
         WaveformBars.Visibility = Visibility.Collapsed;
         Transcript.FontSize = 13;
-        Transcript.Opacity = 0.6;
+        Transcript.Opacity = 0.85;
         SetTranscript(message);
         TranscriptViewport.Visibility = Visibility.Visible;
+        UpdateScrim();
         ClampToWorkAreaAfterLayout();
     }
 
@@ -274,9 +292,10 @@ public partial class DictationBubble : Window
         Hint.Visibility = Visibility.Collapsed;
         WaveformBars.Visibility = Visibility.Collapsed;
         Transcript.FontSize = 13;
-        Transcript.Opacity = 0.6;
+        Transcript.Opacity = 0.85;
         SetTranscript(message);
         TranscriptViewport.Visibility = Visibility.Visible;
+        UpdateScrim();
         ClampToWorkAreaAfterLayout();
     }
 
@@ -357,83 +376,111 @@ public partial class DictationBubble : Window
 
     private void CreateWaveformBars()
     {
-        for (var index = 0; index < SpectrumBarCount; index++)
+        for (var index = 0; index < MeterBarCount; index++)
         {
-            var scale = new ScaleTransform(1, 0.08);
+            var scale = new ScaleTransform(1, 0.15);
             var bar = new System.Windows.Shapes.Rectangle
             {
-                Width = 1.5,
-                Height = 16,
-                RadiusX = 0.75,
-                RadiusY = 0.75,
+                Width = 3,
+                Height = 20,
+                Margin = new Thickness(1.5, 0, 1.5, 0),
+                RadiusX = 1.5,
+                RadiusY = 1.5,
                 VerticalAlignment = VerticalAlignment.Center,
-                Fill = (System.Windows.Media.Brush)System.Windows.Application.Current.Resources["ColorAccent400"],
+                Fill = Brush("ColorAccent400"),
                 RenderTransform = scale,
                 RenderTransformOrigin = new System.Windows.Point(0.5, 0.5)
             };
-            waveformScales.Add(scale);
+            meterScales.Add(scale);
             WaveformBars.Children.Add(bar);
         }
     }
 
-    private void ApplyReadyVisuals()
+    // Every state is told apart by the microphone key itself, not only by a word.
+    private void ApplyReadyVisuals(bool modelLoaded)
     {
-        BubbleShell.CornerRadius = new CornerRadius(32);
-        BubbleShell.Padding = new Thickness(13);
-        BubbleHeader.HorizontalAlignment = System.Windows.HorizontalAlignment.Center;
-        BubbleHeader.Width = 36;
-        StatusTitle.Visibility = Visibility.Collapsed;
-        IconTile.Background = System.Windows.Media.Brushes.Transparent;
-        IconTile.BorderBrush = System.Windows.Media.Brushes.Transparent;
-        IconOutline.Fill = Brush("ColorAccent800");
-        IconOutline.Stroke = Brush("ColorDivider");
-        SetIconBars("ColorAccent300");
+        StopRecordingPulse();
+        Pill.Background = System.Windows.Media.Brushes.Transparent;
+        Pill.BorderBrush = System.Windows.Media.Brushes.Transparent;
+        SetPillContent(locale: null, heldKey: null, title: null);
+        // Without a model the key is only an outline: nothing is loaded behind it yet.
+        SetMicrophoneKey(modelLoaded ? "ColorKeycap" : null, modelLoaded ? "ColorText" : "ColorNeutral400", raised: modelLoaded);
     }
 
-    private void ApplyRecordingVisuals()
+    private void ApplyRecordingVisuals(string localeCode)
     {
-        ApplyExpandedVisuals("Listening", "ColorAccent700", "ColorAccent", "ColorAccent100");
+        ApplyExpandedVisuals(title: null);
+        SetPillContent(LocaleLegend(localeCode), HeldKeyLegend(localeCode), title: null);
+        // Live: the key is pressed and lit.
+        SetMicrophoneKey("ColorAccent800", "ColorAccent100", raised: false);
     }
 
     private void ApplyCancelledVisuals()
     {
-        ApplyExpandedVisuals("Cancelled", "ColorNeutral800", "ColorDivider", "ColorNeutral400");
+        ApplyExpandedVisuals("Not inserted");
+        SetMicrophoneKey("ColorNeutral900", "ColorNeutral400", raised: true);
     }
 
     private void ApplyErrorVisuals()
     {
-        ApplyExpandedVisuals("Error", "ColorAccent900", "ColorAccent300", "ColorAccent300");
+        ApplyExpandedVisuals("Error");
+        SetMicrophoneKey("ColorDangerSurface", "ColorDanger", raised: true);
+        MicrophoneMark.Visibility = Visibility.Collapsed;
+        IconLegend.Visibility = Visibility.Visible;
     }
 
-    private void ApplyExpandedVisuals(string title, string tileBrush, string strokeBrush, string barBrush)
+    private void ApplyExpandedVisuals(string? title)
     {
         StopRecordingPulse();
-        BubbleShell.CornerRadius = new CornerRadius(14);
-        BubbleShell.Padding = new Thickness(17);
-        BubbleHeader.HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch;
-        BubbleHeader.Width = double.NaN;
-        StatusTitle.Text = title;
-        StatusTitle.Visibility = Visibility.Visible;
-        IconTile.Background = System.Windows.Media.Brushes.Transparent;
-        IconTile.BorderBrush = System.Windows.Media.Brushes.Transparent;
-        IconOutline.Fill = Brush(tileBrush);
-        IconOutline.Stroke = Brush(strokeBrush);
-        SetIconBars(barBrush);
+        Pill.Background = Brush("ColorSurface");
+        Pill.BorderBrush = Brush("ColorDivider");
+        SetPillContent(locale: null, heldKey: null, title);
+        SetMicrophoneKey("ColorKeycap", "ColorText", raised: true);
     }
 
-    private void SetIconBars(string brush)
+    private void SetPillContent(string? locale, string? heldKey, string? title)
     {
-        IconBarOne.Fill = Brush(brush);
-        IconBarTwo.Fill = Brush(brush);
-        IconBarThree.Fill = Brush(brush);
+        LocaleText.Text = locale ?? string.Empty;
+        LocaleText.Visibility = locale is null ? Visibility.Collapsed : Visibility.Visible;
+        HeldKeyText.Text = heldKey ?? string.Empty;
+        HeldKey.Visibility = heldKey is null ? Visibility.Collapsed : Visibility.Visible;
+        StatusTitle.Text = title ?? string.Empty;
+        StatusTitle.Visibility = title is null ? Visibility.Collapsed : Visibility.Visible;
+    }
+
+    // A null fill draws the key as an outline.
+    private void SetMicrophoneKey(string? fill, string glyph, bool raised)
+    {
+        IconTile.Background = fill is null ? System.Windows.Media.Brushes.Transparent : Brush(fill);
+        IconTile.BorderBrush = fill is null ? Brush(glyph) : Brush("ColorKeycapEdge");
+        IconTile.BorderThickness = fill is null ? new Thickness(1.5) : new Thickness(0, 0, 0, raised ? 3 : 0);
+        IconOutline.Fill = Brush(glyph);
+        IconStand.Stroke = Brush(glyph);
+        MicrophoneMark.Visibility = Visibility.Visible;
+        IconLegend.Visibility = Visibility.Collapsed;
+    }
+
+    private static string LocaleLegend(string localeCode) => localeCode.Split('-')[0].ToUpperInvariant();
+
+    // The key of the shortcut being held, such as "R" for Ctrl+Shift+R.
+    private string? HeldKeyLegend(string localeCode) =>
+        HotkeyCatalog.FromBindings(shortcuts).FirstOrDefault(binding => binding.LocaleCode == localeCode) is { } binding
+            ? KeycapLegendsConverter.Split(binding.Label)[^1].Legend
+            : null;
+
+    // The scrim under the pill holds the words or the hint, and is hidden while it has neither.
+    private void UpdateScrim()
+    {
+        var words = TranscriptViewport.Visibility == Visibility.Visible && !string.IsNullOrEmpty(Transcript.Text);
+        Scrim.Visibility = Hint.Visibility == Visibility.Visible || words ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void ResetAudioVisuals()
     {
         adaptiveAudioMeter.Reset();
         Array.Fill(smoothedSpectrum, 0.08);
-        foreach (var scale in waveformScales)
-            scale.ScaleY = 0.08;
+        foreach (var scale in meterScales)
+            scale.ScaleY = 0.15;
 
         StopRecordingPulse();
     }
@@ -448,6 +495,7 @@ public partial class DictationBubble : Window
     private void SetTranscript(string text)
     {
         Transcript.Text = text;
+        UpdateScrim();
         TranscriptViewport.UpdateLayout();
         TranscriptViewport.ScrollToEnd();
         Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(TranscriptViewport.ScrollToEnd));

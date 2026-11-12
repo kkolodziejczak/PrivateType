@@ -1,6 +1,10 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-  <!-- Form controls shared by Settings and its dialogs. -->
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:local="clr-namespace:PrivateType.App">
+  <!-- Form controls shared by Settings and its dialogs. Keycaps are the only raised objects; everything else is flat on the page. -->
+  <local:KeycapLegendsConverter x:Key="KeycapLegends" />
+  <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+
   <Style x:Key="SoundVolumeSlider" TargetType="Slider">
     <Setter Property="Template">
       <Setter.Value>
@@ -9,23 +13,23 @@
             <Track x:Name="PART_Track" Minimum="{TemplateBinding Minimum}" Maximum="{TemplateBinding Maximum}" Value="{TemplateBinding Value}">
               <Track.DecreaseRepeatButton>
                 <RepeatButton Command="Slider.DecreaseLarge" Focusable="False">
-                  <RepeatButton.Template><ControlTemplate TargetType="RepeatButton"><Border Height="4" VerticalAlignment="Center" Background="{DynamicResource ColorAccent}" CornerRadius="2" /></ControlTemplate></RepeatButton.Template>
+                  <RepeatButton.Template><ControlTemplate TargetType="RepeatButton"><Border Height="3" VerticalAlignment="Center" Background="{DynamicResource ColorNeutral400}" CornerRadius="1.5" /></ControlTemplate></RepeatButton.Template>
                 </RepeatButton>
               </Track.DecreaseRepeatButton>
               <Track.Thumb>
-                <Thumb Width="16" Height="16">
-                  <Thumb.Template><ControlTemplate TargetType="Thumb"><Ellipse Fill="{DynamicResource ColorAccent}" Stroke="{DynamicResource ColorAccent300}" StrokeThickness="1" /></ControlTemplate></Thumb.Template>
+                <Thumb Width="14" Height="16">
+                  <Thumb.Template><ControlTemplate TargetType="Thumb"><Border Background="{DynamicResource ColorText}" BorderBrush="{DynamicResource ColorNeutral600}" BorderThickness="0,0,0,2" CornerRadius="3" /></ControlTemplate></Thumb.Template>
                 </Thumb>
               </Track.Thumb>
               <Track.IncreaseRepeatButton>
                 <RepeatButton Command="Slider.IncreaseLarge" Focusable="False">
-                  <RepeatButton.Template><ControlTemplate TargetType="RepeatButton"><Border Height="4" VerticalAlignment="Center" Background="{DynamicResource ColorDivider}" CornerRadius="2" /></ControlTemplate></RepeatButton.Template>
+                  <RepeatButton.Template><ControlTemplate TargetType="RepeatButton"><Border Height="3" VerticalAlignment="Center" Background="{DynamicResource ColorNeutral800}" CornerRadius="1.5" /></ControlTemplate></RepeatButton.Template>
                 </RepeatButton>
               </Track.IncreaseRepeatButton>
             </Track>
           </Border>
           <ControlTemplate.Triggers>
-            <Trigger Property="IsKeyboardFocusWithin" Value="True"><Setter TargetName="FocusBorder" Property="BorderBrush" Value="{DynamicResource ColorAccent300}" /></Trigger>
+            <Trigger Property="IsKeyboardFocusWithin" Value="True"><Setter TargetName="FocusBorder" Property="BorderBrush" Value="{DynamicResource ColorAccent}" /></Trigger>
           </ControlTemplate.Triggers>
         </ControlTemplate>
       </Setter.Value>
@@ -34,30 +38,34 @@
   <Style TargetType="TextBlock">
     <Setter Property="FontFamily" Value="{DynamicResource AppFont}" />
   </Style>
+
+  <!-- Buttons are keys: a raised cap with a darker bottom edge. -->
   <Style TargetType="Button">
     <Setter Property="Foreground" Value="{DynamicResource ColorText}" />
-    <Setter Property="Background" Value="{DynamicResource ColorSurface}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource ColorDivider}" />
-    <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="Padding" Value="12,7" />
+    <Setter Property="Background" Value="{DynamicResource ColorKeycap}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource ColorKeycapEdge}" />
+    <Setter Property="BorderThickness" Value="0,0,0,2" />
+    <Setter Property="Padding" Value="12,6" />
     <Setter Property="Cursor" Value="Hand" />
     <Setter Property="Template">
       <Setter.Value>
         <ControlTemplate TargetType="Button">
-          <Border x:Name="ButtonBorder" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
-                  BorderThickness="{TemplateBinding BorderThickness}" Padding="{TemplateBinding Padding}" CornerRadius="8">
-            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" RecognizesAccessKey="True" />
-          </Border>
+          <Grid>
+            <Border x:Name="ButtonBorder" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}" Padding="{TemplateBinding Padding}" CornerRadius="6">
+              <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" RecognizesAccessKey="True" />
+            </Border>
+            <Border x:Name="FocusRing" Margin="-3" BorderBrush="{DynamicResource ColorAccent}" BorderThickness="1.5" CornerRadius="8" Visibility="Collapsed" IsHitTestVisible="False" />
+          </Grid>
           <ControlTemplate.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
-              <Setter TargetName="ButtonBorder" Property="Background" Value="{DynamicResource ColorNeutral900}" />
-              <Setter TargetName="ButtonBorder" Property="BorderBrush" Value="{DynamicResource ColorAccent}" />
+              <Setter TargetName="ButtonBorder" Property="Background" Value="{DynamicResource ColorNeutral800}" />
             </Trigger>
             <Trigger Property="IsPressed" Value="True">
               <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.78" />
             </Trigger>
             <Trigger Property="IsKeyboardFocused" Value="True">
-              <Setter TargetName="ButtonBorder" Property="BorderBrush" Value="{DynamicResource ColorAccent300}" />
+              <Setter TargetName="FocusRing" Property="Visibility" Value="Visible" />
             </Trigger>
             <Trigger Property="IsEnabled" Value="False">
               <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.45" />
@@ -68,43 +76,108 @@
     </Setter>
   </Style>
   <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-    <Setter Property="Background" Value="{DynamicResource ColorAccent800}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource ColorAccent}" />
-    <Setter Property="Foreground" Value="{DynamicResource ColorAccent100}" />
+    <Setter Property="Background" Value="{DynamicResource ColorAccent}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource ColorAccent700}" />
+    <Setter Property="Foreground" Value="{DynamicResource ColorAccentText}" />
     <Setter Property="FontWeight" Value="SemiBold" />
+    <Style.Triggers>
+      <Trigger Property="IsMouseOver" Value="True"><Setter Property="Background" Value="{DynamicResource ColorAccent400}" /></Trigger>
+    </Style.Triggers>
   </Style>
+  <!-- A text action: no cap until hovered. -->
   <Style x:Key="GhostButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderBrush" Value="Transparent" />
-    <Setter Property="Foreground" Value="{DynamicResource ColorAccent300}" />
-    <Setter Property="Padding" Value="0,6" />
+    <Setter Property="Foreground" Value="{DynamicResource ColorNeutral400}" />
+    <Setter Property="Padding" Value="8,6" />
   </Style>
+  <!-- A small square icon key, such as play or remove. -->
+  <Style x:Key="IconKeyButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+    <Setter Property="Width" Value="28" />
+    <Setter Property="Height" Value="28" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="Foreground" Value="{DynamicResource ColorNeutral400}" />
+  </Style>
+  <!-- An empty key drawn with a dashed outline: adds another key to a row. -->
+  <Style x:Key="GhostKeyButton" TargetType="Button">
+    <Setter Property="Foreground" Value="{DynamicResource ColorNeutral400}" />
+    <Setter Property="Padding" Value="12,0" />
+    <Setter Property="Height" Value="32" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="Button">
+          <Grid>
+            <Rectangle x:Name="Outline" RadiusX="6" RadiusY="6" Stroke="{DynamicResource ColorNeutral600}" StrokeThickness="1" StrokeDashArray="3,3" Fill="Transparent" />
+            <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="Center" VerticalAlignment="Center" RecognizesAccessKey="True" />
+          </Grid>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+              <Setter TargetName="Outline" Property="Stroke" Value="{DynamicResource ColorNeutral400}" />
+              <Setter Property="Foreground" Value="{DynamicResource ColorText}" />
+            </Trigger>
+            <Trigger Property="IsKeyboardFocused" Value="True">
+              <Setter TargetName="Outline" Property="Stroke" Value="{DynamicResource ColorAccent}" />
+              <Setter TargetName="Outline" Property="StrokeDashArray" Value="{x:Null}" />
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+  <!-- Plain text links, such as Licenses and Diagnostics in the rail. -->
+  <Style x:Key="TextLinkButton" TargetType="Button">
+    <Setter Property="Foreground" Value="{DynamicResource ColorNeutral400}" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="HorizontalAlignment" Value="Left" />
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="Button">
+          <Border x:Name="LinkBorder" Padding="0,3" Background="Transparent" BorderBrush="Transparent" BorderThickness="0,0,0,1">
+            <ContentPresenter RecognizesAccessKey="True" />
+          </Border>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+              <Setter Property="Foreground" Value="{DynamicResource ColorText}" />
+            </Trigger>
+            <Trigger Property="IsKeyboardFocused" Value="True">
+              <Setter TargetName="LinkBorder" Property="BorderBrush" Value="{DynamicResource ColorAccent}" />
+              <Setter Property="Foreground" Value="{DynamicResource ColorText}" />
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
   <Style TargetType="CheckBox">
     <Setter Property="Foreground" Value="{DynamicResource ColorText}" />
     <Setter Property="Cursor" Value="Hand" />
     <Setter Property="Template">
       <Setter.Value>
         <ControlTemplate TargetType="CheckBox">
-          <Grid>
+          <Grid Background="Transparent">
             <Grid.ColumnDefinitions>
-              <ColumnDefinition Width="22" />
+              <ColumnDefinition Width="18" />
               <ColumnDefinition Width="10" />
               <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
-            <Border x:Name="CheckBoxBorder" Grid.Column="0" Width="22" Height="22" VerticalAlignment="Center" Background="{DynamicResource ColorBg}"
-                    BorderBrush="{DynamicResource ColorAccent}" BorderThickness="2" CornerRadius="4">
-              <Path x:Name="CheckMark" Data="M3,9 L7,13 L15,4" Stroke="{DynamicResource ColorAccent100}" StrokeThickness="2" StrokeLineJoin="Round" Visibility="Collapsed" />
+            <Border x:Name="CheckBoxBorder" Grid.Column="0" Width="18" Height="18" VerticalAlignment="Center" Background="{DynamicResource ColorBg}"
+                    BorderBrush="{DynamicResource ColorNeutral600}" BorderThickness="1.5" CornerRadius="4">
+              <Path x:Name="CheckMark" Data="M3.5,8.5 L6.5,11.5 L12.5,4.5" Stroke="{DynamicResource ColorBg}" StrokeThickness="2" StrokeLineJoin="Round" Visibility="Collapsed" />
             </Border>
             <ContentPresenter Grid.Column="2" VerticalAlignment="Center" RecognizesAccessKey="True" />
           </Grid>
           <ControlTemplate.Triggers>
             <Trigger Property="IsChecked" Value="True">
-              <Setter TargetName="CheckBoxBorder" Property="Background" Value="{DynamicResource ColorAccent800}" />
-              <Setter TargetName="CheckBoxBorder" Property="BorderBrush" Value="{DynamicResource ColorAccent}" />
+              <Setter TargetName="CheckBoxBorder" Property="Background" Value="{DynamicResource ColorText}" />
+              <Setter TargetName="CheckBoxBorder" Property="BorderBrush" Value="{DynamicResource ColorText}" />
               <Setter TargetName="CheckMark" Property="Visibility" Value="Visible" />
             </Trigger>
             <Trigger Property="IsKeyboardFocused" Value="True">
-              <Setter TargetName="CheckBoxBorder" Property="BorderBrush" Value="{DynamicResource ColorAccent300}" />
+              <Setter TargetName="CheckBoxBorder" Property="BorderBrush" Value="{DynamicResource ColorAccent}" />
             </Trigger>
             <Trigger Property="IsEnabled" Value="False">
               <Setter Property="Opacity" Value="0.45" />
@@ -114,21 +187,63 @@
       </Setter.Value>
     </Setter>
   </Style>
+  <!-- A settings-table row whose value is on or off: the label on the left, the switch at the right edge. -->
+  <Style x:Key="SwitchRow" TargetType="CheckBox">
+    <Setter Property="Foreground" Value="{DynamicResource ColorText}" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="MinHeight" Value="38" />
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="CheckBox">
+          <Grid Background="Transparent">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <ContentPresenter VerticalAlignment="Center" RecognizesAccessKey="True" />
+            <Border x:Name="Track" Grid.Column="1" Width="34" Height="20" Margin="12,0,6,0" VerticalAlignment="Center" CornerRadius="10"
+                    Background="{DynamicResource ColorBg}" BorderBrush="{DynamicResource ColorNeutral600}" BorderThickness="1.5">
+              <Ellipse x:Name="Knob" Width="12" Height="12" Margin="3,0" HorizontalAlignment="Left" Fill="{DynamicResource ColorNeutral400}" />
+            </Border>
+          </Grid>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsChecked" Value="True">
+              <Setter TargetName="Track" Property="Background" Value="{DynamicResource ColorText}" />
+              <Setter TargetName="Track" Property="BorderBrush" Value="{DynamicResource ColorText}" />
+              <Setter TargetName="Knob" Property="HorizontalAlignment" Value="Right" />
+              <Setter TargetName="Knob" Property="Fill" Value="{DynamicResource ColorBg}" />
+            </Trigger>
+            <Trigger Property="IsKeyboardFocused" Value="True">
+              <Setter TargetName="Track" Property="BorderBrush" Value="{DynamicResource ColorAccent}" />
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+              <Setter Property="Opacity" Value="0.45" />
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
   <Style TargetType="TextBox">
-    <Setter Property="Foreground" Value="{DynamicResource ColorAccent300}" />
+    <Setter Property="Foreground" Value="{DynamicResource ColorText}" />
     <Setter Property="Background" Value="{DynamicResource ColorBg}" />
     <Setter Property="BorderBrush" Value="{DynamicResource ColorDivider}" />
+    <Setter Property="CaretBrush" Value="{DynamicResource ColorText}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="FontWeight" Value="SemiBold" />
     <Setter Property="VerticalContentAlignment" Value="Center" />
     <Setter Property="Template">
       <Setter.Value>
         <ControlTemplate TargetType="TextBox">
           <Border x:Name="TextBoxBorder" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
-                  BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="8" Padding="{TemplateBinding Padding}">
+                  BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6" Padding="{TemplateBinding Padding}">
             <ScrollViewer x:Name="PART_ContentHost" />
           </Border>
           <ControlTemplate.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+              <Setter TargetName="TextBoxBorder" Property="BorderBrush" Value="{DynamicResource ColorNeutral800}" />
+            </Trigger>
             <Trigger Property="IsKeyboardFocused" Value="True">
               <Setter TargetName="TextBoxBorder" Property="BorderBrush" Value="{DynamicResource ColorAccent}" />
             </Trigger>
@@ -137,20 +252,105 @@
       </Setter.Value>
     </Setter>
   </Style>
+
+  <!-- A read-only TextBox that records a shortcut, drawn as a row of keycaps. Focus "presses" the keys flat and shows a blinking cursor. -->
+  <Style x:Key="KeycapRecorder" TargetType="TextBox">
+    <Setter Property="Foreground" Value="{DynamicResource ColorText}" />
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFont}" />
+    <Setter Property="FontSize" Value="15" />
+    <Setter Property="IsReadOnly" Value="True" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="HorizontalAlignment" Value="Left" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="TextBox">
+          <Border x:Name="Frame" Background="Transparent" BorderBrush="Transparent" BorderThickness="1.5" CornerRadius="8" Padding="3">
+            <StackPanel Orientation="Horizontal">
+              <ScrollViewer x:Name="PART_ContentHost" Visibility="Collapsed" />
+              <ItemsControl x:Name="Caps" Focusable="False" IsHitTestVisible="False"
+                            ItemsSource="{Binding Text, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource KeycapLegends}}">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Border x:Name="Cap" Margin="0,0,5,0" MinWidth="34" Padding="9,5,9,4" CornerRadius="5"
+                            Background="{DynamicResource ColorKeycap}" BorderBrush="{DynamicResource ColorKeycapEdge}" BorderThickness="0,0,0,3">
+                      <TextBlock x:Name="Legend" HorizontalAlignment="Center" FontFamily="{DynamicResource MonoFont}" Foreground="{DynamicResource ColorText}" Text="{Binding Legend}" />
+                    </Border>
+                    <DataTemplate.Triggers>
+                      <DataTrigger Binding="{Binding IsMain}" Value="True">
+                        <Setter TargetName="Cap" Property="MinWidth" Value="46" />
+                        <Setter TargetName="Legend" Property="Foreground" Value="{DynamicResource ColorAccent400}" />
+                        <Setter TargetName="Legend" Property="FontWeight" Value="SemiBold" />
+                      </DataTrigger>
+                      <DataTrigger Binding="{Binding IsPrompt}" Value="True">
+                        <Setter TargetName="Cap" Property="Background" Value="Transparent" />
+                        <Setter TargetName="Cap" Property="BorderThickness" Value="0" />
+                        <Setter TargetName="Legend" Property="FontFamily" Value="{DynamicResource AppFont}" />
+                        <Setter TargetName="Legend" Property="FontSize" Value="13" />
+                        <Setter TargetName="Legend" Property="Foreground" Value="{DynamicResource ColorNeutral400}" />
+                      </DataTrigger>
+                      <!-- Recording: the keys look held down. -->
+                      <DataTrigger Binding="{Binding IsKeyboardFocused, RelativeSource={RelativeSource AncestorType=TextBox}}" Value="True">
+                        <Setter TargetName="Cap" Property="BorderThickness" Value="0" />
+                        <Setter TargetName="Cap" Property="Margin" Value="0,3,5,0" />
+                        <Setter TargetName="Cap" Property="Background" Value="{DynamicResource ColorNeutral900}" />
+                      </DataTrigger>
+                    </DataTemplate.Triggers>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <TextBlock x:Name="Cursor" Margin="2,0,4,0" VerticalAlignment="Center" FontFamily="{DynamicResource MonoFont}" Foreground="{DynamicResource ColorAccent400}" Text="_" Visibility="Collapsed">
+                <TextBlock.Triggers>
+                  <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+                    <BeginStoryboard>
+                      <Storyboard RepeatBehavior="Forever">
+                        <DoubleAnimationUsingKeyFrames Storyboard.TargetProperty="Opacity" Duration="0:0:1">
+                          <DiscreteDoubleKeyFrame KeyTime="0:0:0" Value="1" />
+                          <DiscreteDoubleKeyFrame KeyTime="0:0:0.5" Value="0" />
+                        </DoubleAnimationUsingKeyFrames>
+                      </Storyboard>
+                    </BeginStoryboard>
+                  </EventTrigger>
+                </TextBlock.Triggers>
+              </TextBlock>
+            </StackPanel>
+          </Border>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+              <Setter TargetName="Frame" Property="Background" Value="{DynamicResource ColorHairline}" />
+            </Trigger>
+            <Trigger Property="IsKeyboardFocused" Value="True">
+              <Setter TargetName="Frame" Property="BorderBrush" Value="{DynamicResource ColorAccent}" />
+              <Setter TargetName="Cursor" Property="Visibility" Value="Visible" />
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+              <Setter TargetName="Frame" Property="Opacity" Value="0.45" />
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <!-- Dropdowns are flat text with a chevron; the field box appears on hover and focus. -->
   <Style x:Key="ComboBoxToggleButton" TargetType="ToggleButton">
     <Setter Property="Foreground" Value="{DynamicResource ColorText}" />
     <Setter Property="Template">
       <Setter.Value>
         <ControlTemplate TargetType="ToggleButton">
-          <Border x:Name="ToggleBorder" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
-                  BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="8">
+          <Border x:Name="ToggleBorder" Background="Transparent" BorderBrush="Transparent" BorderThickness="1" CornerRadius="6">
             <ContentPresenter />
           </Border>
           <ControlTemplate.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
-              <Setter TargetName="ToggleBorder" Property="BorderBrush" Value="{DynamicResource ColorAccent}" />
+              <Setter TargetName="ToggleBorder" Property="Background" Value="{DynamicResource ColorBg}" />
+              <Setter TargetName="ToggleBorder" Property="BorderBrush" Value="{DynamicResource ColorDivider}" />
             </Trigger>
             <Trigger Property="IsChecked" Value="True">
+              <Setter TargetName="ToggleBorder" Property="Background" Value="{DynamicResource ColorBg}" />
               <Setter TargetName="ToggleBorder" Property="BorderBrush" Value="{DynamicResource ColorAccent}" />
             </Trigger>
             <Trigger Property="IsEnabled" Value="False">
@@ -162,89 +362,151 @@
     </Setter>
   </Style>
   <Style TargetType="ComboBox">
-    <Style.Triggers>
-      <Trigger Property="IsKeyboardFocusWithin" Value="True">
-        <Setter Property="BorderBrush" Value="{DynamicResource ColorAccent300}" />
-      </Trigger>
-    </Style.Triggers>
     <Setter Property="Foreground" Value="{DynamicResource ColorText}" />
-    <Setter Property="Background" Value="{DynamicResource ColorBg}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource ColorDivider}" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="Cursor" Value="Hand" />
     <Setter Property="Template">
       <Setter.Value>
         <ControlTemplate TargetType="ComboBox">
           <Grid>
-            <ToggleButton x:Name="ToggleButton" Style="{StaticResource ComboBoxToggleButton}" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1"
+            <ToggleButton x:Name="ToggleButton" Style="{StaticResource ComboBoxToggleButton}" Focusable="False"
                           IsChecked="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}">
               <Grid>
-                <ContentPresenter Margin="10,0,30,0" VerticalAlignment="Center" Content="{TemplateBinding SelectionBoxItem}"
-                                  ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}" />
-                <Path HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,11,0" Fill="{DynamicResource ColorNeutral400}" Data="M0,0 L10,0 L5,6 Z" />
+                <ContentPresenter Margin="8,0,26,0" VerticalAlignment="Center" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                  Content="{TemplateBinding SelectionBoxItem}" ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}" />
+                <Path HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,1,10,0" Stroke="{DynamicResource ColorNeutral400}" StrokeThickness="1.5"
+                      StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Data="M0,0 L4,4 L8,0" />
               </Grid>
             </ToggleButton>
+            <Border x:Name="FocusRing" BorderBrush="{DynamicResource ColorAccent}" BorderThickness="1.5" CornerRadius="6" Visibility="Collapsed" IsHitTestVisible="False" />
             <Popup x:Name="Popup" Placement="Bottom" AllowsTransparency="True" IsOpen="{TemplateBinding IsDropDownOpen}" PopupAnimation="Fade">
-              <Border MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}" Margin="0,4,0,0" Background="{DynamicResource ColorSurface}" BorderBrush="{DynamicResource ColorDivider}" BorderThickness="1" CornerRadius="8">
-                <ScrollViewer MaxHeight="240" CanContentScroll="True">
+              <Border MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}" Margin="0,4,0,0" Padding="4" Background="{DynamicResource ColorNeutral900}" BorderBrush="{DynamicResource ColorDivider}" BorderThickness="1" CornerRadius="8">
+                <ScrollViewer MaxHeight="{TemplateBinding MaxDropDownHeight}" CanContentScroll="True">
                   <ItemsPresenter />
                 </ScrollViewer>
               </Border>
             </Popup>
           </Grid>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsKeyboardFocused" Value="True">
+              <Setter TargetName="FocusRing" Property="Visibility" Value="Visible" />
+            </Trigger>
+          </ControlTemplate.Triggers>
         </ControlTemplate>
       </Setter.Value>
     </Setter>
   </Style>
   <Style TargetType="ComboBoxItem">
     <Setter Property="Foreground" Value="{DynamicResource ColorText}" />
-    <Setter Property="Padding" Value="10,8" />
+    <Setter Property="Padding" Value="10,7" />
     <Setter Property="Template">
       <Setter.Value>
         <ControlTemplate TargetType="ComboBoxItem">
-          <Border x:Name="ItemBorder" Background="Transparent" CornerRadius="6" Padding="{TemplateBinding Padding}">
+          <Border x:Name="ItemBorder" Background="Transparent" CornerRadius="5" Padding="{TemplateBinding Padding}">
             <ContentPresenter />
           </Border>
           <ControlTemplate.Triggers>
-            <Trigger Property="IsHighlighted" Value="True">
-              <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource ColorNeutral900}" />
-            </Trigger>
             <Trigger Property="IsSelected" Value="True">
-              <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource ColorAccent800}" />
+              <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource ColorKeycap}" />
+            </Trigger>
+            <Trigger Property="IsHighlighted" Value="True">
+              <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource ColorNeutral800}" />
             </Trigger>
           </ControlTemplate.Triggers>
         </ControlTemplate>
       </Setter.Value>
     </Setter>
   </Style>
-  <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
   <Style TargetType="ProgressBar">
     <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ProgressBar"><Border x:Name="PART_Track" Background="{DynamicResource ColorNeutral800}" CornerRadius="3"><Border x:Name="PART_Indicator" HorizontalAlignment="Left" Background="{DynamicResource ColorAccent}" CornerRadius="3"/></Border></ControlTemplate></Setter.Value></Setter>
   </Style>
+
+  <!-- A page in the left rail. The current page has an accent bar on its left edge. -->
   <Style x:Key="PageTab" TargetType="RadioButton">
-    <Setter Property="Foreground" Value="{DynamicResource ColorText}" />
+    <Setter Property="Foreground" Value="{DynamicResource ColorNeutral400}" />
     <Setter Property="FontSize" Value="13" />
+    <Setter Property="Height" Value="34" />
     <Setter Property="Cursor" Value="Hand" />
     <Setter Property="Template">
       <Setter.Value>
         <ControlTemplate TargetType="RadioButton">
-          <Border x:Name="TabShell" Padding="16,7" CornerRadius="8" Background="Transparent" BorderBrush="{DynamicResource ColorDivider}" BorderThickness="1">
-            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
-          </Border>
+          <Grid x:Name="RailItem" Background="Transparent">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="2" />
+              <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Border x:Name="ActiveBar" Background="Transparent" CornerRadius="1" Margin="0,7" />
+            <ContentPresenter Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center" />
+            <Border x:Name="FocusRing" Grid.ColumnSpan="2" Margin="4,1,8,1" BorderBrush="{DynamicResource ColorAccent}" BorderThickness="1.5" CornerRadius="5" Visibility="Collapsed" />
+          </Grid>
           <ControlTemplate.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
-              <Setter TargetName="TabShell" Property="BorderBrush" Value="{DynamicResource ColorAccent}" />
+              <Setter TargetName="RailItem" Property="Background" Value="{DynamicResource ColorHairline}" />
+              <Setter Property="Foreground" Value="{DynamicResource ColorText}" />
             </Trigger>
             <Trigger Property="IsKeyboardFocused" Value="True">
-              <Setter TargetName="TabShell" Property="BorderBrush" Value="{DynamicResource ColorAccent400}" />
+              <Setter TargetName="FocusRing" Property="Visibility" Value="Visible" />
             </Trigger>
             <Trigger Property="IsChecked" Value="True">
-              <Setter TargetName="TabShell" Property="Background" Value="{DynamicResource ColorAccent800}" />
-              <Setter TargetName="TabShell" Property="BorderBrush" Value="{DynamicResource ColorAccent}" />
-              <Setter Property="Foreground" Value="{DynamicResource ColorAccent100}" />
+              <Setter TargetName="ActiveBar" Property="Background" Value="{DynamicResource ColorAccent}" />
+              <Setter TargetName="RailItem" Property="Background" Value="{DynamicResource ColorHairline}" />
+              <Setter Property="Foreground" Value="{DynamicResource ColorText}" />
               <Setter Property="FontWeight" Value="SemiBold" />
             </Trigger>
           </ControlTemplate.Triggers>
         </ControlTemplate>
       </Setter.Value>
     </Setter>
+  </Style>
+
+  <!-- The dense settings table. -->
+  <Style x:Key="GroupLabel" TargetType="TextBlock">
+    <Setter Property="FontFamily" Value="{DynamicResource AppFont}" />
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource ColorNeutral600}" />
+    <Setter Property="Margin" Value="0,22,0,4" />
+  </Style>
+  <Style x:Key="TableRow" TargetType="Border">
+    <Setter Property="BorderBrush" Value="{DynamicResource ColorHairline}" />
+    <Setter Property="BorderThickness" Value="0,1,0,0" />
+    <Setter Property="MinHeight" Value="40" />
+    <Setter Property="Padding" Value="0,4" />
+  </Style>
+  <Style x:Key="RowLabel" TargetType="TextBlock">
+    <Setter Property="FontFamily" Value="{DynamicResource AppFont}" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="Foreground" Value="{DynamicResource ColorText}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style x:Key="RowValue" TargetType="TextBlock">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFont}" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="Foreground" Value="{DynamicResource ColorNeutral400}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <!-- One line under a row that explains it. Shown while the row has focus. -->
+  <Style x:Key="RowHint" TargetType="TextBlock">
+    <Setter Property="FontFamily" Value="{DynamicResource AppFont}" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="Foreground" Value="{DynamicResource ColorNeutral400}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+    <Setter Property="Margin" Value="0,0,0,6" />
+    <Setter Property="Visibility" Value="Collapsed" />
+    <Style.Triggers>
+      <DataTrigger Binding="{Binding IsKeyboardFocusWithin, RelativeSource={RelativeSource AncestorType=Border}}" Value="True">
+        <Setter Property="Visibility" Value="Visible" />
+      </DataTrigger>
+    </Style.Triggers>
+  </Style>
+  <!-- The ⓘ after a row label: its tooltip carries the row's explanation for pointer users. -->
+  <Style x:Key="InfoMark" TargetType="TextBlock">
+    <Setter Property="Margin" Value="6,0,0,0" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="Foreground" Value="{DynamicResource ColorNeutral600}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Text" Value="ⓘ" />
+    <Setter Property="Cursor" Value="Help" />
+    <Setter Property="ToolTipService.InitialShowDelay" Value="150" />
   </Style>
 </ResourceDictionary>

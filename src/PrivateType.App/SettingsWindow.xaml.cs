@@ -112,7 +112,7 @@ public partial class SettingsWindow : Window
         });
     }
 
-    internal static string HeaderText(Version? version) => $"{ApplicationVersion.Label(version)} — settings";
+    internal static string HeaderText(Version? version) => ApplicationVersion.Number(version);
 
     public PortableSettings? SavedSettings { get; private set; }
 

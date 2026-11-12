@@ -3,8 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Width="64" SizeToContent="Height" WindowStyle="None" AllowsTransparency="True"
         Background="Transparent" ShowInTaskbar="False" Topmost="True" Focusable="False" ShowActivated="False">
-  <Border x:Name="BubbleShell" Background="{DynamicResource ColorSurface}" BorderBrush="{DynamicResource ColorDivider}" BorderThickness="1"
-          CornerRadius="32" Padding="13">
+  <Border x:Name="BubbleShell" Background="Transparent" Padding="0">
     <Border.ContextMenu>
       <ContextMenu Placement="Right" HorizontalOffset="8" MinWidth="132" Background="{DynamicResource ColorSurface}" BorderBrush="{DynamicResource ColorDivider}" BorderThickness="1" Foreground="{DynamicResource ColorText}" FontFamily="{DynamicResource AppFont}">
         <ContextMenu.Resources><Style TargetType="MenuItem"><Setter Property="Foreground" Value="{DynamicResource ColorText}"/><Setter Property="Padding" Value="14,8"/><Setter Property="Template"><Setter.Value><ControlTemplate TargetType="MenuItem"><Border x:Name="ItemShell" Background="{DynamicResource ColorSurface}" Padding="{TemplateBinding Padding}"><ContentPresenter ContentSource="Header" VerticalAlignment="Center" RecognizesAccessKey="True"/></Border><ControlTemplate.Triggers><Trigger Property="IsHighlighted" Value="True"><Setter TargetName="ItemShell" Property="Background" Value="{DynamicResource ColorNeutral900}"/></Trigger><Trigger Property="IsEnabled" Value="False"><Setter TargetName="ItemShell" Property="Opacity" Value="0.45"/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter></Style><Style TargetType="Separator"><Setter Property="Margin" Value="8,2"/><Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Separator"><Border Height="1" Background="{DynamicResource ColorDivider}"/></ControlTemplate></Setter.Value></Setter></Style></ContextMenu.Resources>
@@ -18,42 +17,53 @@
         <MenuItem Header="Quit" Click="Quit" AutomationProperties.Name="Quit" />
       </ContextMenu>
     </Border.ContextMenu>
+    <!-- A pill of keys: the microphone key, the language, the key being held and a level meter. The words appear in a scrim below it. -->
     <StackPanel>
-      <Grid x:Name="BubbleHeader" Height="36">
-        <Grid.ColumnDefinitions>
-          <ColumnDefinition Width="36" />
-          <ColumnDefinition Width="12" />
-          <ColumnDefinition Width="*" />
-        </Grid.ColumnDefinitions>
-        <Border x:Name="IconTile" Grid.Column="0" Width="36" Height="36" Background="Transparent"
-                BorderBrush="Transparent" BorderThickness="0" CornerRadius="18">
-          <Grid ClipToBounds="False">
-            <Ellipse x:Name="RecordingPulseRing" Width="36" Height="36" Opacity="0" Stroke="{DynamicResource ColorAccent}" StrokeThickness="1.5" IsHitTestVisible="False" RenderTransformOrigin="0.5,0.5">
-              <Ellipse.RenderTransform>
-                <ScaleTransform x:Name="RecordingPulseScale" />
-              </Ellipse.RenderTransform>
-            </Ellipse>
-            <Viewbox Width="30" Height="30" Margin="3">
-              <Grid Width="32" Height="32">
-                <Path x:Name="IconOutline" Data="{StaticResource DictationBubbleGlyph}" Fill="{DynamicResource ColorAccent800}" Stroke="{DynamicResource ColorDivider}" StrokeThickness="1" />
-                <Rectangle x:Name="IconBarOne" Width="2.5" Height="8" RadiusX="1.25" RadiusY="1.25" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="9.6,12,0,0" Fill="{DynamicResource ColorAccent300}" />
-                <Rectangle x:Name="IconBarTwo" Width="2.5" Height="13" RadiusX="1.25" RadiusY="1.25" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="14.6,9.5,0,0" Fill="{DynamicResource ColorAccent300}" />
-                <Rectangle x:Name="IconBarThree" Width="2.5" Height="8" RadiusX="1.25" RadiusY="1.25" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="19.6,12,0,0" Fill="{DynamicResource ColorAccent300}" />
-              </Grid>
-            </Viewbox>
-          </Grid>
-        </Border>
-        <TextBlock x:Name="StatusTitle" Grid.Column="2" VerticalAlignment="Center" FontFamily="{DynamicResource AppFont}" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource ColorText}" Text="PrivateType" />
-      </Grid>
-      <TextBlock x:Name="Hint" FontFamily="{DynamicResource AppFont}" Foreground="{DynamicResource ColorText}" Opacity="0.8"
-                 Margin="0,12,0,0" FontSize="13" LineHeight="19" TextWrapping="Wrap" Visibility="Collapsed" />
-      <UniformGrid x:Name="WaveformBars" Columns="44" Height="16" Margin="0,12,0,0" Visibility="Collapsed" />
-      <ScrollViewer x:Name="TranscriptViewport" Margin="0,10,0,0" MaxHeight="60"
-                    VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Disabled"
-                    Visibility="Collapsed">
-        <TextBlock x:Name="Transcript" FontFamily="{DynamicResource AppFont}" Foreground="{DynamicResource ColorText}" Opacity="0.92"
-                   FontSize="14" LineHeight="20" TextWrapping="Wrap" />
-      </ScrollViewer>
+      <Border x:Name="Pill" HorizontalAlignment="Center" Background="{DynamicResource ColorSurface}" BorderBrush="{DynamicResource ColorDivider}" BorderThickness="1" CornerRadius="27" Padding="5">
+        <StackPanel x:Name="BubbleHeader" Orientation="Horizontal" Height="44">
+          <Border x:Name="IconTile" Width="44" Height="44" CornerRadius="22" Background="{DynamicResource ColorKeycap}"
+                  BorderBrush="{DynamicResource ColorKeycapEdge}" BorderThickness="0,0,0,3">
+            <Grid ClipToBounds="False">
+              <Ellipse x:Name="RecordingPulseRing" Width="44" Height="44" Margin="0,0,0,-3" Opacity="0" Stroke="{DynamicResource ColorAccent}" StrokeThickness="1.5" IsHitTestVisible="False" RenderTransformOrigin="0.5,0.5">
+                <Ellipse.RenderTransform>
+                  <ScaleTransform x:Name="RecordingPulseScale" />
+                </Ellipse.RenderTransform>
+              </Ellipse>
+              <Viewbox x:Name="MicrophoneMark" Width="24" Height="24">
+                <Grid Width="32" Height="32">
+                  <Path x:Name="IconOutline" Data="{StaticResource MicrophoneCapsuleGlyph}" Fill="{DynamicResource ColorText}" />
+                  <Path x:Name="IconStand" Data="{StaticResource MicrophoneStandGlyph}" Stroke="{DynamicResource ColorText}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                </Grid>
+              </Viewbox>
+              <TextBlock x:Name="IconLegend" HorizontalAlignment="Center" VerticalAlignment="Center" FontFamily="{DynamicResource MonoFont}" FontSize="18" FontWeight="Bold"
+                         Foreground="{DynamicResource ColorDanger}" Text="!" Visibility="Collapsed" />
+            </Grid>
+          </Border>
+          <TextBlock x:Name="LocaleText" Margin="12,0,0,0" VerticalAlignment="Center" FontFamily="{DynamicResource MonoFont}" FontSize="13" FontWeight="SemiBold"
+                     Foreground="{DynamicResource ColorText}" Visibility="Collapsed" />
+          <!-- The shortcut's key, drawn held down: flat, with no bottom edge. -->
+          <Border x:Name="HeldKey" Margin="8,4,0,0" MinWidth="28" Height="28" Padding="7,0" VerticalAlignment="Center" CornerRadius="5"
+                  Background="{DynamicResource ColorNeutral900}" BorderBrush="{DynamicResource ColorAccent700}" BorderThickness="1" Visibility="Collapsed">
+            <TextBlock x:Name="HeldKeyText" HorizontalAlignment="Center" VerticalAlignment="Center" FontFamily="{DynamicResource MonoFont}" FontSize="13" FontWeight="SemiBold"
+                       Foreground="{DynamicResource ColorAccent400}" />
+          </Border>
+          <StackPanel x:Name="WaveformBars" Margin="12,0,10,0" Orientation="Horizontal" VerticalAlignment="Center" Height="20" Visibility="Collapsed" />
+          <TextBlock x:Name="StatusTitle" Margin="12,0,14,0" VerticalAlignment="Center" FontFamily="{DynamicResource AppFont}" FontSize="13" FontWeight="SemiBold"
+                     Foreground="{DynamicResource ColorText}" Text="PrivateType" Visibility="Collapsed" />
+        </StackPanel>
+      </Border>
+      <Border x:Name="Scrim" Margin="0,6,0,0" Padding="14,9" CornerRadius="10" Background="#F2141518" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="1">
+        <StackPanel>
+          <TextBlock x:Name="Hint" FontFamily="{DynamicResource AppFont}" Foreground="{DynamicResource ColorNeutral400}"
+                     FontSize="13" LineHeight="19" TextWrapping="Wrap" Visibility="Collapsed" />
+          <ScrollViewer x:Name="TranscriptViewport" MaxHeight="44"
+                        VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Disabled"
+                        Visibility="Collapsed">
+            <TextBlock x:Name="Transcript" FontFamily="{DynamicResource AppFont}" Foreground="{DynamicResource ColorText}"
+                       FontSize="15" LineHeight="22" TextWrapping="Wrap" />
+          </ScrollViewer>
+        </StackPanel>
+      </Border>
     </StackPanel>
   </Border>
 </Window>

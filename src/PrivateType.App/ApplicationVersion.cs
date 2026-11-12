@@ -4,12 +4,16 @@ internal static class ApplicationVersion
 {
     internal static Version? Current => typeof(ApplicationVersion).Assembly.GetName().Version;
 
-    internal static string Label(Version? version)
+    internal static string Label(Version? version) =>
+        version is null ? "PrivateType (version unknown)" : $"PrivateType {Number(version)}";
+
+    // The version alone, such as "1.0.4", as Settings shows it beside the product name.
+    internal static string Number(Version? version)
     {
         if (version is null)
-            return "PrivateType (version unknown)";
+            return "version unknown";
 
         var fieldCount = version.Revision > 0 ? 4 : version.Build > 0 ? 3 : 2;
-        return $"PrivateType {version.ToString(fieldCount)}";
+        return version.ToString(fieldCount);
     }
 }

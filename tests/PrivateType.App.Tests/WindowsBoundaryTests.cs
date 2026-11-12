@@ -333,7 +333,7 @@ public sealed class WindowsBoundaryTests
     {
         var version = new Version(1, 0, 4, 0);
 
-        Assert.Equal("PrivateType 1.0.4 — settings", SettingsWindow.HeaderText(version));
+        Assert.Equal("1.0.4", SettingsWindow.HeaderText(version));
         Assert.Equal("PrivateType 1.0.4", DictationApplication.TrayVersionText(version));
     }
 

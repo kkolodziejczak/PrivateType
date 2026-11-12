@@ -12,45 +12,62 @@
       </ResourceDictionary.MergedDictionaries>
     </ResourceDictionary>
   </Window.Resources>
-  <Border Margin="8" Background="{DynamicResource ColorSurface}" BorderBrush="{DynamicResource ColorDivider}" BorderThickness="1" CornerRadius="16">
+  <Border Margin="8" Background="{DynamicResource ColorSurface}" BorderBrush="{DynamicResource ColorDivider}" BorderThickness="1" CornerRadius="12">
     <Grid>
       <Grid.RowDefinitions>
-        <RowDefinition Height="42" />
+        <RowDefinition Height="40" />
         <RowDefinition Height="*" />
       </Grid.RowDefinitions>
-      <Border Grid.Row="0" Background="{DynamicResource ColorNeutral900}" CornerRadius="15,15,0,0" MouseLeftButtonDown="DragWindow">
+      <!-- Title bar: a small keycap mark, the name and the version. -->
+      <Border Grid.Row="0" Background="{DynamicResource ColorSurface}" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,0,0,1" CornerRadius="11,11,0,0" MouseLeftButtonDown="DragWindow">
         <Grid Margin="16,0,8,0">
-          <TextBlock x:Name="SettingsHeaderText" VerticalAlignment="Center" Foreground="{DynamicResource ColorText}" Opacity="0.8" FontSize="13" TextTrimming="CharacterEllipsis" />
-          <Button Width="28" Height="28" Padding="0" HorizontalAlignment="Right" VerticalAlignment="Center" Content="×" FontSize="18"
-                  Background="Transparent" BorderBrush="Transparent" Foreground="{DynamicResource ColorNeutral400}" Click="CloseWindow" />
+          <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+            <Border Width="18" Height="18" CornerRadius="4" Background="{DynamicResource ColorKeycap}" BorderBrush="{DynamicResource ColorKeycapEdge}" BorderThickness="0,0,0,2">
+              <Ellipse Width="6" Height="6" Fill="{DynamicResource ColorAccent400}" />
+            </Border>
+            <TextBlock Margin="10,0,0,0" VerticalAlignment="Center" FontSize="13" FontWeight="SemiBold" Text="PrivateType" />
+            <TextBlock x:Name="SettingsHeaderText" Margin="8,1,0,0" VerticalAlignment="Center" FontFamily="{DynamicResource MonoFont}" FontSize="12"
+                       Foreground="{DynamicResource ColorNeutral600}" TextTrimming="CharacterEllipsis" />
+          </StackPanel>
+          <Button Width="28" Height="28" Padding="0" HorizontalAlignment="Right" VerticalAlignment="Center" Content="×" FontSize="18" Style="{StaticResource GhostButton}"
+                  Click="CloseWindow" AutomationProperties.Name="Close" />
         </Grid>
       </Border>
-      <Border Grid.Row="1" Padding="22" Background="{DynamicResource ColorSurface}" CornerRadius="0,0,14,14">
-        <Grid>
+      <Grid Grid.Row="1">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="150" />
+          <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+        <!-- Left rail: pages at the top, the rarely used windows pinned at the bottom. -->
+        <Border Grid.Column="0" Background="{DynamicResource ColorBg}" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,0,1,0" CornerRadius="0,0,0,11">
+          <DockPanel>
+            <StackPanel DockPanel.Dock="Bottom" Margin="16,0,16,16">
+              <Button Content="Licenses…" Style="{StaticResource TextLinkButton}" AutomationProperties.Name="Open-source licenses" Click="OpenLicenses" />
+              <Button Margin="0,4,0,0" Content="Diagnostics…" Style="{StaticResource TextLinkButton}" AutomationProperties.Name="View diagnostics" Click="OpenDiagnostics" />
+              <TextBlock Margin="0,12,0,0" FontFamily="{DynamicResource MonoFont}" FontSize="11" Foreground="{DynamicResource ColorNeutral600}" Text="runs on this PC" />
+            </StackPanel>
+            <StackPanel Margin="0,14,0,0">
+              <RadioButton x:Name="GeneralTab" Style="{StaticResource PageTab}" GroupName="SettingsPage" Content="General" IsChecked="True" Checked="PageChanged" AutomationProperties.Name="General settings" />
+              <RadioButton x:Name="VocabularyTab" Style="{StaticResource PageTab}" GroupName="SettingsPage" Margin="0,2,0,0" Content="Vocabulary" Checked="PageChanged" AutomationProperties.Name="Vocabulary settings" />
+              <RadioButton x:Name="ModelTab" Style="{StaticResource PageTab}" GroupName="SettingsPage" Margin="0,2,0,0" Content="Model" Checked="PageChanged" AutomationProperties.Name="Speech model settings" />
+            </StackPanel>
+          </DockPanel>
+        </Border>
+        <Grid Grid.Column="1">
           <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
           </Grid.RowDefinitions>
-          <StackPanel Grid.Row="0" Margin="0,0,0,18">
-            <TextBlock FontSize="22" FontWeight="SemiBold" Text="Settings" />
-            <TextBlock Margin="0,5,0,0" Foreground="{DynamicResource ColorText}" Opacity="0.7" FontSize="14" TextWrapping="Wrap" Text="Choose your input, shortcuts, vocabulary, speech model, and ready sound." />
-            <StackPanel Margin="0,14,0,0" Orientation="Horizontal">
-              <RadioButton x:Name="GeneralTab" Style="{StaticResource PageTab}" GroupName="SettingsPage" Content="General" IsChecked="True" Checked="PageChanged" AutomationProperties.Name="General settings" />
-              <RadioButton x:Name="VocabularyTab" Style="{StaticResource PageTab}" GroupName="SettingsPage" Margin="8,0,0,0" Content="Vocabulary" Checked="PageChanged" AutomationProperties.Name="Vocabulary settings" />
-              <RadioButton x:Name="ModelTab" Style="{StaticResource PageTab}" GroupName="SettingsPage" Margin="8,0,0,0" Content="Model" Checked="PageChanged" AutomationProperties.Name="Speech model settings" />
-            </StackPanel>
-          </StackPanel>
-          <ScrollViewer x:Name="SettingsScrollViewer" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="0,0,0,16" Padding="0,0,12,0" Focusable="False">
+          <ScrollViewer x:Name="SettingsScrollViewer" Grid.Row="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="24,18,14,24" Focusable="False">
             <ScrollViewer.Resources>
               <Style TargetType="ScrollBar">
-                <Setter Property="Width" Value="12" />
+                <Setter Property="Width" Value="10" />
                 <Setter Property="Template">
                   <Setter.Value>
                     <ControlTemplate TargetType="ScrollBar">
                       <Track x:Name="PART_Track" Orientation="Vertical" IsDirectionReversed="True" Minimum="{TemplateBinding Minimum}" Maximum="{TemplateBinding Maximum}" Value="{TemplateBinding Value}" ViewportSize="{TemplateBinding ViewportSize}">
                         <Track.DecreaseRepeatButton><RepeatButton Command="ScrollBar.PageUpCommand" Focusable="False"><RepeatButton.Template><ControlTemplate TargetType="RepeatButton"><Border Background="Transparent" /></ControlTemplate></RepeatButton.Template></RepeatButton></Track.DecreaseRepeatButton>
-                        <Track.Thumb><Thumb><Thumb.Template><ControlTemplate TargetType="Thumb"><Border Margin="3,0" Background="{DynamicResource ColorNeutral400}" CornerRadius="3" /></ControlTemplate></Thumb.Template></Thumb></Track.Thumb>
+                        <Track.Thumb><Thumb><Thumb.Template><ControlTemplate TargetType="Thumb"><Border Margin="3,4" Background="{DynamicResource ColorNeutral800}" CornerRadius="2" /></ControlTemplate></Thumb.Template></Thumb></Track.Thumb>
                         <Track.IncreaseRepeatButton><RepeatButton Command="ScrollBar.PageDownCommand" Focusable="False"><RepeatButton.Template><ControlTemplate TargetType="RepeatButton"><Border Background="Transparent" /></ControlTemplate></RepeatButton.Template></RepeatButton></Track.IncreaseRepeatButton>
                       </Track>
                     </ControlTemplate>
@@ -59,105 +76,103 @@
               </Style>
             </ScrollViewer.Resources>
         <Grid>
-        <Grid x:Name="GeneralPage">
-          <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="0" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="22" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="22" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="22" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="22" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="22" />
-            <RowDefinition Height="Auto" />
-          </Grid.RowDefinitions>
+        <StackPanel x:Name="GeneralPage">
+          <!-- The heart of the page: each shortcut drawn as the keys you hold, then the language it dictates in. -->
+          <TextBlock Style="{StaticResource GroupLabel}" Margin="0,0,0,6" Text="DICTATE WITH" />
+          <ItemsControl x:Name="BindingsList" KeyboardNavigation.TabNavigation="Continue">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Grid x:Name="ShortcutRow" MinHeight="54" Background="Transparent">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                  </Grid.ColumnDefinitions>
+                  <TextBox x:Name="KeyBox" Grid.Column="0" Style="{StaticResource KeycapRecorder}" Margin="-4,0,0,0" Text="{Binding ShortcutLabel, Mode=OneWay}" PreviewKeyDown="RecordShortcut"
+                           ToolTip="Click, then press Ctrl+Shift plus a key." AutomationProperties.Name="{Binding ShortcutLabel, StringFormat='Shortcut {0}'}" />
+                  <TextBlock x:Name="Arrow" Grid.Column="1" Margin="8,0,6,0" VerticalAlignment="Center" FontSize="16" Foreground="{DynamicResource ColorNeutral600}" Text="→" />
+                  <ComboBox x:Name="LanguageBox" Grid.Column="2" Height="32" MinWidth="150" HorizontalAlignment="Left" ItemsSource="{Binding SupportedLanguages}" SelectedValuePath="LocaleCode"
+                            SelectedValue="{Binding LocaleCode, Mode=TwoWay}" IsTextSearchEnabled="True" TextSearch.TextPath="Label"
+                            AutomationProperties.Name="Recognition language" MaxDropDownHeight="320">
+                    <ComboBox.ItemTemplate>
+                      <DataTemplate>
+                        <TextBlock Foreground="{DynamicResource ColorText}" FontSize="14" Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
+                      </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                  </ComboBox>
+                  <TextBlock x:Name="RecordHint" Grid.Column="1" Grid.ColumnSpan="2" Margin="12,0,0,0" VerticalAlignment="Center" FontSize="13" Foreground="{DynamicResource ColorNeutral400}"
+                             Text="Press Ctrl+Shift + a key" Visibility="Collapsed" />
+                  <Button x:Name="RemoveButton" Grid.Column="3" Style="{StaticResource GhostButton}" Width="30" Height="30" Padding="0" Content="×" FontSize="17" Opacity="0"
+                          Tag="{Binding}" Click="RemoveBinding"
+                          ToolTip="{Binding ShortcutLabel, StringFormat='Remove {0} shortcut'}" AutomationProperties.Name="{Binding ShortcutLabel, StringFormat='Remove {0} shortcut'}" />
+                </Grid>
+                <DataTemplate.Triggers>
+                  <Trigger SourceName="ShortcutRow" Property="IsMouseOver" Value="True">
+                    <Setter TargetName="RemoveButton" Property="Opacity" Value="1" />
+                  </Trigger>
+                  <Trigger SourceName="ShortcutRow" Property="IsKeyboardFocusWithin" Value="True">
+                    <Setter TargetName="RemoveButton" Property="Opacity" Value="1" />
+                  </Trigger>
+                  <Trigger SourceName="KeyBox" Property="IsKeyboardFocused" Value="True">
+                    <Setter TargetName="RecordHint" Property="Visibility" Value="Visible" />
+                    <Setter TargetName="Arrow" Property="Visibility" Value="Hidden" />
+                    <Setter TargetName="LanguageBox" Property="Visibility" Value="Hidden" />
+                  </Trigger>
+                </DataTemplate.Triggers>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <Button Style="{StaticResource GhostKeyButton}" Margin="0,6,0,0" HorizontalAlignment="Left" Content="+ Add shortcut" Click="AddBinding" />
+          <TextBlock Margin="0,12,0,0" FontSize="12" Foreground="{DynamicResource ColorNeutral400}" TextWrapping="Wrap"
+                     Text="Click the keys, then press Ctrl+Shift plus a letter, number, or function key." />
 
-
-          <Grid Grid.Row="2">
-            <Grid.ColumnDefinitions>
-              <ColumnDefinition Width="140" />
-              <ColumnDefinition Width="16" />
-              <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
-            <StackPanel Grid.Column="0" VerticalAlignment="Center">
-              <TextBlock FontWeight="SemiBold" FontSize="14" Text="Microphone" />
-              <TextBlock Margin="0,3,0,0" FontSize="12" Foreground="{DynamicResource ColorText}" Opacity="0.55" Text="Used for every shortcut" />
-            </StackPanel>
-            <ComboBox x:Name="MicrophoneBox" Grid.Column="2" Height="36" Padding="8,0" AutomationProperties.Name="Microphone" SelectedValuePath="Id">
-              <ComboBox.ItemTemplate>
-                <DataTemplate>
-                  <TextBlock Foreground="{DynamicResource ColorText}" Text="{Binding DisplayName}" />
-                </DataTemplate>
-              </ComboBox.ItemTemplate>
-            </ComboBox>
-          </Grid>
-
-          <Grid Grid.Row="4">
-            <Grid.ColumnDefinitions>
-              <ColumnDefinition Width="140" />
-              <ColumnDefinition Width="16" />
-              <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
-            <StackPanel Grid.Column="0" VerticalAlignment="Top">
-              <TextBlock FontWeight="SemiBold" FontSize="14" Text="Shortcuts" />
-              <TextBlock Margin="0,3,0,0" FontSize="12" Foreground="{DynamicResource ColorText}" Opacity="0.55" Text="Start dictation and insert text" TextWrapping="Wrap" />
-            </StackPanel>
-            <StackPanel Grid.Column="2">
-              <ItemsControl x:Name="BindingsList">
-                <ItemsControl.ItemTemplate>
+          <!-- Everything else: one quiet row per setting. -->
+          <TextBlock Style="{StaticResource GroupLabel}" Margin="0,30,0,4" Text="INPUT" />
+          <Border Style="{StaticResource TableRow}">
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+              </Grid.ColumnDefinitions>
+              <TextBlock Style="{StaticResource RowLabel}" Text="Microphone" />
+              <ComboBox x:Name="MicrophoneBox" Grid.Column="1" Margin="16,0,0,0" Height="32" HorizontalAlignment="Right" AutomationProperties.Name="Microphone" SelectedValuePath="Id">
+                <ComboBox.ItemTemplate>
                   <DataTemplate>
-                    <Border Margin="0,0,0,8" Padding="8" Background="{DynamicResource ColorBg}" BorderBrush="{DynamicResource ColorDivider}" BorderThickness="1" CornerRadius="8">
-                      <Grid>
-                        <Grid.ColumnDefinitions>
-                          <ColumnDefinition Width="*" />
-                          <ColumnDefinition Width="128" />
-                          <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <ComboBox Grid.Column="0" Height="31" Padding="7,0" ItemsSource="{Binding SupportedLanguages}" SelectedValuePath="LocaleCode"
-                                  SelectedValue="{Binding LocaleCode, Mode=TwoWay}" IsTextSearchEnabled="True" TextSearch.TextPath="Label"
-                                  AutomationProperties.Name="Recognition language" MaxDropDownHeight="320">
-                          <ComboBox.ItemTemplate>
-                            <DataTemplate>
-                              <TextBlock Foreground="{DynamicResource ColorText}" Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
-                            </DataTemplate>
-                          </ComboBox.ItemTemplate>
-                        </ComboBox>
-                        <TextBox Grid.Column="1" Margin="8,0" Height="31" Padding="9,0" IsReadOnly="True" Text="{Binding ShortcutLabel, Mode=OneWay}" PreviewKeyDown="RecordShortcut"
-                                 ToolTip="Click, then press Ctrl+Shift plus a key." />
-                        <Button Grid.Column="2" Content="—" Tag="{Binding}" Click="RemoveBinding" FontSize="12" Width="31" Height="31" Padding="0"
-                                ToolTip="Remove shortcut" AutomationProperties.Name="Remove shortcut" />
-                      </Grid>
-                    </Border>
+                    <TextBlock Foreground="{DynamicResource ColorText}" Text="{Binding DisplayName}" TextTrimming="CharacterEllipsis" />
                   </DataTemplate>
-                </ItemsControl.ItemTemplate>
-              </ItemsControl>
-              <Button Style="{StaticResource GhostButton}" Width="136" HorizontalAlignment="Left" Content="+ Add shortcut" Click="AddBinding" />
-              <TextBlock Margin="0,8,0,0" Foreground="{DynamicResource ColorText}" Opacity="0.55" FontSize="12" TextWrapping="Wrap"
-                         Text="Choose a recognition language or Automatic. Then click a shortcut and press Ctrl+Shift plus a letter, number, or function key." />
-              <Grid Margin="0,14,0,0">
+                </ComboBox.ItemTemplate>
+              </ComboBox>
+            </Grid>
+          </Border>
+          <Border Style="{StaticResource TableRow}">
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+              </Grid.ColumnDefinitions>
+              <TextBlock Style="{StaticResource RowLabel}" Text="Shortcut behavior" />
+              <ComboBox x:Name="ShortcutModeBox" Grid.Column="1" Height="32" SelectedValuePath="Id" AutomationProperties.Name="Shortcut behavior">
+                <ComboBox.ItemTemplate>
+                  <DataTemplate>
+                    <TextBlock Foreground="{DynamicResource ColorText}" Text="{Binding Label}" />
+                  </DataTemplate>
+                </ComboBox.ItemTemplate>
+              </ComboBox>
+            </Grid>
+          </Border>
+          <Border Style="{StaticResource TableRow}">
+            <StackPanel>
+              <Grid>
                 <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="Auto" />
+                  <ColumnDefinition Width="Auto" />
                   <ColumnDefinition Width="*" />
-                  <ColumnDefinition Width="220" />
+                  <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <Grid.RowDefinitions>
-                  <RowDefinition Height="Auto" />
-                  <RowDefinition Height="8" />
-                  <RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
-                <TextBlock VerticalAlignment="Center" FontSize="13" Foreground="{DynamicResource ColorText}" Opacity="0.8" Text="Shortcut behavior" />
-                <ComboBox x:Name="ShortcutModeBox" Grid.Column="1" Height="36" Padding="8,0" SelectedValuePath="Id" AutomationProperties.Name="Shortcut behavior">
-                  <ComboBox.ItemTemplate>
-                    <DataTemplate>
-                      <TextBlock Foreground="{DynamicResource ColorText}" Text="{Binding Label}" />
-                    </DataTemplate>
-                  </ComboBox.ItemTemplate>
-                </ComboBox>
-                <TextBlock Grid.Row="2" VerticalAlignment="Center" FontSize="13" Foreground="{DynamicResource ColorText}" Opacity="0.8" Text="Insert text by" />
-                <ComboBox x:Name="InsertionModeBox" Grid.Row="2" Grid.Column="1" Height="36" Padding="8,0" SelectedValuePath="Id" AutomationProperties.Name="Insert text by"
+                <TextBlock Style="{StaticResource RowLabel}" Text="Insert text by" />
+                <TextBlock Grid.Column="1" Style="{StaticResource InfoMark}" ToolTip="{Binding Text, ElementName=InsertionModeHint}" />
+                <ComboBox x:Name="InsertionModeBox" Grid.Column="3" Height="32" SelectedValuePath="Id" AutomationProperties.Name="Insert text by"
                           SelectionChanged="InsertionModeChanged">
                   <ComboBox.ItemTemplate>
                     <DataTemplate>
@@ -166,162 +181,192 @@
                   </ComboBox.ItemTemplate>
                 </ComboBox>
               </Grid>
-              <TextBlock x:Name="InsertionModeHint" Margin="0,8,0,0" Foreground="{DynamicResource ColorText}" Opacity="0.55" FontSize="12" TextWrapping="Wrap" />
+              <TextBlock x:Name="InsertionModeHint" Style="{StaticResource RowHint}" />
             </StackPanel>
-          </Grid>
+          </Border>
 
-          <Grid Grid.Row="6">
-            <Grid.ColumnDefinitions>
-              <ColumnDefinition Width="140" />
-              <ColumnDefinition Width="16" />
-              <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
-            <StackPanel Grid.Column="0" VerticalAlignment="Top">
-              <TextBlock FontWeight="SemiBold" FontSize="14" Text="Recent dictations" />
-              <TextBlock Margin="0,3,0,0" FontSize="12" Foreground="{DynamicResource ColorText}" Opacity="0.55" Text="Paste a dictation again after switching windows" TextWrapping="Wrap" />
-            </StackPanel>
-            <StackPanel Grid.Column="2">
+          <TextBlock Style="{StaticResource GroupLabel}" Text="RECENT DICTATIONS" />
+          <Border Style="{StaticResource TableRow}">
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+              </Grid.ColumnDefinitions>
+              <TextBlock Style="{StaticResource RowLabel}" Text="Keep dictations" />
+              <ComboBox x:Name="HistoryRetentionBox" Grid.Column="1" Height="32" SelectedValuePath="Id" AutomationProperties.Name="Keep recent dictations"
+                        SelectionChanged="HistoryOptionChanged">
+                <ComboBox.ItemTemplate>
+                  <DataTemplate>
+                    <TextBlock Foreground="{DynamicResource ColorText}" Text="{Binding Label}" />
+                  </DataTemplate>
+                </ComboBox.ItemTemplate>
+              </ComboBox>
+            </Grid>
+          </Border>
+          <Border Style="{StaticResource TableRow}">
+            <StackPanel>
               <Grid>
                 <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="Auto" />
+                  <ColumnDefinition Width="Auto" />
                   <ColumnDefinition Width="*" />
-                  <ColumnDefinition Width="220" />
+                  <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <TextBlock VerticalAlignment="Center" FontSize="13" Foreground="{DynamicResource ColorText}" Opacity="0.8" Text="Keep dictations" />
-                <ComboBox x:Name="HistoryRetentionBox" Grid.Column="1" Height="36" Padding="8,0" SelectedValuePath="Id" AutomationProperties.Name="Keep recent dictations"
-                          SelectionChanged="HistoryOptionChanged">
-                  <ComboBox.ItemTemplate>
-                    <DataTemplate>
-                      <TextBlock Foreground="{DynamicResource ColorText}" Text="{Binding Label}" />
-                    </DataTemplate>
-                  </ComboBox.ItemTemplate>
-                </ComboBox>
-              </Grid>
-              <Grid Margin="0,10,0,0">
-                <Grid.ColumnDefinitions>
-                  <ColumnDefinition Width="*" />
-                  <ColumnDefinition Width="220" />
-                </Grid.ColumnDefinitions>
-                <TextBlock x:Name="HistoryShortcutLabel" VerticalAlignment="Center" FontSize="13" Foreground="{DynamicResource ColorText}" Opacity="0.8" Text="Shortcut" />
-                <TextBox x:Name="HistoryShortcutBox" Grid.Column="1" MinWidth="128" Height="36" Padding="12,0" HorizontalAlignment="Right" TextAlignment="Center" VerticalContentAlignment="Center" IsReadOnly="True"
+                <TextBlock x:Name="HistoryShortcutLabel" Style="{StaticResource RowLabel}" Opacity="0.8" Text="Picker shortcut" />
+                <TextBlock Grid.Column="1" Style="{StaticResource InfoMark}" ToolTip="{Binding Text, ElementName=HistoryHint}" />
+                <TextBox x:Name="HistoryShortcutBox" Grid.Column="3" Style="{StaticResource KeycapRecorder}" FontSize="12" Margin="0,0,-4,0"
                          ToolTip="Click, then press the new shortcut, for example Win+Shift+V." AutomationProperties.Name="Recent dictations shortcut"
                          GotKeyboardFocus="StartRecordingHistoryShortcut" LostKeyboardFocus="StopRecordingHistoryShortcut" />
               </Grid>
-              <TextBlock x:Name="HistoryHint" Margin="0,8,0,0" Foreground="{DynamicResource ColorText}" Opacity="0.55" FontSize="12" TextWrapping="Wrap" />
-              <CheckBox x:Name="ClipboardHistoryCheckBox" Margin="0,14,0,0"
+              <TextBlock x:Name="HistoryHint" Style="{StaticResource RowHint}" />
+            </StackPanel>
+          </Border>
+          <Border Style="{StaticResource TableRow}">
+            <StackPanel>
+              <CheckBox x:Name="ClipboardHistoryCheckBox" Style="{StaticResource SwitchRow}"
                         Content="Show pasted dictations in Win+V clipboard history"
                         AutomationProperties.Name="Show pasted dictations in Windows clipboard history" Checked="HistoryOptionChanged" Unchecked="HistoryOptionChanged" />
-              <TextBlock x:Name="ClipboardHistoryHint" Margin="24,6,0,0" Foreground="{DynamicResource ColorText}" Opacity="0.55" FontSize="12" TextWrapping="Wrap" />
+              <TextBlock x:Name="ClipboardHistoryHint" Style="{StaticResource RowHint}" />
             </StackPanel>
-          </Grid>
+          </Border>
 
-          <Grid Grid.Row="8">
-            <Grid.ColumnDefinitions>
-              <ColumnDefinition Width="140" />
-              <ColumnDefinition Width="16" />
-              <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
-            <StackPanel Grid.Column="0" VerticalAlignment="Top">
-              <TextBlock FontWeight="SemiBold" FontSize="14" Text="Startup &amp; resources" />
-              <TextBlock Margin="0,3,0,0" FontSize="12" Foreground="{DynamicResource ColorText}" Opacity="0.55" Text="Launch quietly, free model memory when idle" TextWrapping="Wrap" />
-            </StackPanel>
-            <StackPanel Grid.Column="2">
-              <CheckBox x:Name="StartWithWindowsCheckBox" Content="Start PrivateType with Windows" AutomationProperties.Name="Start PrivateType with Windows" />
-              <TextBlock x:Name="StartWithWindowsHint" Margin="32,6,0,0" Foreground="{DynamicResource ColorText}" Opacity="0.55" FontSize="12" TextWrapping="Wrap" Visibility="Collapsed"
-                         Text="Only a copy from the portable ZIP can change this. This one was built from source." />
-              <Grid Margin="0,12,0,0">
-                <Grid.ColumnDefinitions>
-                  <ColumnDefinition Width="*" />
-                  <ColumnDefinition Width="180" />
-                </Grid.ColumnDefinitions>
-                <TextBlock VerticalAlignment="Center" FontSize="13" Foreground="{DynamicResource ColorText}" Opacity="0.8" Text="Unload model after" />
-                <ComboBox x:Name="IdleTimeoutBox" Grid.Column="1" Height="36" Padding="8,0" SelectedValuePath="Minutes" AutomationProperties.Name="Unload model after">
-                  <ComboBox.ItemTemplate>
-                    <DataTemplate>
-                      <TextBlock Foreground="{DynamicResource ColorText}" Text="{Binding Label}" />
-                    </DataTemplate>
-                  </ComboBox.ItemTemplate>
-                </ComboBox>
-              </Grid>
-            </StackPanel>
-          </Grid>
-
-          <Grid Grid.Row="10">
-            <Grid.ColumnDefinitions>
-              <ColumnDefinition Width="140" />
-              <ColumnDefinition Width="16" />
-              <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
+          <TextBlock Style="{StaticResource GroupLabel}" Text="STARTUP" />
+          <Border Style="{StaticResource TableRow}">
             <StackPanel>
-              <TextBlock FontWeight="SemiBold" FontSize="14" Text="Ready sound" />
-              <TextBlock Margin="0,3,0,0" FontSize="12" Opacity="0.7" TextWrapping="Wrap" Text="Hear when the microphone is listening and you can speak" />
+              <CheckBox x:Name="StartWithWindowsCheckBox" Style="{StaticResource SwitchRow}" Content="Start PrivateType with Windows" AutomationProperties.Name="Start PrivateType with Windows" />
+              <TextBlock x:Name="StartWithWindowsHint" Margin="0,0,0,8" FontSize="12" Foreground="{DynamicResource ColorNeutral400}" TextWrapping="Wrap" Visibility="Collapsed"
+                         Text="Only a copy from the portable ZIP can change this. This one was built from source." />
             </StackPanel>
-            <StackPanel Grid.Column="2">
+          </Border>
+          <Border Style="{StaticResource TableRow}">
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+              </Grid.ColumnDefinitions>
+              <TextBlock Style="{StaticResource RowLabel}" Text="Unload model after" />
+              <ComboBox x:Name="IdleTimeoutBox" Grid.Column="1" Height="32" SelectedValuePath="Minutes" AutomationProperties.Name="Unload model after">
+                <ComboBox.ItemTemplate>
+                  <DataTemplate>
+                    <TextBlock Foreground="{DynamicResource ColorText}" Text="{Binding Label}" />
+                  </DataTemplate>
+                </ComboBox.ItemTemplate>
+              </ComboBox>
+            </Grid>
+          </Border>
+
+          <TextBlock Style="{StaticResource GroupLabel}" Text="SOUND" />
+          <Border Style="{StaticResource TableRow}">
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+              </Grid.ColumnDefinitions>
+              <TextBlock Style="{StaticResource RowLabel}" Text="Ready sound" ToolTip="Plays when the microphone is listening and you can speak." />
+              <ComboBox x:Name="ReadySoundBox" Grid.Column="1" Height="32" SelectedValuePath="Id" AutomationProperties.Name="Ready sound" SelectionChanged="ReadySoundChanged">
+                <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Label}" Foreground="{DynamicResource ColorText}" /></DataTemplate></ComboBox.ItemTemplate>
+              </ComboBox>
+              <Button x:Name="PreviewSoundButton" Grid.Column="2" Margin="8,0,0,0" Style="{StaticResource IconKeyButton}" Content="▶" ToolTip="Preview" AutomationProperties.Name="Preview ready sound" Click="PreviewSound" />
+            </Grid>
+          </Border>
+          <Border Style="{StaticResource TableRow}">
+            <StackPanel>
               <Grid>
                 <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="Auto" />
+                  <ColumnDefinition Width="Auto" />
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="160" />
+                  <ColumnDefinition Width="44" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Style="{StaticResource RowLabel}" Text="Volume" />
+                <TextBlock Grid.Column="1" Style="{StaticResource InfoMark}" ToolTip="0% mutes the ready sound and spoken cues." />
+                <Slider x:Name="ReadyVolumeSlider" Style="{StaticResource SoundVolumeSlider}" Grid.Column="3" Minimum="0" Maximum="100" TickFrequency="1" IsSnapToTickEnabled="True" SmallChange="5" LargeChange="10" ValueChanged="ReadyVolumeChanged" VerticalAlignment="Center" AutomationProperties.Name="Ready sound volume" />
+                <TextBlock x:Name="ReadyVolumeText" Grid.Column="4" Style="{StaticResource RowValue}" Text="80%" TextAlignment="Right" />
+              </Grid>
+              <TextBlock Style="{StaticResource RowHint}" Text="0% mutes the ready sound and spoken cues." />
+            </StackPanel>
+          </Border>
+          <!-- Only a custom ready sound needs a file. -->
+          <Border>
+            <Border.Style>
+              <Style TargetType="Border" BasedOn="{StaticResource TableRow}">
+                <Setter Property="Visibility" Value="Collapsed" />
+                <Style.Triggers>
+                  <DataTrigger Binding="{Binding SelectedValue, ElementName=ReadySoundBox}" Value="custom">
+                    <Setter Property="Visibility" Value="Visible" />
+                  </DataTrigger>
+                </Style.Triggers>
+              </Style>
+            </Border.Style>
+            <StackPanel>
+              <Grid>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="Auto" />
+                  <ColumnDefinition Width="Auto" />
                   <ColumnDefinition Width="*" />
                   <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <ComboBox x:Name="ReadySoundBox" Height="36" SelectedValuePath="Id" AutomationProperties.Name="Ready sound" SelectionChanged="ReadySoundChanged">
+                <TextBlock Style="{StaticResource RowLabel}" Text="Custom file" />
+                <TextBlock Grid.Column="1" Style="{StaticResource InfoMark}" ToolTip="WAV or MP3, up to 3 seconds of playback. Copied into app storage when saved." />
+                <TextBox x:Name="CustomSoundPathText" Grid.Column="2" Margin="16,0,0,0" Height="30" Padding="8,0" IsReadOnly="True" FontFamily="{DynamicResource MonoFont}" FontSize="12" AutomationProperties.Name="Custom ready sound file" />
+                <Button x:Name="BrowseSoundButton" Grid.Column="3" Margin="8,0,0,0" Content="Browse…" AutomationProperties.Name="Choose custom ready sound file" Click="BrowseSound" />
+              </Grid>
+              <TextBlock Style="{StaticResource RowHint}" Text="WAV or MP3, up to 3 seconds of playback. Copied into app storage when saved." />
+            </StackPanel>
+          </Border>
+          <TextBlock x:Name="SoundStatusText" Margin="0,2,0,6" FontSize="12" Foreground="{DynamicResource ColorWarning}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite">
+            <TextBlock.Style>
+              <Style TargetType="TextBlock">
+                <Style.Triggers>
+                  <Trigger Property="Text" Value=""><Setter Property="Visibility" Value="Collapsed" /></Trigger>
+                </Style.Triggers>
+              </Style>
+            </TextBlock.Style>
+          </TextBlock>
+          <Border Style="{StaticResource TableRow}">
+            <StackPanel>
+              <Grid>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="Auto" />
+                  <ColumnDefinition Width="Auto" />
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="Auto" />
+                  <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Style="{StaticResource RowLabel}" Text="Spoken cues" />
+                <TextBlock Grid.Column="1" Style="{StaticResource InfoMark}" ToolTip="Says “Loading model” while the model loads and “Transcribing” while Parakeet finishes your text. Uses the volume above." />
+                <ComboBox x:Name="SpokenCueVoiceBox" Grid.Column="3" Height="32" SelectedValuePath="Id" AutomationProperties.Name="Spoken cues" SelectionChanged="SpokenCueVoiceChanged">
                   <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Label}" Foreground="{DynamicResource ColorText}" /></DataTemplate></ComboBox.ItemTemplate>
                 </ComboBox>
-                <Button x:Name="PreviewSoundButton" Grid.Column="1" Margin="8,0,0,0" Content="▶ Preview" AutomationProperties.Name="Preview ready sound" Click="PreviewSound" />
+                <Button x:Name="PreviewSpokenCueButton" Grid.Column="4" Margin="8,0,0,0" Style="{StaticResource IconKeyButton}" Content="▶" ToolTip="Preview" AutomationProperties.Name="Preview spoken cue" Click="PreviewSpokenCue" />
               </Grid>
-              <Grid Margin="0,14,0,0">
-                <Grid.ColumnDefinitions>
-                  <ColumnDefinition Width="Auto" />
-                  <ColumnDefinition Width="*" />
-                  <ColumnDefinition Width="48" />
-                </Grid.ColumnDefinitions>
-                <TextBlock Text="Volume" VerticalAlignment="Center" />
-                <Slider x:Name="ReadyVolumeSlider" Style="{StaticResource SoundVolumeSlider}" Grid.Column="1" Margin="10,0" Minimum="0" Maximum="100" TickFrequency="1" IsSnapToTickEnabled="True" SmallChange="5" LargeChange="10" ValueChanged="ReadyVolumeChanged" VerticalAlignment="Center" AutomationProperties.Name="Ready sound volume" />
-                <TextBlock x:Name="ReadyVolumeText" Grid.Column="2" Text="80%" TextAlignment="Right" VerticalAlignment="Center" />
-              </Grid>
-              <TextBlock Margin="0,4,0,0" FontSize="12" Opacity="0.7" Text="0% mutes the ready sound and spoken cues." />
-              <TextBlock Margin="0,14,0,6" Text="Custom file" />
-              <Grid>
-                <Grid.ColumnDefinitions>
-                  <ColumnDefinition Width="*" />
-                  <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-                <TextBox x:Name="CustomSoundPathText" Height="36" Padding="8,0" IsReadOnly="True" FontWeight="Normal" AutomationProperties.Name="Custom ready sound file" />
-                <Button x:Name="BrowseSoundButton" Grid.Column="1" Margin="8,0,0,0" Content="Browse…" AutomationProperties.Name="Choose custom ready sound file" Click="BrowseSound" />
-              </Grid>
-              <TextBlock Margin="0,6,0,0" FontSize="12" Opacity="0.7" TextWrapping="Wrap" Text="WAV or MP3, up to 3 seconds of playback. Copied into app storage when saved." />
-              <TextBlock x:Name="SoundStatusText" Margin="0,6,0,0" FontSize="12" Foreground="{DynamicResource ColorAccent300}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
-              <TextBlock Margin="0,18,0,6" Text="Spoken cues" />
-              <Grid>
-                <Grid.ColumnDefinitions>
-                  <ColumnDefinition Width="*" />
-                  <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-                <ComboBox x:Name="SpokenCueVoiceBox" Height="36" SelectedValuePath="Id" AutomationProperties.Name="Spoken cues" SelectionChanged="SpokenCueVoiceChanged">
-                  <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Label}" Foreground="{DynamicResource ColorText}" /></DataTemplate></ComboBox.ItemTemplate>
-                </ComboBox>
-                <Button x:Name="PreviewSpokenCueButton" Grid.Column="1" Margin="8,0,0,0" Content="▶ Preview" AutomationProperties.Name="Preview spoken cue" Click="PreviewSpokenCue" />
-              </Grid>
-              <TextBlock Margin="0,6,0,0" FontSize="12" Opacity="0.7" TextWrapping="Wrap"
+              <TextBlock Style="{StaticResource RowHint}"
                          Text="Says &#x201C;Loading model&#x201D; while the model loads and &#x201C;Transcribing&#x201D; while Parakeet finishes your text. Uses the volume above." />
             </StackPanel>
-          </Grid>
+          </Border>
 
-          <Grid Grid.Row="12">
-            <Grid.ColumnDefinitions>
-              <ColumnDefinition Width="140" />
-              <ColumnDefinition Width="16" />
-              <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
+          <TextBlock Style="{StaticResource GroupLabel}" Text="OTHER COPIES" />
+          <Border Style="{StaticResource TableRow}">
             <StackPanel>
-              <TextBlock FontWeight="SemiBold" FontSize="14" Text="Other copies" />
-              <TextBlock Margin="0,3,0,0" FontSize="12" Opacity="0.7" TextWrapping="Wrap" Text="Bring settings from an earlier version" />
-            </StackPanel>
-            <StackPanel Grid.Column="2">
-              <Button x:Name="ImportFromCopyButton" HorizontalAlignment="Left" Content="Import settings from another copy…" Click="ImportFromCopy"
-                      AutomationProperties.Name="Import settings from another copy" />
-              <TextBlock Margin="0,6,0,0" FontSize="12" Opacity="0.7" TextWrapping="Wrap"
+              <Grid>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="Auto" />
+                  <ColumnDefinition Width="Auto" />
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Style="{StaticResource RowLabel}" Text="Settings from another copy" />
+                <TextBlock Grid.Column="1" Style="{StaticResource InfoMark}" ToolTip="Choose the folder of another PrivateType copy. You'll see what will be copied before anything changes." />
+                <Button x:Name="ImportFromCopyButton" Grid.Column="3" Content="Import…" Click="ImportFromCopy"
+                        AutomationProperties.Name="Import settings from another copy" />
+              </Grid>
+              <TextBlock Style="{StaticResource RowHint}"
                          Text="Choose the folder of another PrivateType copy. You'll see what will be copied before anything changes." />
             </StackPanel>
-          </Grid>
-        </Grid>
+          </Border>
+        </StackPanel>
         <StackPanel x:Name="VocabularyPage" Visibility="Collapsed">
           <TextBlock FontWeight="SemiBold" FontSize="16" Text="Vocabulary" />
           <TextBlock Margin="0,4,0,0" Foreground="{DynamicResource ColorText}" Opacity="0.7" FontSize="13" TextWrapping="Wrap"
@@ -547,28 +592,32 @@
           <TextBlock Margin="0,16,0,0" Foreground="{DynamicResource ColorText}" Opacity="0.55" FontSize="12" TextWrapping="Wrap" Text="{Binding StorageText}" />
           <TextBlock Margin="0,4,0,0" Foreground="{DynamicResource ColorText}" Opacity="0.55" FontSize="12" TextWrapping="Wrap"
                      Text="Models run on this computer. Your voice is processed locally." />
-        </StackPanel>
-        </Grid>
+        </StackPanel>        </Grid>
           </ScrollViewer>
-          <StackPanel Grid.Row="2">
-            <TextBlock x:Name="ValidationText" TextWrapping="Wrap" Foreground="{DynamicResource ColorAccent300}" Margin="0,0,0,8" AutomationProperties.LiveSetting="Polite" />
+          <!-- The page fades into the footer instead of being cut off. -->
+          <Rectangle Grid.Row="0" Height="20" Margin="0,0,12,0" VerticalAlignment="Bottom" IsHitTestVisible="False">
+            <Rectangle.Fill>
+              <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                <GradientStop Offset="0" Color="#001B1C20" />
+                <GradientStop Offset="1" Color="#FF1B1C20" />
+              </LinearGradientBrush>
+            </Rectangle.Fill>
+          </Rectangle>
+          <Border Grid.Row="1" Padding="24,10,16,12" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,1,0,0" CornerRadius="0,0,11,0">
             <Grid>
               <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
               </Grid.ColumnDefinitions>
-              <StackPanel Orientation="Horizontal">
-                <Button Margin="0,0,8,0" Content="Licenses…" AutomationProperties.Name="Open-source licenses" Click="OpenLicenses" />
-                <Button Content="Diagnostics…" AutomationProperties.Name="View diagnostics" Click="OpenDiagnostics" />
-              </StackPanel>
-              <StackPanel Grid.Column="1" Orientation="Horizontal">
-                <Button x:Name="CancelSettingsButton" Margin="0,0,8,0" Content="Cancel" IsCancel="True" />
-                <Button x:Name="SaveSettingsButton" Style="{StaticResource PrimaryButton}" Content="Save changes" IsDefault="True" Click="Save" />
+              <TextBlock x:Name="ValidationText" Margin="0,0,16,0" VerticalAlignment="Center" FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource ColorText}" AutomationProperties.LiveSetting="Polite" />
+              <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                <Button x:Name="CancelSettingsButton" Style="{StaticResource GhostButton}" Margin="0,0,6,0" Padding="12,6" Content="Cancel" IsCancel="True" />
+                <Button x:Name="SaveSettingsButton" Style="{StaticResource PrimaryButton}" Padding="16,6" Content="Save changes" IsDefault="True" Click="Save" />
               </StackPanel>
             </Grid>
-          </StackPanel>
+          </Border>
         </Grid>
-      </Border>
+      </Grid>
     </Grid>
   </Border>
 </Window>
