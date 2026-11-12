@@ -84,10 +84,10 @@
                                 <TextBlock FontSize="13" FontWeight="SemiBold" Text="{Binding Name}" />
                                 <Border Margin="8,0,0,0" Padding="5,1,5,2" CornerRadius="3" VerticalAlignment="Center" BorderBrush="{DynamicResource ColorNeutral800}" BorderThickness="1"
                                         Visibility="{Binding IsRecommended, Converter={StaticResource BoolToVisibility}}">
-                                  <TextBlock FontFamily="{DynamicResource MonoFont}" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource ColorNeutral400}" Text="RECOMMENDED" />
+                                  <TextBlock FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource ColorNeutral400}" Text="RECOMMENDED" />
                                 </Border>
                               </StackPanel>
-                              <TextBlock Grid.Column="3" Margin="12,0,0,0" VerticalAlignment="Center" FontFamily="{DynamicResource MonoFont}" FontSize="12"
+                              <TextBlock Grid.Column="3" Margin="12,0,0,0" VerticalAlignment="Center" FontSize="12" Typography.NumeralAlignment="Tabular"
                                          Foreground="{DynamicResource ColorNeutral400}" Text="{Binding Size}" />
                               <!-- One plain line on the same three facts for every model, then the longer description. -->
                               <StackPanel Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="2" Margin="0,4,0,0">

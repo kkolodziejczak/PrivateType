@@ -20,10 +20,9 @@
           <Trigger Property="IsMouseOver" Value="True"><Setter Property="BorderBrush" Value="{DynamicResource ColorNeutral800}" /></Trigger>
         </Style.Triggers>
       </Style>
-      <!-- A flat mono list of phrases with hairlines between them. -->
+      <!-- A flat list of phrases with hairlines between them. -->
       <Style x:Key="PhraseRow" TargetType="ListBoxItem">
         <Setter Property="Foreground" Value="{DynamicResource ColorText}" />
-        <Setter Property="FontFamily" Value="{DynamicResource MonoFont}" />
         <Setter Property="FontSize" Value="13" />
         <Setter Property="FocusVisualStyle" Value="{x:Null}" />
         <Setter Property="Template">
@@ -69,7 +68,7 @@
               <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
             <TextBlock Style="{StaticResource RowLabel}" Text="File" />
-            <TextBlock x:Name="FileText" Grid.Column="1" Margin="10,0,0,0" Style="{StaticResource RowValue}" TextTrimming="CharacterEllipsis" />
+            <TextBlock x:Name="FileText" Grid.Column="1" Margin="10,0,0,0" Style="{StaticResource RowValue}" FontFamily="{DynamicResource MonoFont}" FontSize="12" TextTrimming="CharacterEllipsis" />
           </Grid>
         </Border>
         <Border Style="{StaticResource TableRow}">

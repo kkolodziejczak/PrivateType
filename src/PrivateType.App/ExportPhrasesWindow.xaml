@@ -42,7 +42,7 @@
             <ItemsControl.ItemTemplate>
               <DataTemplate>
                 <Border BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,1,0,0" MinHeight="36">
-                  <CheckBox VerticalAlignment="Center" FontFamily="{DynamicResource MonoFont}" FontSize="13" IsChecked="{Binding IsSelected, Mode=TwoWay}" Content="{Binding Phrase}"
+                  <CheckBox VerticalAlignment="Center" FontSize="13" IsChecked="{Binding IsSelected, Mode=TwoWay}" Content="{Binding Phrase}"
                             Checked="SelectionChanged" Unchecked="SelectionChanged" />
                 </Border>
               </DataTemplate>

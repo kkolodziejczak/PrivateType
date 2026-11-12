@@ -1,7 +1,8 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-  <FontFamily x:Key="AppFont">Inter, Segoe UI</FontFamily>
-  <!-- Keys, values, versions and numbers. Cascadia Mono ships with Windows 11. -->
+  <!-- Language: labels, values, phrases, dictated words. Segoe UI Variable ships with Windows 11. -->
+  <FontFamily x:Key="AppFont">Segoe UI Variable Text, Segoe UI</FontFamily>
+  <!-- Machine notation only: key legends, file names, versions and model IDs. Cascadia Mono ships with Windows 11. -->
   <FontFamily x:Key="MonoFont">Cascadia Mono, Consolas</FontFamily>
 
   <!-- Neutral graphite: no blue tint in the greys. The accent is kept for the active key, the current page, focus and Save. -->
