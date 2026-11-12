@@ -15,11 +15,11 @@ public partial class ImportPackWindow : Window
         InitializeComponent();
         this.phrases = phrases;
         this.vocabulary = vocabulary;
-        FileText.Text = $"File: {fileName}";
+        FileText.Text = fileName;
         NameBox.Text = vocabulary.SuggestName(VocabularyEditor.NameFromFile(fileName));
         ScopeBox.ItemsSource = VocabularyScopes.All;
         PhraseList.ItemsSource = phrases;
-        CountText.Text = $"{phrases.Count} {(phrases.Count == 1 ? "phrase" : "phrases")}";
+        CountText.Text = $"{phrases.Count} {(phrases.Count == 1 ? "PHRASE" : "PHRASES")}";
         UpdateState();
     }
 

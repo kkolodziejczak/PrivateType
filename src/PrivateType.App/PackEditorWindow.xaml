@@ -1,7 +1,7 @@
 <Window x:Class="PrivateType.App.PackEditorWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Edit vocabulary pack" Icon="/PrivateType;component/Assets/PrivateType.ready.ico" Width="560" Height="620"
+        Title="Edit vocabulary pack" Icon="/PrivateType;component/Assets/PrivateType.ready.ico" Width="520" SizeToContent="Height"
         WindowStartupLocation="CenterOwner" ResizeMode="NoResize" WindowStyle="None" AllowsTransparency="True" ShowInTaskbar="False"
         Background="Transparent" Foreground="{DynamicResource ColorText}" FontFamily="{DynamicResource AppFont}">
   <Window.Resources>
@@ -9,77 +9,110 @@
       <ResourceDictionary.MergedDictionaries>
         <ResourceDictionary Source="FormStyles.xaml" />
       </ResourceDictionary.MergedDictionaries>
+      <!-- In a form, a dropdown keeps the same visible field as the text box beside it. -->
+      <Style x:Key="FieldFrame" TargetType="Border">
+        <Setter Property="Height" Value="30" />
+        <Setter Property="Background" Value="{DynamicResource ColorBg}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource ColorDivider}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="6" />
+        <Style.Triggers>
+          <Trigger Property="IsMouseOver" Value="True"><Setter Property="BorderBrush" Value="{DynamicResource ColorNeutral800}" /></Trigger>
+        </Style.Triggers>
+      </Style>
     </ResourceDictionary>
   </Window.Resources>
-  <Border Margin="8" Background="{DynamicResource ColorSurface}" BorderBrush="{DynamicResource ColorDivider}" BorderThickness="1" CornerRadius="16">
+  <Border Margin="8" Background="{DynamicResource ColorSurface}" BorderBrush="{DynamicResource ColorDivider}" BorderThickness="1" CornerRadius="12">
     <Grid>
       <Grid.RowDefinitions>
-        <RowDefinition Height="42" />
-        <RowDefinition Height="*" />
+        <RowDefinition Height="40" />
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="Auto" />
       </Grid.RowDefinitions>
-      <Border Background="{DynamicResource ColorNeutral900}" CornerRadius="15,15,0,0" MouseLeftButtonDown="DragWindow">
+      <Border BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,0,0,1" CornerRadius="11,11,0,0" Background="Transparent" MouseLeftButtonDown="DragWindow">
         <Grid Margin="16,0,8,0">
-          <TextBlock VerticalAlignment="Center" Foreground="{DynamicResource ColorText}" Opacity="0.8" FontSize="13" Text="Edit vocabulary pack" />
-          <Button Width="28" Height="28" Padding="0" HorizontalAlignment="Right" VerticalAlignment="Center" Content="×" FontSize="18"
-                  Background="Transparent" BorderBrush="Transparent" Foreground="{DynamicResource ColorNeutral400}" IsCancel="True" AutomationProperties.Name="Close" />
+          <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+            <Border Width="18" Height="18" CornerRadius="4" Background="{DynamicResource ColorKeycap}" BorderBrush="{DynamicResource ColorKeycapEdge}" BorderThickness="0,0,0,2">
+              <Ellipse Width="6" Height="6" Fill="{DynamicResource ColorAccent400}" />
+            </Border>
+            <TextBlock Margin="10,0,0,0" VerticalAlignment="Center" FontSize="13" FontWeight="SemiBold" Text="Edit vocabulary pack" />
+          </StackPanel>
+          <Button Style="{StaticResource GhostButton}" Width="28" Height="28" Padding="0" HorizontalAlignment="Right" VerticalAlignment="Center" Content="×" FontSize="18"
+                  IsCancel="True" AutomationProperties.Name="Close" />
         </Grid>
       </Border>
-      <Grid Grid.Row="1" Margin="22">
-        <Grid.RowDefinitions>
-          <RowDefinition Height="Auto" />
-          <RowDefinition Height="*" />
-          <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
-        <Grid>
-          <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="90" />
-            <ColumnDefinition Width="*" />
-          </Grid.ColumnDefinitions>
-          <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="10" />
-            <RowDefinition Height="Auto" />
-          </Grid.RowDefinitions>
-          <TextBlock VerticalAlignment="Center" FontSize="13" Opacity="0.8" Text="Name" />
-          <TextBox x:Name="NameBox" Grid.Column="1" Height="34" Padding="9,0" MaxLength="80" AutomationProperties.Name="Pack name" />
-          <TextBlock Grid.Row="2" VerticalAlignment="Center" FontSize="13" Opacity="0.8" Text="Language" />
-          <ComboBox x:Name="ScopeBox" Grid.Row="2" Grid.Column="1" Height="36" Padding="8,0" SelectedValuePath="Code"
-                    IsTextSearchEnabled="True" TextSearch.TextPath="DisplayName" MaxDropDownHeight="320" AutomationProperties.Name="Pack language">
-            <ComboBox.ItemTemplate>
-              <DataTemplate>
-                <TextBlock Foreground="{DynamicResource ColorText}" Text="{Binding DisplayName}" />
-              </DataTemplate>
-            </ComboBox.ItemTemplate>
-          </ComboBox>
-        </Grid>
-        <ScrollViewer x:Name="PhraseScroll" Grid.Row="1" Margin="0,16,0,0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="0,0,10,0" Focusable="False">
+
+      <StackPanel Grid.Row="1" Margin="24,6,24,16">
+        <Border Style="{StaticResource TableRow}" BorderThickness="0">
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="96" />
+              <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Style="{StaticResource RowLabel}" Text="Name" />
+            <TextBox x:Name="NameBox" Grid.Column="1" Height="30" Padding="8,0" FontSize="13" MaxLength="80" AutomationProperties.Name="Pack name" />
+          </Grid>
+        </Border>
+        <Border Style="{StaticResource TableRow}">
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="96" />
+              <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Style="{StaticResource RowLabel}" Text="Language" />
+            <Border Grid.Column="1" Style="{StaticResource FieldFrame}">
+              <ComboBox x:Name="ScopeBox" Margin="-1" SelectedValuePath="Code"
+                        IsTextSearchEnabled="True" TextSearch.TextPath="DisplayName" MaxDropDownHeight="320" AutomationProperties.Name="Pack language">
+                <ComboBox.ItemTemplate>
+                  <DataTemplate>
+                    <TextBlock Foreground="{DynamicResource ColorText}" Text="{Binding DisplayName}" />
+                  </DataTemplate>
+                </ComboBox.ItemTemplate>
+              </ComboBox>
+            </Border>
+          </Grid>
+        </Border>
+
+        <TextBlock Style="{StaticResource GroupLabel}" Margin="0,18,0,8" Text="PHRASES" />
+        <!-- Each phrase is a real text field, so it keeps its box; the remove key sits beside it. -->
+        <ScrollViewer x:Name="PhraseScroll" MaxHeight="300" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
           <StackPanel>
             <ItemsControl x:Name="PhraseList">
               <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                  <Grid Margin="0,0,0,8">
+                  <Grid Margin="0,0,0,6">
                     <Grid.ColumnDefinitions>
                       <ColumnDefinition Width="*" />
                       <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <TextBox Height="31" Padding="9,0" MaxLength="120" Text="{Binding Phrase, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Pack phrase" />
-                    <Button Grid.Column="1" Margin="8,0,0,0" Content="—" Tag="{Binding}" Click="RemovePhrase" FontSize="12" Width="31" Height="31" Padding="0"
-                            ToolTip="Remove phrase" AutomationProperties.Name="Remove phrase" />
+                    <TextBox Height="30" Padding="8,0" FontFamily="{DynamicResource MonoFont}" FontSize="13" MaxLength="120"
+                             Text="{Binding Phrase, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Pack phrase" />
+                    <Button Grid.Column="1" Style="{StaticResource IconKeyButton}" Margin="8,0,0,0" VerticalAlignment="Center" Content="×" FontSize="14"
+                            Tag="{Binding}" Click="RemovePhrase" ToolTip="Remove phrase" AutomationProperties.Name="Remove phrase" />
                   </Grid>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
-            <Button x:Name="AddPhraseButton" Style="{StaticResource GhostButton}" Width="136" HorizontalAlignment="Left" Content="+ Add phrase" Click="AddPhrase" />
+            <Button x:Name="AddPhraseButton" Style="{StaticResource GhostKeyButton}" Margin="0,2,0,0" HorizontalAlignment="Left" Content="+ Add phrase" Click="AddPhrase" />
           </StackPanel>
         </ScrollViewer>
-        <StackPanel Grid.Row="2" Margin="0,12,0,0">
-          <TextBlock x:Name="ErrorText" Margin="0,0,0,8" Foreground="{DynamicResource ColorAccent300}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
-          <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-            <Button Margin="0,0,8,0" Content="Cancel" IsCancel="True" />
-            <Button x:Name="SaveButton" Style="{StaticResource PrimaryButton}" Content="Save pack" IsDefault="True" Click="Save" />
+      </StackPanel>
+
+      <!-- Slim footer: a message on the left, the text-button Cancel, then the filled primary action at the right. -->
+      <Border Grid.Row="2" Padding="24,10,16,12" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,1,0,0">
+        <Grid>
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+          </Grid.ColumnDefinitions>
+          <TextBlock x:Name="ErrorText" Margin="0,0,16,0" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource ColorDanger}" TextWrapping="Wrap"
+                     AutomationProperties.LiveSetting="Polite" />
+          <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+            <Button Style="{StaticResource GhostButton}" Margin="0,0,6,0" Padding="12,6" Content="Cancel" IsCancel="True" />
+            <Button x:Name="SaveButton" Style="{StaticResource PrimaryButton}" Padding="16,6" Content="Save pack" IsDefault="True" Click="Save" />
           </StackPanel>
-        </StackPanel>
-      </Grid>
+        </Grid>
+      </Border>
     </Grid>
   </Border>
 </Window>
