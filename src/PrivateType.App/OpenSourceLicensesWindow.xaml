@@ -52,17 +52,16 @@
           <RowDefinition Height="Auto" />
           <RowDefinition Height="*" />
         </Grid.RowDefinitions>
-        <TextBlock FontSize="13" Foreground="{DynamicResource ColorNeutral400}" TextWrapping="Wrap"
-                   Text="PrivateType is MIT-licensed. Full notices for every bundled component are included with the portable app." />
+        <TextBlock x:Name="IntroText" FontSize="13" Foreground="{DynamicResource ColorNeutral400}" TextWrapping="Wrap" />
         <!-- A real text field: the notices can be selected and copied. -->
         <TextBox x:Name="Notices" Grid.Row="1" Margin="0,14,0,0" Padding="12,8" IsReadOnly="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"
                  VerticalContentAlignment="Top" FontSize="12" Foreground="{DynamicResource ColorNeutral400}"
                  AutomationProperties.Name="License notices" />
-        <!-- No notices beside this copy: say so, and where the complete set comes from. -->
+        <!-- No notices beside this copy: say what is missing, and where the complete set comes from. -->
         <StackPanel x:Name="MissingNoticesPanel" Grid.Row="1" Margin="0,0,0,24" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed">
           <TextBlock HorizontalAlignment="Center" FontSize="15" FontWeight="SemiBold" Text="The notices aren't in this copy" />
           <TextBlock Margin="0,8,0,0" MaxWidth="420" FontSize="13" Foreground="{DynamicResource ColorNeutral400}" TextAlignment="Center" TextWrapping="Wrap"
-                     Text="Download the complete PrivateType portable ZIP: its licenses folder holds every notice and licence text." />
+                     Text="This copy has no licenses folder with THIRD-PARTY-NOTICES.txt. The complete PrivateType portable ZIP includes it, with every license text." />
         </StackPanel>
       </Grid>
       <!-- The same slim footer as Settings: the secondary action as text, the primary filled at the right. -->

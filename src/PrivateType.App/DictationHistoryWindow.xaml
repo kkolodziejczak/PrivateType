@@ -155,8 +155,8 @@
                       <TextBlock Foreground="{DynamicResource ColorWarning}" FontSize="10" FontWeight="SemiBold" Text="NOT INSERTED" />
                     </Border>
                   </StackPanel>
-                  <!-- The way back: the row's own Enter key pastes it. -->
-                  <TextBlock Margin="0,4,0,0" Foreground="{DynamicResource ColorNeutral400}" FontSize="12" TextWrapping="Wrap" Text="Select it and press Enter to paste."
+                  <!-- The way back: the row's own Enter key pastes it where the user was typing when the list opened. -->
+                  <TextBlock Margin="0,4,0,0" Foreground="{DynamicResource ColorNeutral400}" FontSize="12" TextWrapping="Wrap" Text="Press Enter to paste it into the app you were using."
                              Visibility="{Binding ShowNotInserted, Converter={StaticResource BoolToVisibility}}" />
                 </StackPanel>
                 <Button x:Name="RemoveKey" Grid.Column="1" Style="{StaticResource IconKeyButton}" Margin="10,0,0,0" VerticalAlignment="Top" ContentTemplate="{StaticResource RemoveGlyph}" Content="Remove"
@@ -178,6 +178,10 @@
       <!-- Footer: the keys that act on the selected row, then where the list is kept. -->
       <Border x:Name="KeyHintText" Grid.Row="2" Padding="16,9,16,11" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,1,0,0">
         <Grid>
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+          </Grid.RowDefinitions>
           <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*" />
             <ColumnDefinition Width="Auto" />
@@ -190,8 +194,8 @@
             <Border Style="{StaticResource HintKey}"><TextBlock Style="{StaticResource HintKeyLegend}" Text="Esc" /></Border>
             <TextBlock Style="{StaticResource HintAction}" Text="close" />
           </StackPanel>
-          <TextBlock Grid.Column="1" Margin="0,0,0,2" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource ColorNeutral600}"
-                     Text="kept in memory only" />
+          <!-- Where the list is kept and for how long, from the Keep dictations setting. -->
+          <TextBlock x:Name="RetentionNote" Grid.Row="1" Grid.ColumnSpan="2" Margin="0,8,0,0" FontSize="12" Foreground="{DynamicResource ColorNeutral400}" TextWrapping="Wrap" />
         </Grid>
       </Border>
     </Grid>

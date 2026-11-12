@@ -17,11 +17,12 @@ public partial class ExportPhrasesWindow : Window
     private readonly IReadOnlyList<ExportPhraseChoice> choices;
     private readonly string defaultName;
 
-    public ExportPhrasesWindow(string title, IReadOnlyList<string> phrases, string defaultName)
+    // The subject is what is exported, such as a pack's name or "Your English phrases".
+    public ExportPhrasesWindow(string subject, IReadOnlyList<string> phrases, string defaultName)
     {
         InitializeComponent();
-        TitleText.Text = title;
-        Title = title;
+        SubjectText.Text = subject;
+        Title = $"Export {subject}";
         this.defaultName = defaultName;
         choices = phrases.Order(StringComparer.CurrentCultureIgnoreCase).Select(phrase => new ExportPhraseChoice(phrase)).ToArray();
         PhraseList.ItemsSource = choices;

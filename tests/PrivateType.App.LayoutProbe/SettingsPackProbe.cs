@@ -155,7 +155,7 @@ internal static class SettingsPackProbe
 
     private static void VerifyExport(string outputDirectory, string scratch)
     {
-        var preview = new ExportPhrasesWindow("Export Software development", Development.Phrases, "Software development") { ShowInTaskbar = false };
+        var preview = new ExportPhrasesWindow("Software development", Development.Phrases, "Software development") { ShowInTaskbar = false };
         preview.Show();
         try
         {
@@ -170,7 +170,7 @@ internal static class SettingsPackProbe
         }
 
         var destination = Path.Combine(scratch, "export" + VocabularyPackCodec.Extension);
-        var window = new ExportPhrasesWindow("Export English phrases", ["MVVM", "private-codename", "Kubernetes"], "My English phrases")
+        var window = new ExportPhrasesWindow("Your English phrases", ["MVVM", "private-codename", "Kubernetes"], "My English phrases")
         {
             ShowInTaskbar = false,
             ChooseDestination = _ => destination

@@ -85,6 +85,14 @@ public partial class DictationHistoryWindow : Window
     internal const string OffStep = "Turn them on in Settings → Recent dictations.";
     internal const string EmptyListText = "No dictations to paste yet";
 
+    // The list's privacy note: always in memory, and when the Keep dictations setting deletes entries.
+    internal static string RetentionText(string retention) => "Kept in memory · " + retention switch
+    {
+        DictationHistoryRetentions.OneHour => "deleted after 1 hour",
+        DictationHistoryRetentions.FifteenMinutes => "deleted after 15 minutes",
+        _ => "cleared when PrivateType exits"
+    };
+
     // The empty list names the first dictation shortcut as the keys to press.
     private string shortcutVerb = "Hold your dictation shortcut";
     private string shortcutRest = "and speak in any app.";
@@ -123,6 +131,7 @@ public partial class DictationHistoryWindow : Window
         EntriesList.Visibility = items.Length == 0 ? Visibility.Collapsed : Visibility.Visible;
         EmptyPanel.Visibility = items.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
         KeyHintText.Visibility = EntriesList.Visibility;
+        RetentionNote.Text = RetentionText(history.Retention);
         ShowEmptyMessage();
         ClearAllButton.IsEnabled = items.Length > 0;
         if (items.Length > 0)

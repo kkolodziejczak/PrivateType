@@ -248,11 +248,11 @@
               <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <ContentPresenter VerticalAlignment="Center" RecognizesAccessKey="True" />
-            <Border x:Name="Track" Grid.Column="1" Width="34" Height="20" Margin="12,0,6,0" VerticalAlignment="Center" CornerRadius="10"
+            <Border x:Name="Track" Grid.Column="1" Width="44" Height="24" Margin="12,0,6,0" VerticalAlignment="Center" CornerRadius="12"
                     Background="{DynamicResource ColorBg}" BorderBrush="{DynamicResource ColorNeutral600}" BorderThickness="1.5">
-              <Ellipse x:Name="Knob" Width="12" Height="12" Margin="3,0" HorizontalAlignment="Left" Fill="{DynamicResource ColorNeutral400}" />
+              <Ellipse x:Name="Knob" Width="15" Height="15" Margin="3,0" HorizontalAlignment="Left" Fill="{DynamicResource ColorNeutral400}" />
             </Border>
-            <Border x:Name="FocusRing" Grid.Column="1" Width="40" Height="26" Margin="9,0,3,0" VerticalAlignment="Center" CornerRadius="13"
+            <Border x:Name="FocusRing" Grid.Column="1" Width="50" Height="30" Margin="9,0,3,0" VerticalAlignment="Center" CornerRadius="15"
                     BorderBrush="{DynamicResource ColorAccent}" BorderThickness="2" Visibility="Collapsed" IsHitTestVisible="False" />
           </Grid>
           <ControlTemplate.Triggers>
@@ -544,7 +544,7 @@
     <Setter Property="FontFamily" Value="{DynamicResource AppFont}" />
     <Setter Property="FontSize" Value="11" />
     <Setter Property="FontWeight" Value="SemiBold" />
-    <Setter Property="Foreground" Value="{DynamicResource ColorNeutral600}" />
+    <Setter Property="Foreground" Value="{DynamicResource ColorNeutral400}" />
     <Setter Property="Margin" Value="0,22,0,4" />
   </Style>
   <Style x:Key="TableRow" TargetType="Border">
@@ -552,6 +552,10 @@
     <Setter Property="BorderThickness" Value="0,1,0,0" />
     <Setter Property="MinHeight" Value="40" />
     <Setter Property="Padding" Value="0,4" />
+    <Style.Triggers>
+      <!-- A focused row draws its hint over the rows below it, so it is lifted above them. -->
+      <Trigger Property="IsKeyboardFocusWithin" Value="True"><Setter Property="Panel.ZIndex" Value="1" /></Trigger>
+    </Style.Triggers>
   </Style>
   <Style x:Key="RowLabel" TargetType="TextBlock">
     <Setter Property="FontFamily" Value="{DynamicResource AppFont}" />
@@ -566,14 +570,30 @@
     <Setter Property="Foreground" Value="{DynamicResource ColorNeutral400}" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
-  <!-- One line under a row that explains it. Shown while the row has focus. -->
-  <Style x:Key="RowHint" TargetType="TextBlock">
-    <Setter Property="FontFamily" Value="{DynamicResource AppFont}" />
-    <Setter Property="FontSize" Value="12" />
-    <Setter Property="Foreground" Value="{DynamicResource ColorNeutral400}" />
-    <Setter Property="TextWrapping" Value="Wrap" />
-    <Setter Property="Margin" Value="0,0,0,6" />
+  <!-- One line under a row that explains it, shown while the row has keyboard focus. It lies over the rows below in a
+       zero-height layer, like an open dropdown, so focus never moves a row. -->
+  <Style x:Key="RowHintLayer" TargetType="Canvas">
+    <Setter Property="Height" Value="0" />
+    <Setter Property="ClipToBounds" Value="False" />
+  </Style>
+  <Style x:Key="RowHint" TargetType="Border">
+    <Setter Property="Canvas.Top" Value="6" />
+    <Setter Property="Width" Value="{Binding ActualWidth, RelativeSource={RelativeSource AncestorType=Canvas}}" />
+    <Setter Property="Padding" Value="10,7" />
+    <Setter Property="Background" Value="{DynamicResource ColorNeutral900}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource ColorDivider}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="IsHitTestVisible" Value="False" />
     <Setter Property="Visibility" Value="Collapsed" />
+    <Style.Resources>
+      <Style TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{DynamicResource AppFont}" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Foreground" Value="{DynamicResource ColorNeutral400}" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+      </Style>
+    </Style.Resources>
     <Style.Triggers>
       <DataTrigger Binding="{Binding IsKeyboardFocusWithin, RelativeSource={RelativeSource AncestorType=Border}}" Value="True">
         <Setter Property="Visibility" Value="Visible" />
@@ -581,33 +601,34 @@
     </Style.Triggers>
   </Style>
   <!-- The ⓘ after a row label: its tooltip carries the row's explanation for pointer users. -->
-  <!-- A 24 × 24 target that also takes keyboard focus and then shows the same tip. -->
-  <Style x:Key="InfoMark" TargetType="TextBlock">
+  <!-- A 16 px stroked circle-i inside a 24 × 24 target that also takes keyboard focus and then shows the same tip. -->
+  <Style x:Key="InfoMark" TargetType="ContentControl">
     <Setter Property="Margin" Value="2,0,0,0" />
     <Setter Property="Width" Value="24" />
     <Setter Property="Height" Value="24" />
-    <Setter Property="Padding" Value="0,1,0,0" />
-    <Setter Property="TextAlignment" Value="Center" />
-    <Setter Property="Background" Value="Transparent" />
-    <Setter Property="FontSize" Value="16" />
-    <Setter Property="Foreground" Value="{DynamicResource ColorNeutral400}" />
     <Setter Property="VerticalAlignment" Value="Center" />
-    <Setter Property="Text" Value="ⓘ" />
+    <Setter Property="Foreground" Value="{DynamicResource ColorNeutral400}" />
     <Setter Property="Cursor" Value="Help" />
     <Setter Property="Focusable" Value="True" />
+    <Setter Property="IsTabStop" Value="True" />
     <Setter Property="AutomationProperties.Name" Value="More information" />
     <Setter Property="AutomationProperties.HelpText" Value="{Binding ToolTip, RelativeSource={RelativeSource Self}}" />
     <Setter Property="ToolTipService.InitialShowDelay" Value="150" />
     <Setter Property="ToolTipService.ShowsToolTipOnKeyboardFocus" Value="True" />
-    <Setter Property="FocusVisualStyle">
+    <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+    <Setter Property="Template">
       <Setter.Value>
-        <Style>
-          <Setter Property="Control.Template">
-            <Setter.Value>
-              <ControlTemplate><Border Margin="-1" BorderBrush="{DynamicResource ColorAccent}" BorderThickness="2" CornerRadius="13" /></ControlTemplate>
-            </Setter.Value>
-          </Setter>
-        </Style>
+        <ControlTemplate TargetType="ContentControl">
+          <Grid Background="Transparent">
+            <Path Width="16" Height="16" Stroke="{TemplateBinding Foreground}" StrokeThickness="1.4" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                  Data="M8,0.7 A7.3,7.3 0 1 1 7.99,0.7 Z M8,7.2 V11.6" />
+            <Ellipse Width="1.9" Height="1.9" Margin="0,0,0,6.6" Fill="{TemplateBinding Foreground}" />
+            <Border x:Name="FocusRing" Margin="-1" BorderBrush="{DynamicResource ColorAccent}" BorderThickness="2" CornerRadius="13" Visibility="Collapsed" />
+          </Grid>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="FocusRing" Property="Visibility" Value="Visible" /></Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
       </Setter.Value>
     </Setter>
   </Style>
@@ -648,11 +669,11 @@
                 </Style>
               </ContentPresenter.Resources>
             </ContentPresenter>
-            <Border x:Name="Track" Grid.Column="1" Width="34" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" CornerRadius="10"
+            <Border x:Name="Track" Grid.Column="1" Width="44" Height="24" HorizontalAlignment="Left" VerticalAlignment="Center" CornerRadius="12"
                     Background="{DynamicResource ColorBg}" BorderBrush="{DynamicResource ColorNeutral600}" BorderThickness="1.5">
-              <Ellipse x:Name="Knob" Width="12" Height="12" Margin="3,0" HorizontalAlignment="Left" Fill="{DynamicResource ColorNeutral400}" />
+              <Ellipse x:Name="Knob" Width="15" Height="15" Margin="3,0" HorizontalAlignment="Left" Fill="{DynamicResource ColorNeutral400}" />
             </Border>
-            <Border x:Name="FocusRing" Grid.Column="1" Width="40" Height="26" Margin="-3,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Center" CornerRadius="13"
+            <Border x:Name="FocusRing" Grid.Column="1" Width="50" Height="30" Margin="-3,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Center" CornerRadius="15"
                     BorderBrush="{DynamicResource ColorAccent}" BorderThickness="2" Visibility="Collapsed" IsHitTestVisible="False" />
           </Grid>
           <ControlTemplate.Triggers>

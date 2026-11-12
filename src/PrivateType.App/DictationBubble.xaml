@@ -17,7 +17,7 @@
         <MenuItem Header="Quit" Click="Quit" AutomationProperties.Name="Quit" />
       </ContextMenu>
     </Border.ContextMenu>
-    <!-- A pill of keys: the microphone key, the language and a level meter. The words appear in a scrim below it, on the pill's centre axis. -->
+    <!-- A pill of keys: the microphone key, the state word, the language and a level meter. The words appear in a scrim below it, on the pill's centre axis. -->
     <StackPanel>
       <Border x:Name="Pill" HorizontalAlignment="Center" Background="{DynamicResource ColorSurface}" BorderBrush="{DynamicResource ColorDivider}" BorderThickness="1" CornerRadius="27" Padding="5">
         <StackPanel x:Name="BubbleHeader" Orientation="Horizontal" Height="44">
@@ -39,8 +39,11 @@
                          Foreground="{DynamicResource ColorDanger}" Text="!" Visibility="Collapsed" />
             </Grid>
           </Border>
-          <TextBlock x:Name="LocaleText" Margin="12,0,0,0" VerticalAlignment="Center" FontFamily="{DynamicResource MonoFont}" FontSize="13" FontWeight="SemiBold"
-                     Foreground="{DynamicResource ColorText}" Visibility="Collapsed" />
+          <!-- While recording the state is said in a word; the language follows it, quieter. -->
+          <TextBlock x:Name="ListeningText" Margin="12,0,0,0" VerticalAlignment="Center" FontFamily="{DynamicResource AppFont}" FontSize="13"
+                     Foreground="{DynamicResource ColorText}" Text="Listening" Visibility="Collapsed" />
+          <TextBlock x:Name="LocaleText" Margin="8,0,0,0" VerticalAlignment="Center" FontFamily="{DynamicResource MonoFont}" FontSize="13"
+                     Foreground="{DynamicResource ColorNeutral400}" Visibility="Collapsed" />
           <StackPanel x:Name="WaveformBars" Margin="12,0,10,0" Orientation="Horizontal" VerticalAlignment="Center" Height="20" Visibility="Collapsed" />
           <TextBlock x:Name="StatusTitle" Margin="12,0,14,0" VerticalAlignment="Center" FontFamily="{DynamicResource AppFont}" FontSize="13" FontWeight="SemiBold"
                      Foreground="{DynamicResource ColorText}" Text="PrivateType" Visibility="Collapsed" />

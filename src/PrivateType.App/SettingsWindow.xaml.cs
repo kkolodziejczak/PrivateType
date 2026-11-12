@@ -349,13 +349,13 @@ public partial class SettingsWindow : Window
     private void ExportPack(object sender, RoutedEventArgs e)
     {
         var item = (VocabularyPackItem)((FrameworkElement)sender).Tag;
-        new ExportPhrasesWindow($"Export {item.Name}", item.Phrases, item.Name) { Owner = this }.ShowDialog();
+        new ExportPhrasesWindow(item.Name, item.Phrases, item.Name) { Owner = this }.ShowDialog();
     }
 
     private void ExportPersonalPhrases(object sender, RoutedEventArgs e)
     {
         var scopeName = VocabularyScopes.Get(vocabulary.Scope).DisplayName;
-        new ExportPhrasesWindow($"Export {scopeName} phrases", vocabulary.VisiblePhrases, $"My {scopeName} phrases") { Owner = this }.ShowDialog();
+        new ExportPhrasesWindow($"Your {scopeName} phrases", vocabulary.VisiblePhrases, $"My {scopeName} phrases") { Owner = this }.ShowDialog();
     }
 
     private void RemovePack(object sender, RoutedEventArgs e)

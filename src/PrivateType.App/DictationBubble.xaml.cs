@@ -40,6 +40,7 @@ public partial class DictationBubble : Window
     private bool recordingIndicatorVisible;
     private bool recordingVisualsActive;
     private bool dragActive;
+    private string? historyShortcutLabel;
     private PointInt dragGrabOffset;
     private readonly NativeMethods.MouseHookProc mouseHookProc;
     private nint mouseHook;
@@ -111,6 +112,7 @@ public partial class DictationBubble : Window
         BubbleShell.Opacity = OpacityForReadyState(modelLoaded);
         ApplyReadyVisuals(modelLoaded);
         SetWidthAroundCenter(ReadyWidth);
+        historyShortcutLabel = settings.HistoryShortcut.Label;
         Hint.Text = DescribeBindings(settings.Shortcuts);
         Hint.Visibility = Visibility.Collapsed;
         WaveformBars.Visibility = Visibility.Collapsed;
@@ -281,9 +283,51 @@ public partial class DictationBubble : Window
         WaveformBars.Visibility = Visibility.Collapsed;
         SetTranscriptLines(fontSize: 13, lineHeight: 19, lines: 3, opacity: 0.85);
         SetTranscript(message);
+        DrawShortcutAsKeys(historyShortcutLabel);
         TranscriptViewport.Visibility = Visibility.Visible;
         UpdateScrim();
         ClampToWorkAreaAfterLayout();
+    }
+
+    // A shortcut named in the message is drawn as the keys to press, like the empty recent-dictations list; the text stays its accessible name.
+    private void DrawShortcutAsKeys(string? label)
+    {
+        var message = Transcript.Text;
+        var at = string.IsNullOrEmpty(label) ? -1 : message.IndexOf(label, StringComparison.Ordinal);
+        if (at < 0)
+            return;
+
+        var keys = new StackPanel { Orientation = System.Windows.Controls.Orientation.Horizontal, Margin = new Thickness(1, 0, 1, 0) };
+        foreach (var key in KeycapLegendsConverter.Split(label))
+        {
+            keys.Children.Add(new Border
+            {
+                MinWidth = 22,
+                Height = 18,
+                Margin = new Thickness(1, 3, 1, 0),
+                Padding = new Thickness(4, 0, 4, 0),
+                CornerRadius = new CornerRadius(4),
+                Background = Brush("ColorKeycap"),
+                BorderBrush = Brush("ColorKeycapEdge"),
+                BorderThickness = new Thickness(0, 0, 0, 2),
+                Child = new TextBlock
+                {
+                    Text = key.Legend,
+                    HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
+                    VerticalAlignment = System.Windows.VerticalAlignment.Center,
+                    FontFamily = (System.Windows.Media.FontFamily)System.Windows.Application.Current.Resources["MonoFont"],
+                    FontSize = 11,
+                    LineHeight = double.NaN,
+                    Foreground = Brush("ColorText")
+                }
+            });
+        }
+
+        System.Windows.Automation.AutomationProperties.SetName(Transcript, message);
+        Transcript.Inlines.Clear();
+        Transcript.Inlines.Add(new System.Windows.Documents.Run(message[..at]));
+        Transcript.Inlines.Add(new System.Windows.Documents.InlineUIContainer(keys) { BaselineAlignment = BaselineAlignment.Center });
+        Transcript.Inlines.Add(new System.Windows.Documents.Run(message[(at + label!.Length)..]));
     }
 
     // The title names what failed; the message says what to do next.
@@ -392,7 +436,7 @@ public partial class DictationBubble : Window
                 Margin = new Thickness(1.5, 0, 1.5, 0),
                 RadiusX = 1.5,
                 RadiusY = 1.5,
-                VerticalAlignment = VerticalAlignment.Center,
+                VerticalAlignment = System.Windows.VerticalAlignment.Center,
                 Fill = Brush("ColorAccent400"),
                 RenderTransform = scale,
                 RenderTransformOrigin = new System.Windows.Point(0.5, 0.5)
@@ -448,6 +492,7 @@ public partial class DictationBubble : Window
     {
         LocaleText.Text = locale ?? string.Empty;
         LocaleText.Visibility = locale is null ? Visibility.Collapsed : Visibility.Visible;
+        ListeningText.Visibility = LocaleText.Visibility;
         StatusTitle.Text = title ?? string.Empty;
         StatusTitle.Visibility = title is null ? Visibility.Collapsed : Visibility.Visible;
     }
@@ -503,6 +548,7 @@ public partial class DictationBubble : Window
 
     private void SetTranscript(string text)
     {
+        System.Windows.Automation.AutomationProperties.SetName(Transcript, null);
         Transcript.Text = text;
         UpdateScrim();
         TranscriptViewport.UpdateLayout();

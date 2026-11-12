@@ -211,8 +211,10 @@ internal static class SettingsModelProbe
                 && link.NavigateUri == SpeechModelCatalog.Parakeet.LicenseUri, "A new install must start on the recommended Parakeet, listed first, with its terms.");
             var badges = cards.Select(card => Descendants(card).OfType<TextBlock>().Any(text => text.Text == "RECOMMENDED" && text.IsVisible)).ToList();
             Require(badges.SequenceEqual([true, false]), "Only the recommended model carries the Recommended tag.");
-            var advice = (TextBlock)setup.FindName("ModelAdviceText");
-            Require(advice.IsVisible && advice.Text.Contains("Nemotron", StringComparison.Ordinal), "Setup must say when to choose Nemotron instead.");
+            // When to choose Nemotron is said on its own card: live words, phrase boosting and Asian languages.
+            var advice = Descendants(cards[1]).OfType<TextBlock>().Single(text => text.Text.Contains("Asian", StringComparison.Ordinal));
+            Require(advice.IsVisible && advice.Text.Contains("while you speak", StringComparison.Ordinal) && advice.Text.Contains("phrase boosting", StringComparison.Ordinal),
+                "Setup must say when to choose Nemotron instead.");
             Require(advice.TranslatePoint(new Point(0, advice.ActualHeight), setup).Y <= setup.ActualHeight, "The advice must fit inside the setup window.");
             Capture(setup, outputDirectory, "model-consent-recommended.png");
 

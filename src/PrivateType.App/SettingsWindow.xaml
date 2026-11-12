@@ -58,7 +58,7 @@
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
           </Grid.RowDefinitions>
-          <ScrollViewer x:Name="SettingsScrollViewer" Grid.Row="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False" ScrollChanged="ShowScrollFade">
+          <ScrollViewer x:Name="SettingsScrollViewer" Grid.Row="0" VerticalScrollBarVisibility="Visible" HorizontalScrollBarVisibility="Disabled" Focusable="False" ScrollChanged="ShowScrollFade">
             <ScrollViewer.Resources>
               <Style TargetType="ScrollBar">
                 <Setter Property="Width" Value="10" />
@@ -70,6 +70,10 @@
                         <Track.Thumb><Thumb><Thumb.Template><ControlTemplate TargetType="Thumb"><Border Margin="3,4" Background="{DynamicResource ColorNeutral800}" CornerRadius="2" /></ControlTemplate></Thumb.Template></Thumb></Track.Thumb>
                         <Track.IncreaseRepeatButton><RepeatButton Command="ScrollBar.PageDownCommand" Focusable="False"><RepeatButton.Template><ControlTemplate TargetType="RepeatButton"><Border Background="Transparent" /></ControlTemplate></RepeatButton.Template></RepeatButton></Track.IncreaseRepeatButton>
                       </Track>
+                      <!-- The lane is kept on every page so the content edge never moves; a page that fits shows no thumb. -->
+                      <ControlTemplate.Triggers>
+                        <Trigger Property="Maximum" Value="0"><Setter TargetName="PART_Track" Property="Visibility" Value="Hidden" /></Trigger>
+                      </ControlTemplate.Triggers>
                     </ControlTemplate>
                   </Setter.Value>
                 </Setter>
@@ -171,7 +175,7 @@
                 </Grid.ColumnDefinitions>
                 <StackPanel Orientation="Horizontal">
                   <TextBlock Style="{StaticResource RowLabel}" Text="Insert text by" />
-                  <TextBlock Style="{StaticResource InfoMark}" ToolTip="{Binding Text, ElementName=InsertionModeHint}" />
+                  <ContentControl Style="{StaticResource InfoMark}" ToolTip="{Binding Text, ElementName=InsertionModeHint}" />
                 </StackPanel>
                 <ComboBox x:Name="InsertionModeBox" Grid.Column="1" Style="{StaticResource ValuePicker}" SelectedValuePath="Id" AutomationProperties.Name="Insert text by"
                           SelectionChanged="InsertionModeChanged">
@@ -182,7 +186,7 @@
                   </ComboBox.ItemTemplate>
                 </ComboBox>
               </Grid>
-              <TextBlock x:Name="InsertionModeHint" Style="{StaticResource RowHint}" />
+              <Canvas Style="{StaticResource RowHintLayer}"><Border Style="{StaticResource RowHint}"><TextBlock x:Name="InsertionModeHint" /></Border></Canvas>
             </StackPanel>
           </Border>
 
@@ -213,13 +217,13 @@
                 </Grid.ColumnDefinitions>
                 <StackPanel Orientation="Horizontal">
                   <TextBlock x:Name="HistoryShortcutLabel" Style="{StaticResource RowLabel}" Text="Picker shortcut" />
-                  <TextBlock Style="{StaticResource InfoMark}" ToolTip="{Binding Text, ElementName=HistoryHint}" />
+                  <ContentControl Style="{StaticResource InfoMark}" ToolTip="{Binding Text, ElementName=HistoryHint}" />
                 </StackPanel>
                 <TextBox x:Name="HistoryShortcutBox" Grid.Column="1" Style="{StaticResource KeycapRecorder}" Margin="-4,1.6,0,-1.6"
                          ToolTip="Click, then press the new shortcut, for example Win+Shift+V." AutomationProperties.Name="Recent dictations shortcut"
                          GotKeyboardFocus="StartRecordingHistoryShortcut" LostKeyboardFocus="StopRecordingHistoryShortcut" />
               </Grid>
-              <TextBlock x:Name="HistoryHint" Style="{StaticResource RowHint}" />
+              <Canvas Style="{StaticResource RowHintLayer}"><Border Style="{StaticResource RowHint}"><TextBlock x:Name="HistoryHint" /></Border></Canvas>
             </StackPanel>
           </Border>
           <Border Style="{StaticResource TableRow}">
@@ -228,7 +232,7 @@
                         Content="Show in clipboard history"
                         AutomationProperties.Name="Show pasted dictations in Windows clipboard history" Checked="HistoryOptionChanged" Unchecked="HistoryOptionChanged" />
               <!-- Always shown: it says what other apps can read, and the switch it explains cannot take focus while typing. -->
-              <TextBlock x:Name="ClipboardHistoryHint" Style="{StaticResource RowHint}" Visibility="Visible" />
+              <TextBlock x:Name="ClipboardHistoryHint" Style="{StaticResource PageNote}" Margin="0,0,0,6" />
             </StackPanel>
           </Border>
 
@@ -282,14 +286,14 @@
                 </Grid.ColumnDefinitions>
                 <StackPanel Orientation="Horizontal">
                   <TextBlock Style="{StaticResource RowLabel}" Text="Volume" />
-                  <TextBlock Style="{StaticResource InfoMark}" ToolTip="0% mutes the ready sound and spoken cues." />
+                  <ContentControl Style="{StaticResource InfoMark}" ToolTip="0% mutes the ready sound and spoken cues." />
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal">
                   <Slider x:Name="ReadyVolumeSlider" Style="{StaticResource SoundVolumeSlider}" Width="140" Margin="-4,0,0,0" Minimum="0" Maximum="100" TickFrequency="1" IsSnapToTickEnabled="True" SmallChange="5" LargeChange="10" ValueChanged="ReadyVolumeChanged" VerticalAlignment="Center" AutomationProperties.Name="Ready sound volume" />
                   <TextBlock x:Name="ReadyVolumeText" Margin="12,0,0,0" Style="{StaticResource RowValue}" Text="80%" />
                 </StackPanel>
               </Grid>
-              <TextBlock Style="{StaticResource RowHint}" Text="0% mutes the ready sound and spoken cues." />
+              <Canvas Style="{StaticResource RowHintLayer}"><Border Style="{StaticResource RowHint}"><TextBlock Text="0% mutes the ready sound and spoken cues." /></Border></Canvas>
             </StackPanel>
           </Border>
           <!-- Only a custom ready sound needs a file. -->
@@ -313,12 +317,12 @@
                 </Grid.ColumnDefinitions>
                 <StackPanel Orientation="Horizontal">
                   <TextBlock Style="{StaticResource RowLabel}" Text="Custom file" />
-                  <TextBlock Style="{StaticResource InfoMark}" ToolTip="WAV or MP3, up to 3 seconds of playback. Copied into app storage when saved." />
+                  <ContentControl Style="{StaticResource InfoMark}" ToolTip="WAV or MP3, up to 3 seconds of playback. Copied into app storage when saved." />
                 </StackPanel>
                 <TextBox x:Name="CustomSoundPathText" Grid.Column="1" Height="30" IsReadOnly="True" FontFamily="{DynamicResource MonoFont}" FontSize="12" AutomationProperties.Name="Custom ready sound file" />
                 <Button x:Name="BrowseSoundButton" Grid.Column="2" Margin="8,0,0,0" Content="Browse…" AutomationProperties.Name="Choose custom ready sound file" Click="BrowseSound" />
               </Grid>
-              <TextBlock Style="{StaticResource RowHint}" Text="WAV or MP3, up to 3 seconds of playback. Copied into app storage when saved." />
+              <Canvas Style="{StaticResource RowHintLayer}"><Border Style="{StaticResource RowHint}"><TextBlock Text="WAV or MP3, up to 3 seconds of playback. Copied into app storage when saved." /></Border></Canvas>
             </StackPanel>
           </Border>
           <TextBlock x:Name="SoundStatusText" Margin="0,2,0,6" FontSize="12" Foreground="{DynamicResource ColorWarning}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite">
@@ -339,7 +343,7 @@
                 </Grid.ColumnDefinitions>
                 <StackPanel Orientation="Horizontal">
                   <TextBlock Style="{StaticResource RowLabel}" Text="Spoken cues" />
-                  <TextBlock Style="{StaticResource InfoMark}" ToolTip="Says “Loading model” while the model loads and “Transcribing” while Parakeet finishes your text. Uses the volume above." />
+                  <ContentControl Style="{StaticResource InfoMark}" ToolTip="Says “Loading model” while the model loads and “Transcribing” while Parakeet finishes your text. Uses the volume above." />
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal">
                   <ComboBox x:Name="SpokenCueVoiceBox" Style="{StaticResource ValuePicker}" SelectedValuePath="Id" AutomationProperties.Name="Spoken cues" SelectionChanged="SpokenCueVoiceChanged">
@@ -348,8 +352,7 @@
                   <Button x:Name="PreviewSpokenCueButton" Margin="8,0,0,0" Style="{StaticResource IconKeyButton}" Content="▶" ToolTip="Preview" AutomationProperties.Name="Preview spoken cue" Click="PreviewSpokenCue" />
                 </StackPanel>
               </Grid>
-              <TextBlock Style="{StaticResource RowHint}"
-                         Text="Says &#x201C;Loading model&#x201D; while the model loads and &#x201C;Transcribing&#x201D; while Parakeet finishes your text. Uses the volume above." />
+              <Canvas Style="{StaticResource RowHintLayer}"><Border Style="{StaticResource RowHint}"><TextBlock Text="Says &#x201C;Loading model&#x201D; while the model loads and &#x201C;Transcribing&#x201D; while Parakeet finishes your text. Uses the volume above." /></Border></Canvas>
             </StackPanel>
           </Border>
 
@@ -363,13 +366,12 @@
                 </Grid.ColumnDefinitions>
                 <StackPanel Orientation="Horizontal">
                   <TextBlock Style="{StaticResource RowLabel}" Text="Settings from another copy" />
-                  <TextBlock Style="{StaticResource InfoMark}" ToolTip="Choose the folder of another PrivateType copy. You'll see what will be copied before anything changes." />
+                  <ContentControl Style="{StaticResource InfoMark}" ToolTip="Choose the folder of another PrivateType copy. You'll see what will be copied before anything changes." />
                 </StackPanel>
                 <Button x:Name="ImportFromCopyButton" Grid.Column="1" HorizontalAlignment="Left" Content="Import…" Click="ImportFromCopy"
                         AutomationProperties.Name="Import settings from another copy" />
               </Grid>
-              <TextBlock Style="{StaticResource RowHint}"
-                         Text="Choose the folder of another PrivateType copy. You'll see what will be copied before anything changes." />
+              <Canvas Style="{StaticResource RowHintLayer}"><Border Style="{StaticResource RowHint}"><TextBlock Text="Choose the folder of another PrivateType copy. You'll see what will be copied before anything changes." /></Border></Canvas>
             </StackPanel>
           </Border>
           <!-- The table closes with a hairline, so the end of the page reads as an end. -->
@@ -423,7 +425,7 @@
                 </Grid.ColumnDefinitions>
                 <StackPanel Orientation="Horizontal">
                   <TextBlock Style="{StaticResource RowLabel}" Text="Strength" />
-                  <TextBlock Style="{StaticResource InfoMark}" ToolTip="{Binding Text, ElementName=StrengthHint}" />
+                  <ContentControl Style="{StaticResource InfoMark}" ToolTip="{Binding Text, ElementName=StrengthHint}" />
                 </StackPanel>
                 <ComboBox x:Name="VocabularyStrengthBox" Grid.Column="1" Style="{StaticResource ValuePicker}" ItemsSource="{Binding Strengths}" SelectedValuePath="Id"
                           SelectedValue="{Binding Strength, Mode=TwoWay}" AutomationProperties.Name="Vocabulary strength">
@@ -434,8 +436,7 @@
                   </ComboBox.ItemTemplate>
                 </ComboBox>
               </Grid>
-              <TextBlock x:Name="StrengthHint" Style="{StaticResource RowHint}"
-                         Text="Strength applies to every phrase. Stronger settings help rare words more but can also insert them where they were not said." />
+              <Canvas Style="{StaticResource RowHintLayer}"><Border Style="{StaticResource RowHint}"><TextBlock x:Name="StrengthHint" Text="Strength applies to every phrase. Stronger settings help rare words more but can also insert them where they were not said." /></Border></Canvas>
             </StackPanel>
           </Border>
           <!-- The phrases: a flat mono list; each row shows its field and × on hover. -->

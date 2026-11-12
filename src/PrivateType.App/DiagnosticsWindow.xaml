@@ -76,15 +76,26 @@
         </Grid.RowDefinitions>
         <TextBlock FontSize="13" Foreground="{DynamicResource ColorNeutral400}" TextWrapping="Wrap"
                    Text="Warnings, errors, and safe operational breadcrumbs stay in memory only until PrivateType closes. Audio and dictated text are never included." />
-        <!-- A line too long for the row ends in an ellipsis short of the edge; Copy and Save keep the whole line. -->
+        <!-- Time and level keep their columns; a long message wraps under its own column, so nothing is cut off. -->
         <ListBox x:Name="Entries" Grid.Row="1" Margin="0,14,0,0" ItemContainerStyle="{StaticResource EntryRow}"
                  BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,1,0,0"
                  ScrollViewer.HorizontalScrollBarVisibility="Disabled" AutomationProperties.Name="Diagnostics entries">
           <ListBox.ItemTemplate>
-            <DataTemplate><TextBlock Margin="0,0,12,0" Text="{Binding Display}" TextTrimming="CharacterEllipsis" /></DataTemplate>
+            <DataTemplate>
+              <Grid Margin="0,0,12,0">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="70" />
+                  <ColumnDefinition Width="85" />
+                  <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <TextBlock VerticalAlignment="Top" Text="{Binding Time}" />
+                <TextBlock Grid.Column="1" VerticalAlignment="Top" Text="{Binding Level}" />
+                <TextBlock Grid.Column="2" VerticalAlignment="Top" Text="{Binding Message}" TextWrapping="Wrap" />
+              </Grid>
+            </DataTemplate>
           </ListBox.ItemTemplate>
         </ListBox>
-        <!-- Nothing logged yet: what that means, and when to come back. Save, Copy and Clear stay available. -->
+        <!-- Nothing logged yet: what that means, and when to come back. Clear, Copy and Save have nothing to act on, so only Close is enabled. -->
         <StackPanel x:Name="EmptyPanel" Grid.Row="1" Margin="0,0,0,24" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed">
           <TextBlock HorizontalAlignment="Center" FontSize="15" FontWeight="SemiBold" Text="Nothing logged this session" />
           <TextBlock Margin="0,8,0,0" MaxWidth="400" FontSize="13" Foreground="{DynamicResource ColorNeutral400}" TextAlignment="Center" TextWrapping="Wrap"
@@ -95,11 +106,12 @@
            then Close as text, Copy report as a key and Save report filled at the right. -->
       <Border Grid.Row="2" Padding="16,10,16,12" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,1,0,0">
         <Grid>
-          <Button Style="{StaticResource GhostButton}" Height="32" Padding="8,0" HorizontalAlignment="Left" Foreground="{DynamicResource ColorDanger}" Content="Clear" Click="ClearReport" />
+          <Button Style="{StaticResource GhostButton}" Height="32" Padding="8,0" HorizontalAlignment="Left" Foreground="{DynamicResource ColorDanger}" Content="Clear" Click="ClearReport"
+                  IsEnabled="{Binding HasItems, ElementName=Entries}" />
           <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
             <Button Style="{StaticResource GhostButton}" Margin="0,0,8,0" Height="32" Padding="12,0" Content="Close" Click="Close" />
-            <Button Margin="0,0,8,0" Height="32" Padding="12,0" Content="Copy report" Click="CopyReport" />
-            <Button Style="{StaticResource PrimaryButton}" Height="32" Padding="16,0" Content="Save report" Click="SaveReport" />
+            <Button Margin="0,0,8,0" Height="32" Padding="12,0" Content="Copy report" Click="CopyReport" IsEnabled="{Binding HasItems, ElementName=Entries}" />
+            <Button Style="{StaticResource PrimaryButton}" Height="32" Padding="16,0" Content="Save report" Click="SaveReport" IsEnabled="{Binding HasItems, ElementName=Entries}" />
           </StackPanel>
         </Grid>
       </Border>

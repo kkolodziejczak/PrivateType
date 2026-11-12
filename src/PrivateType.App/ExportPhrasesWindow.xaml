@@ -20,12 +20,11 @@
       </Grid.RowDefinitions>
       <Border BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,0,0,1" CornerRadius="11,11,0,0" Background="Transparent" MouseLeftButtonDown="DragWindow">
         <Grid Margin="16,0,8,0">
-          <!-- A dock, not a stack, so a long pack name is trimmed before the close button. -->
           <DockPanel VerticalAlignment="Center" Margin="0,0,36,0">
             <Border Width="18" Height="18" CornerRadius="4" Background="{DynamicResource ColorKeycap}" BorderBrush="{DynamicResource ColorKeycapEdge}" BorderThickness="0,0,0,2">
               <Ellipse Width="6" Height="6" Fill="{DynamicResource ColorAccent400}" />
             </Border>
-            <TextBlock x:Name="TitleText" Margin="10,0,0,0" VerticalAlignment="Center" FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" Text="Export phrases" />
+            <TextBlock Margin="10,0,0,0" VerticalAlignment="Center" FontSize="13" FontWeight="SemiBold" Text="Export phrases" />
           </DockPanel>
           <Button Style="{StaticResource GhostButton}" Width="28" Height="28" Padding="0" HorizontalAlignment="Right" VerticalAlignment="Center" Content="×" FontSize="18"
                   IsCancel="True" AutomationProperties.Name="Close" />
@@ -33,6 +32,8 @@
       </Border>
 
       <StackPanel Grid.Row="1" Margin="24,14,24,16">
+        <!-- What is exported, in full: a long pack name wraps here instead of being cut in the title bar. -->
+        <TextBlock x:Name="SubjectText" Margin="0,0,0,6" FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap" />
         <TextBlock Foreground="{DynamicResource ColorNeutral400}" FontSize="12" TextWrapping="Wrap"
                    Text="Untick anything you do not want to share. Only the ticked phrases are written." />
         <TextBlock Style="{StaticResource GroupLabel}" Margin="0,18,0,4" Text="PHRASES" />

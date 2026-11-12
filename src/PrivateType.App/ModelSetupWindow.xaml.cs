@@ -17,8 +17,11 @@ public partial class ModelSetupWindow : Window
     internal const string EngineCouldNotStartHeading = "Speech engine couldn't start";
     internal const string EngineCouldNotStartCause = "The speech engine is here, but Windows couldn't start it.";
     internal const string EngineCouldNotStartStep = "Install the Microsoft Visual C++ Redistributable (x64), then select Retry.";
-    internal const string FailureHeading = "Model setup stopped";
-    internal const string FailureStep = "Select Retry to start again. If you're offline, connect first.";
+    internal const string FailureHeading = "Download interrupted";
+    internal const string DroppedConnectionCause = "The connection dropped before the model finished. Retry starts the download again.";
+    internal const string UnfinishedDownloadCause = "The model didn't finish downloading. Retry starts the download again.";
+    internal const string SourceNotice = "From NVIDIA on Hugging Face.";
+    internal const string ChangeLaterNotice = "Switch or delete models later in Settings → Model.";
     internal const string SharedStorageNotice = "Stays on this computer, shared with other PrivateType versions on this Windows account.";
     internal const string PortableStorageNotice = "Portable-local mode: this copy uses its existing app\\models folder and does not use the shared cache.";
     private SpeechModelDefinition chosenModel;
@@ -55,8 +58,8 @@ public partial class ModelSetupWindow : Window
     {
         var model = ChosenModel;
         ModelTermsLink.NavigateUri = model.LicenseUri;
-        ModelTermsLinkText.Text = $"Read the {model.LicenseName} terms for {model.DisplayName}";
-        TermsText.Text = $"I accept the {model.LicenseName} terms for {model.DisplayName}.";
+        ModelTermsLinkText.Text = $"Read the {model.LicenseName} terms";
+        TermsText.Text = $"I accept the {model.LicenseName} terms for {ModelLibraryEditor.ShortName(model)}";
         TermsCheckBox.IsChecked = false;
         ShowDownloadReadiness();
     }
@@ -64,8 +67,9 @@ public partial class ModelSetupWindow : Window
     internal static string StorageNotice(ModelStorageMode mode)
         => mode == ModelStorageMode.Portable ? PortableStorageNotice : SharedStorageNotice;
 
+    // Where the model comes from and where it stays, in one note.
     internal void SetStorageMode(ModelStorageMode mode)
-        => StorageNoticeText.Text = StorageNotice(mode);
+        => StorageNoticeText.Text = $"{SourceNotice} {StorageNotice(mode)} {ChangeLaterNotice}";
 
     internal static ProcessStartInfo ModelTermsBrowserStartInfo(SpeechModelDefinition? model = null)
         => new((model ?? SpeechModelCatalog.Nemotron).LicenseUri.AbsoluteUri) { UseShellExecute = true };
@@ -95,6 +99,7 @@ public partial class ModelSetupWindow : Window
         SetStorageMode(storageMode);
         ConsentPanel.Visibility = Visibility.Collapsed;
         ProgressBar.Visibility = Visibility.Collapsed;
+        PhaseStrip.Visibility = Visibility.Collapsed;
         DownloadButton.Visibility = Visibility.Collapsed;
         RetryButton.Visibility = Visibility.Visible;
         ShowDownloadReadiness();
@@ -110,6 +115,7 @@ public partial class ModelSetupWindow : Window
         SetStorageMode(storageMode);
         ConsentPanel.Visibility = Visibility.Visible;
         ProgressBar.Visibility = Visibility.Collapsed;
+        PhaseStrip.Visibility = Visibility.Collapsed;
         DownloadButton.Visibility = Visibility.Visible;
         RetryButton.Visibility = Visibility.Collapsed;
         ShowDownloadReadiness();
@@ -130,18 +136,39 @@ public partial class ModelSetupWindow : Window
         ConsentPanel.Visibility = Visibility.Collapsed;
         DownloadButton.Visibility = Visibility.Collapsed;
         ShowDownloadReadiness();
-        ProgressBar.Visibility = Visibility.Visible;
         SetStorageMode(storageMode);
+        // A full bar would claim progress that checking doesn't have; the phase strip says which step is under way instead.
+        PhaseStrip.Visibility = verifying ? Visibility.Visible : Visibility.Collapsed;
+        ProgressBar.Visibility = verifying ? Visibility.Collapsed : Visibility.Visible;
         ProgressBar.Value = total == 0 ? 0 : Math.Min(100, downloaded * 100d / total);
-        ProgressBar.BeginAnimation(OpacityProperty, new DoubleAnimation(1, 0.75, TimeSpan.FromSeconds(0.8)) { AutoReverse = true, RepeatBehavior = RepeatBehavior.Forever });
+        ProgressBar.BeginAnimation(OpacityProperty, verifying ? null
+            : new DoubleAnimation(1, 0.75, TimeSpan.FromSeconds(0.8)) { AutoReverse = true, RepeatBehavior = RepeatBehavior.Forever });
     }
 
-    public void ShowFailure(string message)
+    // A dropped connection is told apart from other failures by the network exceptions in the chain.
+    internal static bool IsDroppedConnection(Exception exception)
+    {
+        for (var current = exception; current is not null; current = current.InnerException)
+        {
+            if (current is System.Net.Sockets.SocketException or System.Net.Http.HttpRequestException or System.Net.Http.HttpIOException)
+                return true;
+        }
+
+        return false;
+    }
+
+    public void ShowFailure(Exception exception) => ShowFailure(exception.Message, IsDroppedConnection(exception));
+
+    // The plain cause and what Retry does lead; the system's message follows as a quieter, selectable detail.
+    internal void ShowFailure(string message, bool connectionDropped)
     {
         // The partial download is discarded, so the bar goes with it.
-        ShowStopped(FailureHeading, message, FailureStep);
+        ShowStopped(FailureHeading, connectionDropped ? DroppedConnectionCause : UnfinishedDownloadCause, string.Empty);
+        FailureDetailText.Text = message;
+        FailureDetailText.Visibility = Visibility.Visible;
         ProgressBar.BeginAnimation(OpacityProperty, null);
         ProgressBar.Visibility = Visibility.Collapsed;
+        PhaseStrip.Visibility = Visibility.Collapsed;
         RetryButton.Visibility = Visibility.Visible;
         DownloadButton.Visibility = Visibility.Collapsed;
         ShowDownloadReadiness();
@@ -150,6 +177,7 @@ public partial class ModelSetupWindow : Window
 
     private void ShowStopped(string heading, string cause, string step)
     {
+        FailureDetailText.Visibility = Visibility.Collapsed;
         HeadingText.Text = heading;
         StatusText.Text = cause;
         NextStepText.Text = step;
@@ -184,11 +212,13 @@ internal sealed class SetupModelChoice(SpeechModelDefinition model, bool isChose
 
     public SpeechModelDefinition Model { get; } = model;
     public string Name => Model.DisplayName;
+    // The name Settings uses for the same model; the full ID is its secondary line.
+    public string ShortName => ModelLibraryEditor.ShortName(Model);
     // One description per model, the same three facts for each: how text appears, which language, and phrase boosting.
     public string Headline => Model.Id switch
     {
         SpeechModelCatalog.ParakeetId => "Text appears when you release, with an optional preview while you speak · detects the language itself, 25 European languages · no phrase boosting, fixes still apply",
-        SpeechModelCatalog.NemotronId => "Words appear while you speak · uses each shortcut's language, 32 languages · phrase boosting",
+        SpeechModelCatalog.NemotronId => "Words appear while you speak · uses each shortcut's language, 32 languages including Asian ones · phrase boosting",
         _ => Model.Summary
     };
     public bool IsRecommended => Model.Id == SpeechModelCatalog.DefaultId;

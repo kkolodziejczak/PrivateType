@@ -153,10 +153,20 @@
                         </Grid.ColumnDefinitions>
                         <TextBlock VerticalAlignment="Center" FontSize="13" Text="{Binding Phrase}" TextTrimming="CharacterEllipsis" />
                         <TextBlock Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center" Style="{StaticResource PageNote}" TextWrapping="NoWrap" Text="{Binding Detail}" TextTrimming="CharacterEllipsis" />
-                        <Button Grid.Column="2" Style="{StaticResource RowRemoveButton}" VerticalAlignment="Center" Tag="{Binding}" Click="RemoveFix"
+                        <Button x:Name="RemoveFixButton" Grid.Column="2" Style="{StaticResource RowRemoveButton}" VerticalAlignment="Center" Tag="{Binding}" Click="RemoveFix"
                                 ToolTip="{Binding RemoveName}" AutomationProperties.Name="{Binding RemoveName}" />
+                        <!-- The fix being written has no remove key: it says whether Save includes it. -->
+                        <Border x:Name="DraftChip" Grid.Column="2" Margin="12,0,0,0" Style="{StaticResource StatusChip}" Visibility="Collapsed">
+                          <TextBlock Text="{Binding DraftState}" />
+                        </Border>
                       </Grid>
                     </Border>
+                    <DataTemplate.Triggers>
+                      <DataTrigger Binding="{Binding IsDraft}" Value="True">
+                        <Setter TargetName="RemoveFixButton" Property="Visibility" Value="Collapsed" />
+                        <Setter TargetName="DraftChip" Property="Visibility" Value="Visible" />
+                      </DataTrigger>
+                    </DataTemplate.Triggers>
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
@@ -187,8 +197,7 @@
         <StackPanel Margin="24,18,24,24">
           <TextBlock FontSize="15" FontWeight="SemiBold" Text="Saved to your vocabulary" />
           <TextBlock x:Name="SavedText" Margin="0,8,0,0" FontSize="13" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
-          <TextBlock Margin="0,8,0,0" Style="{StaticResource PageNote}"
-                     Text="Future dictations use them. You can review or edit them on the Vocabulary page in Settings." />
+          <TextBlock x:Name="SavedNoteText" Margin="0,8,0,0" Style="{StaticResource PageNote}" />
         </StackPanel>
         <Border Grid.Row="1" Padding="24,10,16,12" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,1,0,0">
           <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">

@@ -391,7 +391,7 @@ internal sealed class DictationApplication : IDisposable
         }
         catch (Exception exception)
         {
-            window.ShowFailure(exception.Message);
+            window.ShowFailure(exception);
             statusItem.Text = "Model setup failed";
         }
         finally
@@ -873,7 +873,8 @@ internal sealed class DictationApplication : IDisposable
     internal static string KeptTextHint(KeyChord historyShortcut) => $"Press {historyShortcut.Label} to paste it.";
 
     // A failed dictation names what failed in the bubble's title and says what to try next in words.
-    internal const string DictationStoppedTitle = "Dictation stopped";
+    // Every session failure is reported as the microphone's, with the step that fixes the microphone.
+    internal const string DictationStoppedTitle = "Microphone unavailable";
     internal const string ModelLoadFailedTitle = "Model didn't load";
     internal static string DictationStoppedText(string reason) =>
         $"{reason} Check that a microphone is connected and allowed in Windows privacy settings, then try again.";

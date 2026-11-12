@@ -51,7 +51,19 @@ internal static class CaptureProbe
             FocusKeyboard(window, picker);
             picker.IsDropDownOpen = true;
         });
+        // A pointer over a picker and over a switch row: each window is placed so that control lies under the pointer where it already is.
+        Draw(NewSettings(), output, "settings", "settings-general-hover", window => Hover(window, (FrameworkElement)window.FindName("MicrophoneBox")));
+        Draw(NewSettings(), output, "settings", "settings-general-hover-switch", window => Hover(window, (FrameworkElement)window.FindName("ClipboardHistoryCheckBox")));
+        var threeShortcuts = Sample with { Shortcuts = [.. ShortcutBinding.Defaults, new("de-DE", 0x47)] };
+        Draw(new SettingsWindow(threeShortcuts, Microphones, new ProbeModelStore(SpeechModelCatalog.DefaultId)), output, "settings", "settings-general-added-shortcut");
         Draw(NewSettings(), output, "settings", "settings-dirty", window => ((ComboBox)window.FindName("ShortcutModeBox")).SelectedIndex = 1);
+        // An edit on General, then another page: what the footer shows for a change made elsewhere.
+        Draw(NewSettings(), output, "settings", "settings-dirty-cross-page", window =>
+        {
+            ((ComboBox)window.FindName("ShortcutModeBox")).SelectedIndex = 1;
+            Flush(window);
+            Page(window, "VocabularyTab");
+        });
         Draw(NewSettings(), output, "settings", "settings-short", window => ((SettingsWindow)window).FitToWorkArea(600));
         Draw(NewSettings(), output, "settings", "settings-vocabulary", window => Page(window, "VocabularyTab"));
         Draw(NewSettings(), output, "settings", "settings-vocabulary-end", window =>
@@ -101,6 +113,23 @@ internal static class CaptureProbe
 
     private static ScrollViewer Scroll(Window window) => (ScrollViewer)window.FindName("SettingsScrollViewer");
 
+    // The one window drawn with the pointer over it; every other window is drawn with hit testing off.
+    private static Window? hovered;
+
+    // Moves the window so the element's centre is under the pointer, without moving the pointer, and lets the window see it.
+    private static void Hover(Window window, FrameworkElement element)
+    {
+        hovered = window;
+        window.Topmost = true;
+        NativeMethods.GetCursorPos(out var cursor);
+        var pointer = PresentationSource.FromVisual(window)!.CompositionTarget!.TransformFromDevice.Transform(new Point(cursor.X, cursor.Y));
+        var centre = element.TranslatePoint(new Point(element.ActualWidth / 2, element.ActualHeight / 2), window);
+        window.Left = Math.Round(pointer.X - centre.X);
+        window.Top = Math.Round(pointer.Y - centre.Y);
+        Flush(window);
+        System.Windows.Input.Mouse.Synchronize();
+    }
+
     private static void Bubble(string output)
     {
         Draw(Ready(loaded: true), output, "bubble", "bubble-ready");
@@ -132,6 +161,9 @@ internal static class CaptureProbe
         var error = Ready(loaded: true);
         error.ShowError(DictationApplication.DictationStoppedTitle, DictationApplication.DictationStoppedText("Couldn't reach the microphone."));
         Draw(error, output, "bubble", "bubble-error");
+        var loadFailed = Ready(loaded: false);
+        loadFailed.ShowError(DictationApplication.ModelLoadFailedTitle, DictationApplication.ModelLoadFailedText);
+        Draw(loadFailed, output, "bubble", "bubble-load-failed");
     }
 
     // What the recognizer hands the bubble: one running text, wrapped by the bubble itself.
@@ -160,7 +192,7 @@ internal static class CaptureProbe
         Draw(verifying, output, "model-setup", "setup-verifying");
         var failure = new ModelSetupWindow();
         failure.ShowProgress(400L * 1024 * 1024, total);
-        failure.ShowFailure("Unable to read data from the transport connection.");
+        failure.ShowFailure("Unable to read data from the transport connection.", connectionDropped: true);
         Draw(failure, output, "model-setup", "setup-failure");
         var missing = new ModelSetupWindow();
         missing.ShowMissingEnginePrerequisite();
@@ -187,6 +219,14 @@ internal static class CaptureProbe
         clock.Now = Now;
         history.Add(new FinalizedDictation("Short note.", "auto"));
         Draw(new DictationHistoryWindow(history, clock, () => 100), output, "history", "history-list");
+        // The not-inserted row selected from the keyboard: its actions are the row's own keys (Enter pastes, Del removes).
+        Draw(new DictationHistoryWindow(history, clock, () => 100), output, "history", "history-list-focus", window =>
+        {
+            ((DictationHistoryWindow)window).Refresh(selectIndex: 1);
+            Flush(window);
+            var entries = (ListBox)window.FindName("EntriesList");
+            FocusKeyboard(window, (IInputElement)entries.ItemContainerGenerator.ContainerFromIndex(1));
+        });
         Draw(new DictationHistoryWindow(new DictationHistory(clock), clock, () => 100, Sample), output, "history", "history-empty");
     }
 
@@ -225,6 +265,16 @@ internal static class CaptureProbe
             Flush(window);
             ((TextBox)teach.FindName("DesiredBox")).Text = "PostgreSQL";
         });
+        // A range that runs from the end of one line of words onto the next, beside a set-aside fix longer than the words it replaces.
+        Draw(new TeachWindow(new FinalizedDictation(longSentence, "en-US"), _ => null), output, "teach", "teach-range-wrap", window =>
+        {
+            var teach = (TeachWindow)window;
+            AddFix(teach, 25, 26, "WireGuard VPN tunnel");
+            teach.ActivateWord(17);
+            teach.ActivateWord(19);
+            Flush(window);
+            ((TextBox)teach.FindName("DesiredBox")).Text = "PostgreSQL migration";
+        });
     }
 
     // Selects the words first..last, types the correction and adds it as a pending fix.
@@ -255,10 +305,20 @@ internal static class CaptureProbe
             output, "import-pack", "import-pack-preview", window => ((ComboBox)window.FindName("ScopeBox")).SelectedValue = "en");
         var editing = new VocabularyEditor([], "normal", [Development]) { ShowAllPacks = true };
         Draw(new PackEditorWindow(editing.VisiblePacks.Single(), editing), output, "pack-editor", "pack-editor");
-        Draw(new ExportPhrasesWindow("Export Software development", Development.Phrases, "Software development"), output, "export", "export-review");
+        Draw(new ExportPhrasesWindow("Software development", Development.Phrases, "Software development"), output, "export", "export-review");
         const string longPack = "Mechanical engineering and additive manufacturing for production tooling";
-        Draw(new ExportPhrasesWindow($"Export {longPack}", ["fused deposition modelling", "selective laser sintering", "thermoplastic polyurethane filament",
-            "Fusion 360 parametric timeline", "PrusaSlicer variable layer height"], longPack), output, "export", "export-review-long");
+        string[] longPhrases = ["fused deposition modelling", "selective laser sintering", "thermoplastic polyurethane filament",
+            "Fusion 360 parametric timeline", "PrusaSlicer variable layer height"];
+        Draw(new ExportPhrasesWindow(longPack, longPhrases, longPack), output, "export", "export-review-long");
+        // Some and none of the same five phrases ticked.
+        Draw(new ExportPhrasesWindow(longPack, longPhrases, longPack), output, "export", "export-review-partial", window => Untick(window, 2));
+        Draw(new ExportPhrasesWindow(longPack, longPhrases, longPack), output, "export", "export-review-none", window => Untick(window, longPhrases.Length));
+    }
+
+    private static void Untick(Window window, int count)
+    {
+        foreach (var box in Descendants(window).OfType<CheckBox>().Take(count))
+            box.IsChecked = false;
     }
 
     private static void Prompts(string output)
@@ -324,7 +384,7 @@ internal static class CaptureProbe
             StopAnimations(window);
             // Some windows place themselves under the pointer; take the content out of hit testing so nothing draws hovered.
             // An open dropdown holds the mouse capture and would close without it, so its window keeps hit testing; it is off screen.
-            if (window.Content is UIElement content && System.Windows.Input.Mouse.Captured is null)
+            if (window.Content is UIElement content && System.Windows.Input.Mouse.Captured is null && window != hovered)
                 content.IsHitTestVisible = false;
             foreach (var popup in Descendants(window).OfType<Popup>().Where(popup => popup.Child is not null))
                 popup.Child.IsHitTestVisible = false;
@@ -354,6 +414,7 @@ internal static class CaptureProbe
         }
         finally
         {
+            hovered = null;
             window.Close();
         }
     }

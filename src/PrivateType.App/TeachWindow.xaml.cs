@@ -47,11 +47,29 @@ public sealed class TeachWord(int index, string text) : INotifyPropertyChanged
     public bool IsAvailable => !isFixed;
 }
 
-public sealed class TeachFixRow(TeachFix fix)
+// A row of Fixes to save: a set-aside fix, or the one being written, which Save includes only when it is ready.
+public sealed class TeachFixRow
 {
-    public TeachFix Fix { get; } = fix;
-    public string Phrase => Fix.Entry.Phrase;
-    public string Detail => $"Replaces “{Fix.Heard}” · {VocabularyScopes.Get(Fix.Entry.Scope).DisplayName}";
+    internal const string ReadyState = "Ready to save";
+    internal const string EditingState = "Being edited";
+
+    public TeachFixRow(TeachFix fix) : this(fix.Entry.Phrase, fix.Heard, fix.Entry.Scope, state: null) => Fix = fix;
+
+    private TeachFixRow(string phrase, string heard, string scope, string? state)
+    {
+        Phrase = phrase;
+        Detail = $"Replaces “{heard}” · {VocabularyScopes.Get(scope).DisplayName}";
+        DraftState = state;
+    }
+
+    internal static TeachFixRow Draft(string phrase, string heard, string scope, bool ready) => new(phrase, heard, scope, ready ? ReadyState : EditingState);
+
+    public TeachFix? Fix { get; }
+    public string Phrase { get; }
+    public string Detail { get; }
+    // Set only on the fix being written: whether Save would include it.
+    public string? DraftState { get; }
+    public bool IsDraft => DraftState is not null;
     public string RemoveName => $"Remove fix {Phrase}";
 }
 
@@ -88,6 +106,10 @@ public partial class TeachWindow : Window
         RecognitionLocaleCatalog.Get(localeCode).BaseLanguageCode ?? VocabularyScopes.Shared;
 
     // "Saved 2 fixes to Polish and Shared across languages."
+    // "Future dictations use it." for one saved fix, "use them" for several.
+    internal static string SavedNote(int count) =>
+        $"Future dictations use {(count == 1 ? "it" : "them")}. You can review or edit {(count == 1 ? "it" : "them")} on the Vocabulary page in Settings.";
+
     internal static string SavedSummary(IReadOnlyList<VocabularyEntry> entries)
     {
         var scopes = entries.Select(entry => entry.Scope).Distinct().Select(scope => VocabularyScopes.Get(scope).DisplayName).ToArray();
@@ -205,13 +227,25 @@ public partial class TeachWindow : Window
     {
         var canAdd = CanAddCurrent;
         AddFixButton.IsEnabled = canAdd;
-        var count = fixes.Entries.Count + (canAdd ? 1 : 0);
+        ShowFixRows(canAdd);
+        // Counts exactly the rows Save includes: every set-aside fix, and the one being written when it is ready.
+        var count = fixRows.Count(row => row.DraftState != TeachFixRow.EditingState);
         SaveButton.IsEnabled = count > 0;
         SaveButton.Content = count > 1 ? $"Save {count} fixes" : "Save fix";
         SelectionHint.Text = SelectionOverlapsFix
             ? "The selection includes words you already fixed. Remove that fix or select other words."
             : string.Empty;
         FixesPanel.Visibility = fixRows.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    // The fix being written leads the list while words are selected; the set-aside fixes follow in sentence order.
+    private void ShowFixRows(bool draftReady)
+    {
+        fixRows.Clear();
+        if (selection.Range is not null && ScopeBox.SelectedValue is string scope)
+            fixRows.Add(TeachFixRow.Draft(VocabularyRules.Normalize(DesiredBox.Text), HeardText(), scope, draftReady));
+        foreach (var fix in fixes.Fixes)
+            fixRows.Add(new TeachFixRow(fix));
     }
 
     private void AddCurrentFix()
@@ -223,7 +257,6 @@ public partial class TeachWindow : Window
         if (!fixes.TryAdd(fix))
             return;
 
-        fixRows.Insert(fixes.Fixes.ToList().IndexOf(fix), new TeachFixRow(fix));
         MarkFixedWords();
         selection.Clear();
         lastPrefill = string.Empty;
@@ -236,9 +269,9 @@ public partial class TeachWindow : Window
 
     private void RemoveFix(object sender, RoutedEventArgs e)
     {
-        var row = (TeachFixRow)((FrameworkElement)sender).Tag;
-        fixes.Remove(row.Fix);
-        fixRows.Remove(row);
+        if (((FrameworkElement)sender).Tag is not TeachFixRow { Fix: { } fix })
+            return;
+        fixes.Remove(fix);
         MarkFixedWords();
         SelectionChanged();
     }
@@ -274,6 +307,7 @@ public partial class TeachWindow : Window
     {
         savedScope = entries[0].Scope;
         SavedText.Text = SavedSummary(entries);
+        SavedNoteText.Text = SavedNote(entries.Count);
         EditPanel.Visibility = Visibility.Collapsed;
         SavedPanel.Visibility = Visibility.Visible;
         SaveButton.IsDefault = false;

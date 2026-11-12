@@ -12,7 +12,12 @@ public partial class DiagnosticsWindow : Window
     private void Refresh()
     {
         var entries = diagnostics.Snapshot();
-        Entries.ItemsSource = entries.Select(entry => new { Display = $"{entry.Timestamp:HH:mm:ss}  {entry.Severity,-11} {entry.EventName} {string.Join(" ", entry.Details.Select(pair => $"{pair.Key}={pair.Value}"))}" }).ToArray();
+        Entries.ItemsSource = entries.Select(entry => new
+        {
+            Time = $"{entry.Timestamp:HH:mm:ss}",
+            Level = entry.Severity.ToString(),
+            Message = $"{entry.EventName} {string.Join(" ", entry.Details.Select(pair => $"{pair.Key}={pair.Value}"))}"
+        }).ToArray();
         Entries.Visibility = entries.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
         EmptyPanel.Visibility = entries.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
     }

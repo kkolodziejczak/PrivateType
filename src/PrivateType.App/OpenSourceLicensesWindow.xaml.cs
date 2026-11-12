@@ -6,6 +6,7 @@ namespace PrivateType.App;
 
 public partial class OpenSourceLicensesWindow : Window
 {
+    private const string MitLicensed = "PrivateType is MIT-licensed.";
     private readonly string licensesDirectory;
 
     public OpenSourceLicensesWindow() : this(Path.Combine(AppContext.BaseDirectory, "licenses"))
@@ -27,6 +28,8 @@ public partial class OpenSourceLicensesWindow : Window
         Notices.Text = found ? File.ReadAllText(noticePath) : string.Empty;
         Notices.Visibility = found ? Visibility.Visible : Visibility.Collapsed;
         MissingNoticesPanel.Visibility = found ? Visibility.Collapsed : Visibility.Visible;
+        // Without the notices the intro promises nothing it can't show.
+        IntroText.Text = found ? $"{MitLicensed} Full notices for every bundled component are included with the portable app." : MitLicensed;
     }
 
     private void OpenLicensesFolder(object sender, RoutedEventArgs e)

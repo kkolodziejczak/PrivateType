@@ -52,6 +52,13 @@
       <StackPanel Grid.Row="1" Margin="24,18,24,20">
         <TextBlock x:Name="HeadingText" FontSize="15" FontWeight="SemiBold" Text="Download local dictation" />
         <TextBlock x:Name="StatusText" Margin="0,4,0,0" FontSize="13" Foreground="{DynamicResource ColorNeutral400}" TextWrapping="Wrap" Text="Download the local speech model before using dictation." />
+        <!-- The system's own words for a failure: quieter than the explanation above, and selectable so it can be copied. -->
+        <TextBox x:Name="FailureDetailText" Margin="0,6,0,0" Padding="0" FontSize="12" Foreground="{DynamicResource ColorNeutral400}" Background="Transparent" BorderThickness="0"
+                 IsReadOnly="True" TextWrapping="Wrap" AutomationProperties.Name="Error details" Visibility="Collapsed">
+          <TextBox.Template>
+            <ControlTemplate TargetType="TextBox"><ScrollViewer x:Name="PART_ContentHost" Margin="-2,0" /></ControlTemplate>
+          </TextBox.Template>
+        </TextBox>
         <!-- What to do next, in the text colour: set only when setup has stopped and needs the person. -->
         <TextBlock x:Name="NextStepText" Margin="0,12,0,0" FontSize="13" TextWrapping="Wrap">
           <TextBlock.Style>
@@ -85,13 +92,14 @@
                               <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
                               </Grid.RowDefinitions>
                               <Grid Width="16" Height="16" VerticalAlignment="Center">
                                 <Ellipse x:Name="Ring" Stroke="{DynamicResource ColorNeutral600}" StrokeThickness="1.5" />
                                 <Ellipse x:Name="Dot" Width="8" Height="8" Fill="{DynamicResource ColorAccent}" Visibility="Hidden" />
                               </Grid>
                               <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                                <TextBlock FontSize="13" FontWeight="SemiBold" Text="{Binding Name}" />
+                                <TextBlock FontSize="13" FontWeight="SemiBold" Text="{Binding ShortName}" />
                                 <Border Margin="8,0,0,0" Padding="5,1,5,2" CornerRadius="3" VerticalAlignment="Center" BorderBrush="{DynamicResource ColorNeutral800}" BorderThickness="1"
                                         Visibility="{Binding IsRecommended, Converter={StaticResource BoolToVisibility}}">
                                   <TextBlock FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource ColorNeutral400}" Text="RECOMMENDED" />
@@ -99,8 +107,11 @@
                               </StackPanel>
                               <TextBlock Grid.Column="3" Margin="12,0,0,0" VerticalAlignment="Center" FontSize="12" Typography.NumeralAlignment="Tabular"
                                          Foreground="{DynamicResource ColorNeutral400}" Text="{Binding Size}" />
+                              <!-- The model's full ID, as Settings shows it under the same short name. -->
+                              <TextBlock Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="2" Margin="0,2,0,0" FontFamily="{DynamicResource MonoFont}" FontSize="11"
+                                         Foreground="{DynamicResource ColorNeutral600}" Text="{Binding Name}" />
                               <!-- One description per model: the same three facts for each, so the difference reads across the two cards. -->
-                              <StackPanel Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="2" Margin="0,4,0,0">
+                              <StackPanel Grid.Row="2" Grid.Column="2" Grid.ColumnSpan="2" Margin="0,4,0,0">
                                 <TextBlock FontSize="13" Foreground="{DynamicResource ColorText}" Text="{Binding Headline}" TextWrapping="Wrap" />
                               </StackPanel>
                             </Grid>
@@ -125,17 +136,40 @@
               </ItemsControl.ItemTemplate>
             </ItemsControl>
           </Border>
-          <TextBlock x:Name="ModelAdviceText" Margin="0,10,0,0" Style="{StaticResource FinePrint}"
-                     Text="Choose Nemotron for live words while you speak, vocabulary boosting, or Asian languages." />
+          <TextBlock Margin="0,10,0,0" Style="{StaticResource FinePrint}" Text="Your voice is processed on this computer." />
           <TextBlock Margin="0,16,0,0" FontSize="13" TextWrapping="Wrap">
             <Hyperlink x:Name="ModelTermsLink" Foreground="{DynamicResource ColorAccent400}" RequestNavigate="OpenModelTerms" ToolTip="Open the model terms in your default browser"><Run x:Name="ModelTermsLinkText" /></Hyperlink>
           </TextBlock>
           <CheckBox x:Name="TermsCheckBox" Margin="0,10,0,0" VerticalContentAlignment="Top" Checked="TermsChanged" Unchecked="TermsChanged"><TextBlock x:Name="TermsText" FontSize="13" TextWrapping="Wrap" /></CheckBox>
-          <TextBlock Margin="0,10,0,0" Style="{StaticResource FinePrint}" Text="Both download from NVIDIA on Hugging Face. You can download the other model, switch, or delete models later in Settings → Model." />
           <TextBlock x:Name="StorageNoticeText" Margin="0,10,0,0" Style="{StaticResource FinePrint}" />
         </StackPanel>
         <ProgressBar x:Name="ProgressBar" Margin="0,18,0,0" Height="4" Minimum="0" Maximum="100" Visibility="Collapsed" />
-        <TextBlock Margin="0,14,0,0" FontSize="12" Foreground="{DynamicResource ColorNeutral600}" TextWrapping="Wrap" Text="Your voice is processed on this computer." />
+        <!-- Checking a finished download has no measurable progress: the two phases, the first done, the second under way. -->
+        <Grid x:Name="PhaseStrip" Margin="0,18,0,0" Visibility="Collapsed" AutomationProperties.Name="Downloaded. Checking files.">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="4" />
+            <ColumnDefinition Width="*" />
+          </Grid.ColumnDefinitions>
+          <StackPanel>
+            <Border Height="4" CornerRadius="2" Background="{DynamicResource ColorAccent}" />
+            <TextBlock Margin="0,8,0,0" FontSize="12" Foreground="{DynamicResource ColorNeutral400}" Text="Downloaded ✓" />
+          </StackPanel>
+          <StackPanel Grid.Column="2">
+            <Border Height="4" CornerRadius="2" Background="{DynamicResource ColorNeutral800}" />
+            <TextBlock Margin="0,8,0,0" FontSize="12" FontWeight="SemiBold" Text="Checking files…" />
+          </StackPanel>
+        </Grid>
+        <!-- Under the choice while choosing; at the end of every other state. -->
+        <TextBlock Margin="0,14,0,0" Text="Your voice is processed on this computer.">
+          <TextBlock.Style>
+            <Style TargetType="TextBlock" BasedOn="{StaticResource FinePrint}">
+              <Style.Triggers>
+                <DataTrigger Binding="{Binding Visibility, ElementName=ConsentPanel}" Value="Visible"><Setter Property="Visibility" Value="Collapsed" /></DataTrigger>
+              </Style.Triggers>
+            </Style>
+          </TextBlock.Style>
+        </TextBlock>
       </StackPanel>
       <!-- The same slim footer as Settings: the secondary action as text, the primary filled at the right. -->
       <Border Grid.Row="2" Padding="24,10,16,12" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,1,0,0">
