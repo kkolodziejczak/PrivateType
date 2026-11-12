@@ -288,7 +288,8 @@
       <!-- The same slim footer as Settings: the secondary action as text, the primary filled at the right. -->
       <Border Grid.Row="2" Grid.Column="1" Padding="16,10,16,12" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,1,0,0">
         <Grid>
-          <Button x:Name="BackButton" HorizontalAlignment="Left" Style="{StaticResource GhostButton}" Height="32" Padding="12,0" Content="Back" Click="Back" />
+          <!-- Pulled left by 4 so its text sits on the content's edge, with the footer note; the padding keeps its hit area. -->
+          <Button x:Name="BackButton" Margin="-4,0,0,0" HorizontalAlignment="Left" Style="{StaticResource GhostButton}" Height="32" Padding="12,0" Content="Back" Click="Back" />
           <TextBlock x:Name="FooterNoteText" Margin="8,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource ColorNeutral400}"
                      Text="Quitting stops the download." />
           <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">

@@ -195,18 +195,19 @@ internal static class CaptureProbe
 
     private static void ModelSetup(string output)
     {
+        // The starting design's setup-consent names stay on the states that show a person the same point, so the screenshots line up.
         // Step 1, choosing: as setup opens, with the other model chosen, and with keyboard focus on the second row while Parakeet stays chosen.
-        Draw(Setup(SpeechModelCatalog.ParakeetId), output, "model-setup", "setup-choose");
-        Draw(Setup(SpeechModelCatalog.NemotronId), output, "model-setup", "setup-choose-nemotron");
-        Draw(Setup(SpeechModelCatalog.ParakeetId), output, "model-setup", "setup-choose-focus", window =>
+        Draw(Setup(SpeechModelCatalog.ParakeetId), output, "model-setup", "setup-consent");
+        Draw(Setup(SpeechModelCatalog.NemotronId), output, "model-setup", "setup-consent-nemotron");
+        Draw(Setup(SpeechModelCatalog.ParakeetId), output, "model-setup", "setup-consent-focus", window =>
             FocusKeyboard(window, Descendants((ItemsControl)window.FindName("ModelChoices")).OfType<RadioButton>().ElementAt(1)));
         // Step 2, reviewing: on arrival the box is empty; then ticked.
         Draw(Review(SpeechModelCatalog.ParakeetId, ticked: false), output, "model-setup", "setup-review");
-        Draw(Review(SpeechModelCatalog.ParakeetId, ticked: true), output, "model-setup", "setup-review-ticked");
+        Draw(Review(SpeechModelCatalog.ParakeetId, ticked: true), output, "model-setup", "setup-consent-ticked");
         Draw(Review(SpeechModelCatalog.NemotronId, ticked: false), output, "model-setup", "setup-review-nemotron");
-        Draw(Review(SpeechModelCatalog.NemotronId, ticked: true), output, "model-setup", "setup-review-nemotron-ticked");
+        Draw(Review(SpeechModelCatalog.NemotronId, ticked: true), output, "model-setup", "setup-consent-nemotron-ticked");
         // A portable-local copy has the longest storage sentence: the tightest fit.
-        Draw(Review(SpeechModelCatalog.ParakeetId, ticked: false, ModelStorageMode.Portable), output, "model-setup", "setup-review-portable");
+        Draw(Review(SpeechModelCatalog.ParakeetId, ticked: false, ModelStorageMode.Portable), output, "model-setup", "setup-consent-portable");
         // The app reports the chosen model's manifest size as the download total.
         var total = SpeechModelCatalog.Parakeet.Manifest.ExpectedBytes;
         var downloadStart = new ModelSetupWindow();
