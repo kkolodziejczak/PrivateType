@@ -363,13 +363,13 @@ internal static class CaptureProbe
         Draw(new StartupVersionPromptWindow(new Version(2, 4, 0), new Version(1, 9, 3)), output, "version-prompt", "version-prompt");
         Draw(new DiagnosticsWindow(new InMemoryDiagnostics(), Clock), output, "diagnostics", "diagnostics-empty");
         Draw(new DiagnosticsWindow(SampleDiagnostics(), Clock), output, "diagnostics", "diagnostics-entries");
-        // The Error row reached with the arrow keys: selected and focused.
+        // The Error row reached with the arrow keys: selected, focused and open on its raw line.
         Draw(new DiagnosticsWindow(SampleDiagnostics(), Clock), output, "diagnostics", "diagnostics-row-focus", window =>
         {
             var entries = (ListBox)window.FindName("Entries");
-            entries.SelectedIndex = 1;
+            entries.SelectedIndex = 0;
             Flush(window);
-            FocusKeyboard(window, (IInputElement)entries.ItemContainerGenerator.ContainerFromIndex(1));
+            FocusKeyboard(window, (IInputElement)entries.ItemContainerGenerator.ContainerFromIndex(0));
         });
         Draw(new DiagnosticsWindow(BusyDiagnostics(), Clock), output, "diagnostics", "diagnostics-busy");
         Draw(new DiagnosticsWindow(InformationOnlyDiagnostics(), Clock), output, "diagnostics", "diagnostics-info-only");
@@ -383,21 +383,22 @@ internal static class CaptureProbe
     // The person's clock in every diagnostics capture: two hours ahead of the UTC timestamps the log keeps, whatever zone the capture runs in.
     private static readonly TimeZoneInfo Clock = TimeZoneInfo.CreateCustomTimeZone("capture", TimeSpan.FromHours(2), "capture", "capture");
 
-    // Three warnings and one error, with only the event names and details the log keeps; no dictated text.
+    // Three warnings and one error, as the code records them: the application's own events under "application", each
+    // dictation under its own session ID. The newest problem is a warning, and an older error sits under it.
     private static InMemoryDiagnostics SampleDiagnostics()
     {
         var diagnostics = new InMemoryDiagnostics();
-        void Record(int minute, string name, Exception? error = null, params (string Key, string Value)[] details) =>
-            diagnostics.Record(new DictationDiagnostic("a1b2c3", Now.AddMinutes(minute), name, details.ToDictionary(pair => pair.Key, pair => pair.Value), error));
-        Record(-14, "insertion.skipped", details: [("reason", "foreground-changed"), ("characters", "142")]);
-        Record(-9, "model.load.failed", details: [("device", "vulkan:1")]);
-        Record(-6, "session.failed", new InvalidOperationException("synthetic"), ("phase", "capture.start"), ("state", "Recording"));
-        Record(-2, "cue.skipped", details: [("source", "ready"), ("reason", "muted")]);
+        void Record(string session, int minute, string name, Exception? error = null, params (string Key, string Value)[] details) =>
+            diagnostics.Record(new DictationDiagnostic(session, Now.AddMinutes(minute), name, details.ToDictionary(pair => pair.Key, pair => pair.Value), error));
+        Record("application", -14, "engine.warm-up.failed", details: [("device", "vulkan:1")]);
+        Record("d41a07", -9, "injection.skipped", details: [("reason", "empty-transcript")]);
+        Record("e8802c", -6, "session.failed", new InvalidOperationException("synthetic"), ("phase", "capture.start"), ("state", "Ready"));
+        Record("f3c95b", -2, "injection.skipped", details: [("reason", "target-ineligible"), ("targetEligibility", "Changed"), ("characters", "142")]);
         return diagnostics;
     }
 
-    // A real session's log: the application and three dictations, each under its own session ID. Most entries are
-    // information; the four problems of the short sample are among them. Only event names and the details the log keeps.
+    // A real log: the application and four dictations, each under its own session ID. Most entries are information;
+    // the four problems of the short sample are among them. Only event names the code records and the details the log keeps.
     private static InMemoryDiagnostics BusyDiagnostics()
     {
         var diagnostics = new InMemoryDiagnostics();
@@ -408,51 +409,47 @@ internal static class CaptureProbe
             diagnostics.Record(new DictationDiagnostic(session, at, name, details.ToDictionary(pair => pair.Key, pair => pair.Value), error));
         }
 
-        void StartDictation(string session, int secondsLater, string language)
+        void Dictation(string session, int secondsLater, string recorded, string took, string characters, string? skipped = null)
         {
-            Record(session, secondsLater, "session.started", [("language", language)]);
-            Record(session, 0, "capture.start", [("source", "default")]);
-            Record(session, 0, "session.state", [("state", "Recording")]);
-        }
-
-        void FinishDictation(string session, int spokenSeconds, string recorded, string took, string characters, bool inserted)
-        {
-            Record(session, 3, "session.update", [("characters", "38")]);
-            Record(session, spokenSeconds, "session.update", [("characters", characters)]);
-            Record(session, 1, "capture.stop", [("recordedSeconds", recorded)]);
-            Record(session, 0, "session.finalizing", [("state", "Finalizing")]);
-            Record(session, 1, "transcription.timed", [("recordedSeconds", recorded), ("tookSeconds", took)]);
-            Record(session, 0, "recognizer.complete", [("characters", characters)]);
-            Record(session, 0, "text.corrected", [("characters", characters)]);
-            if (inserted)
+            Record(session, secondsLater, "session.started", [("locale", "en-US"), ("vocabularyPhrases", "4")]);
+            Record(session, 9, "session.state", [("state", "Finalizing")]);
+            Record(session, 0, "session.finalizing", [("timeoutMilliseconds", "15000")]);
+            Record("application", 0, "cue.transcribing", [("recordedSeconds", recorded), ("predictedSeconds", took), ("announced", "False")]);
+            Record("application", 1, "transcription.coverage", [("voicedSeconds", recorded), ("lastVoicedSeconds", recorded), ("lastWordSeconds", recorded), ("recoveredCharacters", "0")]);
+            Record("application", 0, "transcription.timed", [("recordedSeconds", recorded), ("tookSeconds", took)]);
+            if (skipped is null)
             {
                 Record(session, 0, "injection.started", [("characters", characters)]);
                 Record(session, 0, "injection.completed", [("characters", characters)]);
             }
             else
             {
-                Record(session, 0, "insertion.skipped", [("reason", "foreground-changed"), ("characters", characters)]);
+                Record(session, 0, "injection.skipped", skipped == "empty-transcript"
+                    ? [("reason", skipped)]
+                    : [("reason", skipped), ("targetEligibility", "Changed"), ("characters", characters)]);
             }
 
-            Record(session, 0, "session.completed", [("state", "Idle")]);
+            Record(session, 0, "session.completed", []);
+            Record(session, 0, "session.state", [("state", "Ready")]);
         }
 
-        Record("application", 0, "engine.started", [("device", "vulkan:1")]);
-        Record("application", 1, "model.loading", [("device", "vulkan:1")]);
-        Record("application", 2, "model.load.failed", [("device", "vulkan:1")]);
-        Record("application", 0, "engine.fallback", [("device", "cpu")]);
-        Record("application", 5, "model.loaded", [("device", "cpu"), ("tookSeconds", "4.6")]);
-        Record("application", 1, "engine.warmed", [("tookSeconds", "0.7")]);
-        StartDictation("d41a07", 352, "en-US");
-        FinishDictation("d41a07", 9, "13.2", "1.1", "142", inserted: false);
-        Record("application", 44, "history.opened", [("source", "shortcut")]);
-        Record("application", 6, "history.pasted", [("characters", "142")]);
-        Record("application", 0, "history.closed", [("reason", "pasted")]);
-        StartDictation("e8802c", 214, "pl-PL");
-        Record("e8802c", 1, "session.failed", [("phase", "capture.start"), ("state", "Recording")], new InvalidOperationException("synthetic"));
-        Record("application", 238, "cue.skipped", [("source", "ready"), ("reason", "muted")]);
-        StartDictation("f3c95b", 2, "en-US");
-        FinishDictation("f3c95b", 17, "21.4", "1.8", "264", inserted: true);
+        Record("application", 0, "model.standby", []);
+        Record("application", 0, "model.loading", []);
+        Record("application", 1, "engine.started", [("device", "vulkan:1")]);
+        Record("application", 2, "engine.warm-up.failed", [("device", "vulkan:1")]);
+        Record("application", 0, "engine.fallback", [("device", "vulkan:1")]);
+        Record("application", 3, "engine.started", [("device", "cpu")]);
+        Record("application", 1, "engine.warmed", [("device", "cpu")]);
+        Record("application", 0, "model.loaded", []);
+        Dictation("a5c210", 290, "8.4", "1.2", "96", skipped: "empty-transcript");
+        Dictation("d41a07", 62, "13.2", "1.1", "142", skipped: "target-ineligible");
+        Record("application", 44, "history.opened", [("source", "shortcut"), ("foreground", "True")]);
+        Record("application", 6, "history.pasted", []);
+        Record("application", 0, "history.closed", [("reason", "pasted"), ("heldForeground", "True")]);
+        Record("e8802c", 214, "session.started", [("locale", "pl-PL")]);
+        Record("e8802c", 1, "session.failed", [("phase", "capture.start"), ("state", "Ready")], new InvalidOperationException("synthetic"));
+        Record("e8802c", 0, "session.state", [("state", "Error")]);
+        Dictation("f3c95b", 240, "21.4", "1.8", "264");
         Record("application", 30, "model.unload.scheduled", [("minutes", "10")]);
         return diagnostics;
     }
@@ -463,14 +460,14 @@ internal static class CaptureProbe
         var diagnostics = new InMemoryDiagnostics();
         void Record(string session, int second, string name, params (string Key, string Value)[] details) =>
             diagnostics.Record(new DictationDiagnostic(session, Now.AddMinutes(-4).AddSeconds(second), name, details.ToDictionary(pair => pair.Key, pair => pair.Value)));
-        Record("application", 0, "engine.started", ("device", "vulkan:1"));
-        Record("application", 1, "model.loading", ("device", "vulkan:1"));
-        Record("application", 4, "model.loaded", ("device", "vulkan:1"), ("tookSeconds", "2.9"));
-        Record("application", 5, "engine.warmed", ("tookSeconds", "0.4"));
-        Record("d41a07", 62, "session.started", ("language", "en-US"));
-        Record("d41a07", 75, "transcription.timed", ("recordedSeconds", "11.8"), ("tookSeconds", "0.9"));
+        Record("application", 0, "model.standby");
+        Record("application", 0, "model.loading");
+        Record("application", 1, "engine.started", ("device", "vulkan:1"));
+        Record("application", 4, "engine.warmed", ("device", "vulkan:1"));
+        Record("application", 4, "model.loaded");
+        Record("d41a07", 62, "session.started", ("locale", "en-US"));
+        Record("application", 75, "transcription.timed", ("recordedSeconds", "11.8"), ("tookSeconds", "0.9"));
         Record("d41a07", 75, "injection.completed", ("characters", "126"));
-        Record("d41a07", 75, "session.completed", ("state", "Idle"));
         return diagnostics;
     }
 

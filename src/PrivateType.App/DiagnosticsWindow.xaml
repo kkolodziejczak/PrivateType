@@ -1,7 +1,8 @@
 <Window x:Class="PrivateType.App.DiagnosticsWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="PrivateType diagnostics" Icon="/PrivateType;component/Assets/PrivateType.ready.ico" Width="620" Height="480" WindowStartupLocation="CenterOwner" WindowStyle="None" UseLayoutRounding="True"
+        Title="PrivateType diagnostics" Icon="/PrivateType;component/Assets/PrivateType.ready.ico" Width="620" SizeToContent="Height" MinHeight="260" MaxHeight="520"
+        WindowStartupLocation="CenterOwner" WindowStyle="None" UseLayoutRounding="True"
         AllowsTransparency="True" Background="Transparent" Foreground="{DynamicResource ColorText}" FontFamily="{DynamicResource AppFont}">
   <Window.Resources>
     <ResourceDictionary>
@@ -23,12 +24,52 @@
           </Setter.Value>
         </Setter>
       </Style>
-      <!-- One entry per table row: mono text between hairlines. A screen reader hears the row as one sentence. -->
-      <Style x:Key="EntryRow" TargetType="ListBoxItem">
-        <Setter Property="AutomationProperties.Name" Value="{Binding SpokenName}" />
+      <!-- The severity mark, 14 px: a filled circle with ✕ for an error, a triangle with ! for a warning, a small hollow
+           circle for information. The shape tells them apart without colour. -->
+      <DataTemplate x:Key="SeverityMark">
+        <Grid Width="14" Height="14">
+          <Grid x:Name="ErrorMark" Visibility="Collapsed">
+            <Ellipse Fill="{DynamicResource ColorDanger}" />
+            <Path Stroke="{DynamicResource ColorSurface}" StrokeThickness="1.6" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Data="M4.8,4.8 L9.2,9.2 M9.2,4.8 L4.8,9.2" />
+          </Grid>
+          <Grid x:Name="WarningMark" Visibility="Collapsed">
+            <Path Fill="{DynamicResource ColorWarning}" Stroke="{DynamicResource ColorWarning}" StrokeThickness="1.2" StrokeLineJoin="Round" Data="M7,1.2 L13.2,12.8 L0.8,12.8 Z" />
+            <Path Stroke="{DynamicResource ColorSurface}" StrokeThickness="1.6" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Data="M7,5.2 L7,8.4 M7,10.6 L7,10.7" />
+          </Grid>
+          <Ellipse x:Name="InformationMark" Width="8" Height="8" Stroke="{DynamicResource ColorNeutral600}" StrokeThickness="1.6" />
+        </Grid>
+        <DataTemplate.Triggers>
+          <DataTrigger Binding="{Binding}" Value="Error">
+            <Setter TargetName="ErrorMark" Property="Visibility" Value="Visible" />
+            <Setter TargetName="InformationMark" Property="Visibility" Value="Collapsed" />
+          </DataTrigger>
+          <DataTrigger Binding="{Binding}" Value="Warning">
+            <Setter TargetName="WarningMark" Property="Visibility" Value="Visible" />
+            <Setter TargetName="InformationMark" Property="Visibility" Value="Collapsed" />
+          </DataTrigger>
+        </DataTemplate.Triggers>
+      </DataTemplate>
+      <!-- The raw event as secondary detail: mono, quiet, selectable so it can be copied, but not a tab stop. -->
+      <Style x:Key="RawLine" TargetType="TextBox">
         <Setter Property="FontFamily" Value="{DynamicResource MonoFont}" />
         <Setter Property="FontSize" Value="12" />
-        <Setter Property="Foreground" Value="{DynamicResource ColorNeutral400}" />
+        <Setter Property="Foreground" Value="{DynamicResource ColorNeutral600}" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="IsReadOnly" Value="True" />
+        <Setter Property="IsTabStop" Value="False" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+        <Setter Property="AutomationProperties.Name" Value="Raw event" />
+        <Setter Property="Template">
+          <Setter.Value>
+            <ControlTemplate TargetType="TextBox"><ScrollViewer x:Name="PART_ContentHost" Margin="-2,0" /></ControlTemplate>
+          </Setter.Value>
+        </Setter>
+      </Style>
+      <!-- One entry per row between hairlines: mark, time, plain title. Selecting a row opens its raw line beneath it. -->
+      <Style x:Key="EntryRow" TargetType="ListBoxItem">
+        <Setter Property="AutomationProperties.Name" Value="{Binding SpokenName}" />
         <Setter Property="FocusVisualStyle" Value="{x:Null}" />
         <Setter Property="Template">
           <Setter.Value>
@@ -37,7 +78,7 @@
                    sides, like a selected row in Recent dictations, so the ring never touches the first letter. -->
               <Grid>
                 <Border x:Name="Row" Background="Transparent" />
-                <Border Margin="8,0" Padding="0,9" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,0,0,1">
+                <Border Margin="8,0" MinHeight="36" Padding="0,9" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,0,0,1">
                   <ContentPresenter />
                 </Border>
                 <!-- Keyboard focus: the same ring as a model row in setup. -->
@@ -45,11 +86,7 @@
               </Grid>
               <ControlTemplate.Triggers>
                 <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="FocusRing" Property="Visibility" Value="Visible" /></Trigger>
-                <Trigger Property="IsMouseOver" Value="True"><Setter Property="Foreground" Value="{DynamicResource ColorText}" /></Trigger>
-                <Trigger Property="IsSelected" Value="True">
-                  <Setter TargetName="Row" Property="Background" Value="{DynamicResource ColorNeutral900}" />
-                  <Setter Property="Foreground" Value="{DynamicResource ColorText}" />
-                </Trigger>
+                <Trigger Property="IsSelected" Value="True"><Setter TargetName="Row" Property="Background" Value="{DynamicResource ColorNeutral900}" /></Trigger>
               </ControlTemplate.Triggers>
             </ControlTemplate>
           </Setter.Value>
@@ -78,53 +115,132 @@
                   AutomationProperties.Name="Close" Click="Close" />
         </Grid>
       </Border>
-      <Grid Grid.Row="1" Margin="24,18,24,16">
+      <Grid Grid.Row="1" Margin="24,18,24,0">
         <Grid.RowDefinitions>
           <RowDefinition Height="Auto" />
+          <RowDefinition Height="Auto" />
           <RowDefinition Height="*" />
+          <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
-        <TextBlock FontSize="13" Foreground="{DynamicResource ColorNeutral400}" TextWrapping="Wrap"
-                   Text="Warnings, errors, and safe operational breadcrumbs stay in memory only until PrivateType closes. Audio and dictated text are never included." />
-        <!-- Time and level keep their columns; a long message wraps under its own column, so nothing is cut off. -->
-        <!-- The list's top hairline, as wide as the rows' own. -->
-        <Border Grid.Row="1" Margin="0,14,0,0" VerticalAlignment="Top" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,1,0,0"
-                Visibility="{Binding Visibility, ElementName=Entries}" />
-        <ListBox x:Name="Entries" Grid.Row="1" Margin="-8,15,-8,0" ItemContainerStyle="{StaticResource EntryRow}"
-                 ScrollViewer.HorizontalScrollBarVisibility="Disabled" AutomationProperties.Name="Diagnostics entries">
-          <ListBox.ItemTemplate>
-            <DataTemplate>
-              <Grid Margin="0,0,12,0">
-                <Grid.ColumnDefinitions>
-                  <ColumnDefinition Width="70" />
-                  <ColumnDefinition Width="85" />
-                  <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
-                <TextBlock VerticalAlignment="Top" Text="{Binding Time}" />
-                <TextBlock Grid.Column="1" VerticalAlignment="Top" Text="{Binding Level}" />
-                <TextBlock Grid.Column="2" VerticalAlignment="Top" Text="{Binding Message}" TextWrapping="Wrap" />
-              </Grid>
-            </DataTemplate>
-          </ListBox.ItemTemplate>
-        </ListBox>
-        <!-- Nothing logged yet: what that means, and when to come back. Clear, Copy and Save have nothing to act on, so only Close is enabled. -->
-        <StackPanel x:Name="EmptyPanel" Grid.Row="1" Margin="0,0,0,24" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed">
-          <TextBlock HorizontalAlignment="Center" FontSize="15" FontWeight="SemiBold" Text="Nothing logged this session" />
-          <TextBlock Margin="0,8,0,0" MaxWidth="400" FontSize="13" Foreground="{DynamicResource ColorNeutral400}" TextAlignment="Center" TextWrapping="Wrap"
-                     Text="If dictation goes wrong, come back here before you close PrivateType and save the report." />
-        </StackPanel>
-      </Grid>
-      <!-- The same slim footer as Settings, in three weights: destructive Clear alone on the left in the danger colour,
-           then Close as text, Copy report as a key and Save report filled at the right. -->
-      <Border Grid.Row="2" Padding="16,10,16,12" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,1,0,0">
-        <Grid>
-          <Button Style="{StaticResource GhostButton}" Height="32" Padding="8,0" HorizontalAlignment="Left" Foreground="{DynamicResource ColorDanger}" Content="Clear" Click="ClearReport"
-                  IsEnabled="{Binding HasItems, ElementName=Entries}" />
-          <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-            <Button Style="{StaticResource GhostButton}" Margin="0,0,8,0" Height="32" Padding="12,0" Content="Close" Click="Close" />
-            <Button Margin="0,0,8,0" Height="32" Padding="12,0" Content="Copy report" Click="CopyReport" IsEnabled="{Binding HasItems, ElementName=Entries}" />
-            <Button Style="{StaticResource PrimaryButton}" Height="32" Padding="16,0" Content="Save report" Click="SaveReport" IsEnabled="{Binding HasItems, ElementName=Entries}" />
+        <TextBlock Style="{StaticResource GroupLabel}" Margin="0,0,0,8" Text="LATEST RECORDED PROBLEM" />
+        <!-- The newest warning or error, read first: severity and time, the plain title, the next step when the code makes
+             it certain, and the raw event. With no problem recorded it says so, neutrally. -->
+        <Border x:Name="Latest" Grid.Row="1" Padding="16,14" Background="{DynamicResource ColorNeutral900}" CornerRadius="8"
+                AutomationProperties.Name="{Binding SpokenName}">
+          <StackPanel>
+            <!-- A problem's mark, word and time; a neutral panel has none of them and carries its mark beside the title instead. -->
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+              <StackPanel.Style>
+                <Style TargetType="StackPanel">
+                  <Style.Triggers>
+                    <DataTrigger Binding="{Binding IsProblem}" Value="False"><Setter Property="Visibility" Value="Collapsed" /></DataTrigger>
+                  </Style.Triggers>
+                </Style>
+              </StackPanel.Style>
+              <ContentControl VerticalAlignment="Center" Content="{Binding Severity}" ContentTemplate="{StaticResource SeverityMark}" Focusable="False" />
+              <TextBlock Margin="6,0,0,0" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold" Text="{Binding Word}">
+                <TextBlock.Style>
+                  <Style TargetType="TextBlock">
+                    <Setter Property="Foreground" Value="{DynamicResource ColorWarning}" />
+                    <Style.Triggers>
+                      <DataTrigger Binding="{Binding Severity}" Value="Error"><Setter Property="Foreground" Value="{DynamicResource ColorDanger}" /></DataTrigger>
+                    </Style.Triggers>
+                  </Style>
+                </TextBlock.Style>
+              </TextBlock>
+              <TextBlock Margin="6,0,0,0" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource ColorNeutral400}" Typography.NumeralAlignment="Tabular" Text="{Binding ShortTime}" />
+            </StackPanel>
+            <DockPanel>
+              <ContentControl Margin="0,0,10,0" VerticalAlignment="Center" Content="{Binding Severity}" ContentTemplate="{StaticResource SeverityMark}" Focusable="False">
+                <ContentControl.Style>
+                  <Style TargetType="ContentControl">
+                    <Style.Triggers>
+                      <DataTrigger Binding="{Binding IsProblem}" Value="True"><Setter Property="Visibility" Value="Collapsed" /></DataTrigger>
+                    </Style.Triggers>
+                  </Style>
+                </ContentControl.Style>
+              </ContentControl>
+              <TextBlock FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap" Text="{Binding Title}" />
+            </DockPanel>
+            <TextBlock Margin="0,4,0,0" FontSize="13" Foreground="{DynamicResource ColorNeutral400}" TextWrapping="Wrap" Text="{Binding NextStep}">
+              <TextBlock.Style>
+                <Style TargetType="TextBlock">
+                  <Style.Triggers>
+                    <DataTrigger Binding="{Binding NextStep}" Value="{x:Null}"><Setter Property="Visibility" Value="Collapsed" /></DataTrigger>
+                  </Style.Triggers>
+                </Style>
+              </TextBlock.Style>
+            </TextBlock>
+            <TextBox Margin="0,8,0,0" Text="{Binding Raw, Mode=OneWay}">
+              <TextBox.Style>
+                <Style TargetType="TextBox" BasedOn="{StaticResource RawLine}">
+                  <Style.Triggers>
+                    <DataTrigger Binding="{Binding Raw}" Value=""><Setter Property="Visibility" Value="Collapsed" /></DataTrigger>
+                  </Style.Triggers>
+                </Style>
+              </TextBox.Style>
+            </TextBox>
           </StackPanel>
+        </Border>
+        <!-- Every other recorded entry, newest first, with the counts for the whole retained log and Clear beside it. -->
+        <Grid x:Name="EntriesRegion" Grid.Row="2" Margin="0,18,0,0">
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+          </Grid.RowDefinitions>
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="Auto" />
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock x:Name="EntriesLabel" Style="{StaticResource GroupLabel}" Margin="0" VerticalAlignment="Center" Text="OTHER RECORDED EVENTS" />
+            <TextBlock x:Name="Counts" Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource ColorNeutral400}" Typography.NumeralAlignment="Tabular" />
+            <Button Grid.Column="2" Margin="0,0,-8,0" Height="28" Padding="8,0" Style="{StaticResource GhostButton}" Foreground="{DynamicResource ColorDanger}" Content="Clear" Click="ClearReport" />
+          </Grid>
+          <!-- The list's top hairline, as wide as the rows' own. -->
+          <Border Grid.Row="1" Margin="0,6,0,0" VerticalAlignment="Top" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,1,0,0" />
+          <ListBox x:Name="Entries" Grid.Row="1" Margin="-8,7,-8,0" ItemContainerStyle="{StaticResource EntryRow}" SelectionMode="Single"
+                   ScrollViewer.HorizontalScrollBarVisibility="Disabled" AutomationProperties.Name="Recorded events">
+            <ListBox.ItemTemplate>
+              <DataTemplate>
+                <Grid Margin="0,0,12,0">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="20" />
+                    <ColumnDefinition Width="64" />
+                    <ColumnDefinition Width="*" />
+                  </Grid.ColumnDefinitions>
+                  <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                  </Grid.RowDefinitions>
+                  <ContentControl Margin="0,2,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" Content="{Binding Severity}" ContentTemplate="{StaticResource SeverityMark}" Focusable="False" />
+                  <TextBlock Grid.Column="1" Margin="0,2,0,0" VerticalAlignment="Top" FontFamily="{DynamicResource MonoFont}" FontSize="12" Foreground="{DynamicResource ColorNeutral400}" Text="{Binding Time}" />
+                  <TextBlock x:Name="Title" Grid.Column="2" VerticalAlignment="Top" FontSize="13" TextWrapping="Wrap" Foreground="{DynamicResource ColorNeutral400}">
+                    <Run FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource ColorDanger}" Text="{Binding ErrorWord, Mode=OneWay}" /><Run Text="{Binding Title, Mode=OneWay}" />
+                  </TextBlock>
+                  <TextBox x:Name="RawLine" Grid.Row="1" Grid.Column="2" Margin="0,4,0,0" Style="{StaticResource RawLine}" Text="{Binding Raw, Mode=OneWay}" Visibility="Collapsed" />
+                </Grid>
+                <DataTemplate.Triggers>
+                  <DataTrigger Binding="{Binding IsProblem}" Value="True"><Setter TargetName="Title" Property="Foreground" Value="{DynamicResource ColorText}" /></DataTrigger>
+                  <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True">
+                    <Setter TargetName="RawLine" Property="Visibility" Value="Visible" />
+                  </DataTrigger>
+                </DataTemplate.Triggers>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
         </Grid>
+        <TextBlock x:Name="RetentionNote" Grid.Row="3" Margin="0,12,0,12" FontSize="12" Foreground="{DynamicResource ColorNeutral400}" TextWrapping="Wrap"
+                   Text="Holds the latest 200 events until PrivateType closes. The report has no audio and no dictated text." />
+      </Grid>
+      <!-- The same slim footer as Settings: Close as text, Copy report as a key and Save report filled at the right. -->
+      <Border Grid.Row="2" Padding="16,10,16,12" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,1,0,0">
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+          <Button Style="{StaticResource GhostButton}" Margin="0,0,8,0" Height="32" Padding="12,0" Content="Close" Click="Close" />
+          <Button x:Name="CopyButton" Margin="0,0,8,0" Height="32" Padding="12,0" Content="Copy report" Click="CopyReport" />
+          <Button x:Name="SaveButton" Style="{StaticResource PrimaryButton}" Height="32" Padding="16,0" Content="Save report…" Click="SaveReport" />
+        </StackPanel>
       </Border>
     </Grid>
   </Border>
