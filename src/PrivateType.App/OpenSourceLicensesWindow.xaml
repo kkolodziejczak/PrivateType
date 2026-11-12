@@ -4,27 +4,68 @@
         Icon="/PrivateType;component/Assets/PrivateType.ready.ico" Width="620" Height="520" WindowStartupLocation="CenterOwner" WindowStyle="None"
         AllowsTransparency="True" Background="Transparent" Foreground="{DynamicResource ColorText}"
         FontFamily="{DynamicResource AppFont}">
-  <Border Margin="8" Background="{DynamicResource ColorSurface}" BorderBrush="{DynamicResource ColorDivider}" BorderThickness="1" CornerRadius="16">
+  <Window.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="FormStyles.xaml" />
+      </ResourceDictionary.MergedDictionaries>
+      <!-- The same slim dark scrollbar as Settings. -->
+      <Style TargetType="ScrollBar">
+        <Setter Property="Width" Value="10" />
+        <Setter Property="Template">
+          <Setter.Value>
+            <ControlTemplate TargetType="ScrollBar">
+              <Track x:Name="PART_Track" Orientation="Vertical" IsDirectionReversed="True" Minimum="{TemplateBinding Minimum}" Maximum="{TemplateBinding Maximum}" Value="{TemplateBinding Value}" ViewportSize="{TemplateBinding ViewportSize}">
+                <Track.DecreaseRepeatButton><RepeatButton Command="ScrollBar.PageUpCommand" Focusable="False"><RepeatButton.Template><ControlTemplate TargetType="RepeatButton"><Border Background="Transparent" /></ControlTemplate></RepeatButton.Template></RepeatButton></Track.DecreaseRepeatButton>
+                <Track.Thumb><Thumb><Thumb.Template><ControlTemplate TargetType="Thumb"><Border Margin="3,4" Background="{DynamicResource ColorNeutral800}" CornerRadius="2" /></ControlTemplate></Thumb.Template></Thumb></Track.Thumb>
+                <Track.IncreaseRepeatButton><RepeatButton Command="ScrollBar.PageDownCommand" Focusable="False"><RepeatButton.Template><ControlTemplate TargetType="RepeatButton"><Border Background="Transparent" /></ControlTemplate></RepeatButton.Template></RepeatButton></Track.IncreaseRepeatButton>
+              </Track>
+            </ControlTemplate>
+          </Setter.Value>
+        </Setter>
+      </Style>
+    </ResourceDictionary>
+  </Window.Resources>
+  <Border Margin="8" Background="{DynamicResource ColorSurface}" BorderBrush="{DynamicResource ColorDivider}" BorderThickness="1" CornerRadius="12">
     <Grid>
-      <Grid.RowDefinitions><RowDefinition Height="42"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-      <Border Background="{DynamicResource ColorNeutral900}" CornerRadius="15,15,0,0">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="40" />
+        <RowDefinition Height="*" />
+        <RowDefinition Height="Auto" />
+      </Grid.RowDefinitions>
+      <!-- The same title bar as Settings: keycap mark, name, and what this window is for. -->
+      <Border Background="{DynamicResource ColorSurface}" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,0,0,1" CornerRadius="11,11,0,0">
         <Grid Margin="16,0,8,0">
-          <TextBlock VerticalAlignment="Center" FontSize="13" Opacity=".8" Text="PrivateType — open-source licenses"/>
-          <Button Width="28" Height="28" Padding="0" HorizontalAlignment="Right" Content="×" Background="Transparent" BorderBrush="Transparent" Click="Close"/>
+          <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+            <Border Width="18" Height="18" CornerRadius="4" Background="{DynamicResource ColorKeycap}" BorderBrush="{DynamicResource ColorKeycapEdge}" BorderThickness="0,0,0,2">
+              <Ellipse Width="6" Height="6" Fill="{DynamicResource ColorAccent400}" />
+            </Border>
+            <TextBlock Margin="10,0,0,0" VerticalAlignment="Center" FontSize="13" FontWeight="SemiBold" Text="PrivateType" />
+            <TextBlock Margin="8,0,0,0" VerticalAlignment="Center" FontSize="13" Foreground="{DynamicResource ColorNeutral400}" Text="open-source licenses" />
+          </StackPanel>
+          <Button Width="28" Height="28" Padding="0" HorizontalAlignment="Right" VerticalAlignment="Center" Content="×" FontSize="18" Style="{StaticResource GhostButton}"
+                  AutomationProperties.Name="Close" Click="Close" />
         </Grid>
       </Border>
-      <Grid Grid.Row="1" Margin="22">
-        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="12"/><RowDefinition Height="*"/><RowDefinition Height="14"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-        <StackPanel>
-          <TextBlock FontSize="22" FontWeight="SemiBold" Text="Open-source licenses"/>
-          <TextBlock Margin="0,5,0,0" Opacity=".7" TextWrapping="Wrap" Text="PrivateType is MIT-licensed. Full notices for every bundled component are included with the portable app."/>
-        </StackPanel>
-        <TextBox x:Name="Notices" Grid.Row="2" IsReadOnly="True" Foreground="{DynamicResource ColorText}" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" Background="{DynamicResource ColorBg}" BorderBrush="{DynamicResource ColorDivider}" Padding="12"/>
-        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">
-          <Button Margin="0,0,8,0" Content="Open licenses folder" Click="OpenLicensesFolder"/>
-          <Button Content="Close" Click="Close"/>
-        </StackPanel>
+      <Grid Grid.Row="1" Margin="24,18,24,20">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto" />
+          <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <TextBlock FontSize="13" Foreground="{DynamicResource ColorNeutral400}" TextWrapping="Wrap"
+                   Text="PrivateType is MIT-licensed. Full notices for every bundled component are included with the portable app." />
+        <!-- A real text field: the notices can be selected and copied. -->
+        <TextBox x:Name="Notices" Grid.Row="1" Margin="0,14,0,0" Padding="12,10" IsReadOnly="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"
+                 VerticalContentAlignment="Top" FontFamily="{DynamicResource MonoFont}" FontSize="12" Foreground="{DynamicResource ColorNeutral400}"
+                 AutomationProperties.Name="License notices" />
       </Grid>
+      <!-- The same slim footer as Settings: the secondary action as text, the primary filled at the right. -->
+      <Border Grid.Row="2" Padding="24,10,16,12" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,1,0,0">
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+          <Button Style="{StaticResource GhostButton}" Margin="0,0,6,0" Padding="12,6" Content="Open licenses folder" Click="OpenLicensesFolder" />
+          <Button Style="{StaticResource PrimaryButton}" Padding="16,6" Content="Close" Click="Close" />
+        </StackPanel>
+      </Border>
     </Grid>
   </Border>
 </Window>

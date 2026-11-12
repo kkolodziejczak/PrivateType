@@ -123,7 +123,7 @@ public partial class ModelSetupWindow : Window
         DownloadButton.Visibility = Visibility.Collapsed;
         ProgressBar.Visibility = Visibility.Visible;
         SetStorageMode(storageMode);
-        ProgressCaption.Text = $"{downloaded / 1024d / 1024d:F0} MB of {total / 1024d / 1024d:F0} MB";
+        ProgressCaption.Text = $"{downloaded / 1024d / 1024d:F0} MiB of {total / 1024d / 1024d:F0} MiB";
         ProgressBar.Value = total == 0 ? 0 : Math.Min(100, downloaded * 100d / total);
         ProgressBar.BeginAnimation(OpacityProperty, new DoubleAnimation(1, 0.75, TimeSpan.FromSeconds(0.8)) { AutoReverse = true, RepeatBehavior = RepeatBehavior.Forever });
     }
@@ -163,7 +163,8 @@ internal sealed class SetupModelChoice(SpeechModelDefinition model, bool isChose
     public string Name => Model.DisplayName;
     public string Summary => Model.Summary;
     public bool IsRecommended => Model.Id == SpeechModelCatalog.DefaultId;
-    public string Details => $"{SpeechModelCatalog.SizeLabel(Model)}. Downloaded from NVIDIA on Hugging Face and kept on this computer.";
+    // The download size as a table value: "681 MiB".
+    public string Size => $"{Model.Manifest.ExpectedBytes / 1024d / 1024d:F0} MiB";
 
     public bool IsChosen
     {
