@@ -118,7 +118,7 @@
           <TextBlock Margin="0,16,0,0" FontSize="12" Foreground="{DynamicResource ColorNeutral400}" TextWrapping="Wrap">
             <Run x:Name="ModelTermsName" Text="Model terms: " /><Hyperlink x:Name="ModelTermsLink" Foreground="{DynamicResource ColorAccent400}" RequestNavigate="OpenModelTerms" ToolTip="Open the model terms in your default browser"><Run x:Name="ModelTermsLinkText" FontFamily="{DynamicResource MonoFont}" /></Hyperlink>
           </TextBlock>
-          <CheckBox x:Name="TermsCheckBox" Margin="0,10,0,0" Checked="TermsChanged" Unchecked="TermsChanged"><TextBlock x:Name="TermsText" FontSize="13" TextWrapping="Wrap" /></CheckBox>
+          <CheckBox x:Name="TermsCheckBox" Margin="0,10,0,0" VerticalContentAlignment="Top" Checked="TermsChanged" Unchecked="TermsChanged"><TextBlock x:Name="TermsText" FontSize="13" TextWrapping="Wrap" /></CheckBox>
           <TextBlock Margin="0,10,0,0" Style="{StaticResource FinePrint}" Text="Both download from NVIDIA on Hugging Face. You can download the other model, switch, or delete models later in Settings → Model." />
         </StackPanel>
         <ProgressBar x:Name="ProgressBar" Margin="0,18,0,0" Height="4" Minimum="0" Maximum="100" Visibility="Collapsed" />

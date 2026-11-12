@@ -155,23 +155,22 @@
   <Style TargetType="CheckBox">
     <Setter Property="Foreground" Value="{DynamicResource ColorText}" />
     <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
     <Setter Property="Template">
       <Setter.Value>
         <ControlTemplate TargetType="CheckBox">
-          <!-- The box sits on the label's first line, so a wrapped label hangs below it. -->
+          <!-- A wrapped label sets VerticalContentAlignment to Top, so the box sits on its first line. -->
           <Grid Background="Transparent">
-            <Grid VerticalAlignment="Center">
-              <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="18" />
-                <ColumnDefinition Width="10" />
-                <ColumnDefinition Width="*" />
-              </Grid.ColumnDefinitions>
-              <Border x:Name="CheckBoxBorder" Grid.Column="0" Width="18" Height="18" VerticalAlignment="Top" Background="{DynamicResource ColorBg}"
-                      BorderBrush="{DynamicResource ColorNeutral600}" BorderThickness="1.5" CornerRadius="4">
-                <Path x:Name="CheckMark" Data="M3.5,8.5 L6.5,11.5 L12.5,4.5" Stroke="{DynamicResource ColorBg}" StrokeThickness="2" StrokeLineJoin="Round" Visibility="Collapsed" />
-              </Border>
-              <ContentPresenter Grid.Column="2" VerticalAlignment="Top" RecognizesAccessKey="True" />
-            </Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="18" />
+              <ColumnDefinition Width="10" />
+              <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Border x:Name="CheckBoxBorder" Grid.Column="0" Width="18" Height="18" VerticalAlignment="{TemplateBinding VerticalContentAlignment}" Background="{DynamicResource ColorBg}"
+                    BorderBrush="{DynamicResource ColorNeutral600}" BorderThickness="1.5" CornerRadius="4">
+              <Path x:Name="CheckMark" Data="M3.5,8.5 L6.5,11.5 L12.5,4.5" Stroke="{DynamicResource ColorBg}" StrokeThickness="2" StrokeLineJoin="Round" Visibility="Collapsed" />
+            </Border>
+            <ContentPresenter Grid.Column="2" VerticalAlignment="{TemplateBinding VerticalContentAlignment}" RecognizesAccessKey="True" />
           </Grid>
           <ControlTemplate.Triggers>
             <Trigger Property="IsChecked" Value="True">
