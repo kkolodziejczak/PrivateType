@@ -548,7 +548,7 @@ public partial class DictationBubble : Window
 
     private void SetTranscript(string text)
     {
-        System.Windows.Automation.AutomationProperties.SetName(Transcript, null);
+        Transcript.ClearValue(System.Windows.Automation.AutomationProperties.NameProperty);
         Transcript.Text = text;
         UpdateScrim();
         TranscriptViewport.UpdateLayout();
