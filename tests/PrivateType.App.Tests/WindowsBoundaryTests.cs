@@ -561,6 +561,33 @@ public sealed class WindowsBoundaryTests
     }
 
     [Fact]
+    public void Draws_the_live_spectrum_as_a_five_bar_meter()
+    {
+        Assert.Equal(5, DictationBubble.MeterBarCount);
+    }
+
+    [Theory]
+    [InlineData("Ctrl+Shift+R", new[] { "Ctrl", "Shift", "R" })]
+    [InlineData("Win+Shift+V", new[] { "Win", "Shift", "V" })]
+    [InlineData("Ctrl+Shift++", new[] { "Ctrl", "Shift", "+" })]
+    public void Splits_a_shortcut_into_keycaps_with_the_last_key_as_the_main_one(string label, string[] legends)
+    {
+        var keycaps = KeycapLegendsConverter.Split(label);
+
+        Assert.Equal(legends, keycaps.Select(keycap => keycap.Legend));
+        Assert.True(keycaps[^1].IsMain);
+        Assert.All(keycaps.SkipLast(1), keycap => Assert.False(keycap.IsMain));
+    }
+
+    [Fact]
+    public void Shows_a_recording_prompt_as_text_rather_than_a_keycap()
+    {
+        var keycap = Assert.Single(KeycapLegendsConverter.Split("Press the new shortcut…"));
+
+        Assert.True(keycap.IsPrompt);
+    }
+
+    [Fact]
     public void Uses_the_model_loading_copy_for_a_cold_start()
     {
         Assert.Contains("Loading local model", DictationBubble.ModelLoadingTitle);
