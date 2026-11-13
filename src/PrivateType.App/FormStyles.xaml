@@ -622,6 +622,13 @@
       </Setter.Value>
     </Setter>
   </Style>
+  <!-- The notice strip: a quiet panel that holds a warning mark and its words, as Licenses' missing-texts notice and the
+       version choice's forced-close notice draw it. -->
+  <Style x:Key="NoticeStrip" TargetType="Border">
+    <Setter Property="Background" Value="{DynamicResource ColorNeutral900}" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Padding" Value="12,10" />
+  </Style>
   <!-- The success mark beside the warning mark: a filled circle with a tick, the tick drawn in the surface colour so it reads
        as cut out. Drawn in the same 20-unit box; its colour is the foreground. -->
   <Style x:Key="SuccessMark" TargetType="ContentControl">

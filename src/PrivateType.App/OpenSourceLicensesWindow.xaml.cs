@@ -86,7 +86,7 @@ public partial class OpenSourceLicensesWindow : Window
         DockPanel.SetDock(mark, Dock.Left);
         row.Children.Add(mark);
         row.Children.Add(words);
-        return new BlockUIContainer(new Border { Background = Themed("ColorNeutral900"), CornerRadius = new CornerRadius(8), Padding = new Thickness(12, 10, 12, 10), Child = row })
+        return new BlockUIContainer(new Border { Style = (Style)FindResource("NoticeStrip"), Child = row })
         {
             Margin = new Thickness(0, 18, 0, 0)
         };

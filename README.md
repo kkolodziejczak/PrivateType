@@ -18,8 +18,9 @@ transcript history.
 4. Choose a speech model and approve its download (about 700 MiB, once).
 5. Open **Settings** from the tray icon and pick your microphone.
 
-To update, close PrivateType, unpack the new ZIP, and start the new
-`PrivateType.exe`. Every copy shares your settings, so the new one starts
+To update, unpack the new ZIP and start the new `PrivateType.exe`. If the
+old version is still running, choose **Use** and PrivateType closes it, so
+only one copy runs. Every copy shares your settings, so the new one starts
 with them. The first version that shares settings offers once to bring them
 over from the copy you used before.
 

@@ -326,8 +326,8 @@ public sealed class WindowsBoundaryTests
     [Fact]
     public void Describes_known_and_unknown_versions_without_exposing_paths()
     {
-        Assert.Equal("PrivateType 2.4.1", StartupVersionPromptWindow.VersionLabel(new Version(2, 4, 1)));
-        Assert.Equal("PrivateType (version unknown)", StartupVersionPromptWindow.VersionLabel(null));
+        Assert.Equal("PrivateType 2.4.1", ChooseVersionWindow.VersionLabel(new Version(2, 4, 1)));
+        Assert.Equal("PrivateType (version unknown)", ChooseVersionWindow.VersionLabel(null));
     }
 
     [Fact]
@@ -348,10 +348,8 @@ public sealed class WindowsBoundaryTests
                 hasPrivateTypeRegistration: false,
                 hasLegacyRegistration: false,
                 registeredExecutablePath: null,
-                registeredVersion: null,
                 currentIsRelease: true,
-                currentExecutablePath: "C:\\Apps\\PrivateType\\PrivateType.exe",
-                currentVersion: new Version(2, 0)));
+                currentExecutablePath: "C:\\Apps\\PrivateType\\PrivateType.exe"));
     }
 
     [Fact]
@@ -363,31 +361,22 @@ public sealed class WindowsBoundaryTests
                 hasPrivateTypeRegistration: false,
                 hasLegacyRegistration: true,
                 registeredExecutablePath: "C:\\Apps\\LiveDictation\\LiveDictation.App.exe",
-                registeredVersion: null,
                 currentIsRelease: true,
-                currentExecutablePath: "C:\\Apps\\PrivateType\\PrivateType.exe",
-                currentVersion: new Version(1, 0)));
+                currentExecutablePath: "C:\\Apps\\PrivateType\\PrivateType.exe"));
     }
 
-    [Theory]
-    [InlineData(2, 0, 1, 9)]
-    [InlineData(2, 0, 2, 0)]
-    public void Automatically_claims_windows_startup_for_the_same_or_a_newer_version(
-        int currentMajor,
-        int currentMinor,
-        int registeredMajor,
-        int registeredMinor)
+    // Another copy asks whatever its version: the user chooses which copy Windows starts.
+    [Fact]
+    public void Asks_before_any_other_copy_takes_over_windows_startup()
     {
         Assert.Equal(
-            StartupOwnershipDecision.ClaimCurrent,
+            StartupOwnershipDecision.ConfirmCurrent,
             StartupOwnershipPolicy.Decide(
                 hasPrivateTypeRegistration: true,
                 hasLegacyRegistration: false,
-                registeredExecutablePath: "C:\\Apps\\PrivateType-v1\\PrivateType.exe",
-                registeredVersion: new Version(registeredMajor, registeredMinor),
+                registeredExecutablePath: @"C:\Apps\PrivateType 1.5.3\app\PrivateType.exe",
                 currentIsRelease: true,
-                currentExecutablePath: "C:\\Apps\\PrivateType-v2\\PrivateType.exe",
-                currentVersion: new Version(currentMajor, currentMinor)));
+                currentExecutablePath: @"C:\Apps\PrivateType 1.6.1\app\PrivateType.exe"));
     }
 
     // A build in a worktree disappears with the worktree, and must not replace the copy Windows starts.
@@ -402,40 +391,8 @@ public sealed class WindowsBoundaryTests
                 hasPrivateTypeRegistration,
                 hasLegacyRegistration,
                 registeredExecutablePath: "C:\\Apps\\PrivateType-1.5.1\\app\\PrivateType.exe",
-                registeredVersion: new Version(1, 5, 1),
                 currentIsRelease: false,
-                currentExecutablePath: "C:\\worktree\\bin\\Debug\\PrivateType.exe",
-                currentVersion: new Version(2, 0)));
-    }
-
-    [Fact]
-    public void Asks_before_a_deliberate_downgrade_reclaims_windows_startup()
-    {
-        Assert.Equal(
-            StartupOwnershipDecision.ConfirmCurrent,
-            StartupOwnershipPolicy.Decide(
-                hasPrivateTypeRegistration: true,
-                hasLegacyRegistration: false,
-                registeredExecutablePath: "C:\\Apps\\PrivateType-v2\\PrivateType.exe",
-                registeredVersion: new Version(2, 0),
-                currentIsRelease: true,
-                currentExecutablePath: "C:\\Apps\\PrivateType-v1\\PrivateType.exe",
-                currentVersion: new Version(1, 5)));
-    }
-
-    [Fact]
-    public void Asks_when_either_portable_version_is_unknown()
-    {
-        Assert.Equal(
-            StartupOwnershipDecision.ConfirmCurrent,
-            StartupOwnershipPolicy.Decide(
-                hasPrivateTypeRegistration: true,
-                hasLegacyRegistration: false,
-                registeredExecutablePath: "C:\\Apps\\PrivateType-unknown\\PrivateType.exe",
-                registeredVersion: null,
-                currentIsRelease: true,
-                currentExecutablePath: "C:\\Apps\\PrivateType-local\\PrivateType.exe",
-                currentVersion: new Version(1, 0)));
+                currentExecutablePath: "C:\\worktree\\bin\\Debug\\PrivateType.exe"));
     }
 
     [Fact]
@@ -447,10 +404,8 @@ public sealed class WindowsBoundaryTests
                 hasPrivateTypeRegistration: true,
                 hasLegacyRegistration: false,
                 registeredExecutablePath: "C:\\Apps\\PrivateType\\PrivateType.exe",
-                registeredVersion: null,
                 currentIsRelease: true,
-                currentExecutablePath: "c:\\apps\\privatetype\\PrivateType.exe",
-                currentVersion: null));
+                currentExecutablePath: "c:\\apps\\privatetype\\PrivateType.exe"));
     }
 
     [Theory]

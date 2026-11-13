@@ -135,14 +135,13 @@ static void RenderWindows(bool monitorPlacementOnly)
     var engineCouldNotStart = new ModelSetupWindow();
     engineCouldNotStart.ShowEngineStartPrerequisite();
     Render(engineCouldNotStart, Path.Combine(outputDirectory, "engine-could-not-start.png"));
+    Render(ChooseVersionSample(running: true, quitsCleanly: false), Path.Combine(outputDirectory, "choose-version-running.png"));
+    Render(ChooseVersionSample(running: false, quitsCleanly: true), Path.Combine(outputDirectory, "choose-version-startup.png"));
     Render(
-        new StartupVersionPromptWindow(new Version(2, 4, 0), new Version(1, 9, 3)),
-        Path.Combine(outputDirectory, "startup-version-prompt.png"));
-    Render(
-        new StartupVersionPromptWindow(null, null),
-        Path.Combine(outputDirectory, "startup-version-prompt-unknown.png"));
-    VerifyStartupVersionPromptChoice(useCurrent: false);
-    VerifyStartupVersionPromptChoice(useCurrent: true);
+        new ChooseVersionWindow(new RunningCopy(1, @"C:\Apps\PrivateType\app\PrivateType.exe", DateTime.UnixEpoch, null), null, true, null, false),
+        Path.Combine(outputDirectory, "choose-version-unknown.png"));
+    VerifyChooseVersionChoice(useCurrent: false);
+    VerifyChooseVersionChoice(useCurrent: true);
 
     var panel = new DictationBubble();
     panel.ShowReady(PortableSettings.Default, modelLoaded: true);
@@ -382,9 +381,16 @@ static bool IsFullyInside(Window panel, DictationBubble.DisplayWorkArea workArea
     panel.Left + panel.ActualWidth <= workArea.Right &&
     panel.Top + panel.ActualHeight <= workArea.Bottom;
 
-static void VerifyStartupVersionPromptChoice(bool useCurrent)
+static ChooseVersionWindow ChooseVersionSample(bool running, bool quitsCleanly) => new(
+    running ? new RunningCopy(1, @"C:\Apps\PrivateType 1.5.3\app\PrivateType.exe", DateTime.UnixEpoch, new Version(1, 5, 3)) : null,
+    new Version(1, 5, 3),
+    claimsStartup: true,
+    new Version(1, 6, 1),
+    quitsCleanly);
+
+static void VerifyChooseVersionChoice(bool useCurrent)
 {
-    var prompt = new StartupVersionPromptWindow(new Version(2, 4, 0), new Version(1, 9, 3));
+    var prompt = ChooseVersionSample(running: true, quitsCleanly: false);
     Exception? loadedFailure = null;
     var loadedTimer = new System.Windows.Threading.DispatcherTimer(
         System.Windows.Threading.DispatcherPriority.ApplicationIdle,
@@ -403,7 +409,7 @@ static void VerifyStartupVersionPromptChoice(bool useCurrent)
             prompt.Activate();
             var keepButton = (System.Windows.Controls.Button)prompt.FindName("KeepButton");
             if (!keepButton.IsKeyboardFocused)
-                throw new InvalidOperationException("The safe startup-version choice did not receive initial keyboard focus.");
+                throw new InvalidOperationException("The safe version choice did not receive initial keyboard focus.");
 
             var buttonName = useCurrent ? "UseButton" : "KeepButton";
             var selectedButton = (System.Windows.Controls.Button)prompt.FindName(buttonName);
