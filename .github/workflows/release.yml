@@ -6,7 +6,8 @@ name: Build portable PrivateType
 on:
   workflow_dispatch:
   push:
-    tags: ["v*"]
+    # vMAJOR.MINOR.PATCH only: the format gh release-signing approve -Tag accepts.
+    tags: ["v[0-9]+.[0-9]+.[0-9]+"]
 
 permissions:
   contents: read
@@ -53,7 +54,7 @@ jobs:
         id: build
         shell: pwsh
         run: |
-          $version = if ($env:GITHUB_REF_NAME -match '^v(\d+\.\d+\.\d+(?:\.\d+)?)(?:[-+].+)?$') { $Matches[1] } else { '0.0.0' }
+          $version = if ($env:GITHUB_REF_NAME -match '^v(\d+\.\d+\.\d+)$') { $Matches[1] } else { '0.0.0' }
           ./Build-PortableRelease.ps1 -Version $version -SkipArchive
           "version=$version" >> $env:GITHUB_OUTPUT
 
