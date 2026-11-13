@@ -48,7 +48,8 @@ try {
     $probe = Get-ChildItem -Path "$build\bin" -Recurse -Filter 'PrivateType.App.LayoutProbe.exe' | Select-Object -First 1
     if (-not $probe) { throw "The build wrote no probe." }
     New-Item -ItemType Directory -Force $Output | Out-Null
-    $process = Start-Process -FilePath $probe.FullName -ArgumentList '--capture', "`"$Output`"" -NoNewWindow -PassThru
+    # Without its last backslash, which would swallow the closing quote and leave the probe with no folder to draw into.
+    $process = Start-Process -FilePath $probe.FullName -ArgumentList '--capture', "`"$($Output.TrimEnd(''))`"" -NoNewWindow -PassThru
     $null = $process.Handle  # keeps the exit code readable after the process ends
     if (-not $process.WaitForExit(180000)) {
         taskkill /PID $process.Id /T /F | Out-Null

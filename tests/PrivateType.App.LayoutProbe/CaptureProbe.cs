@@ -31,14 +31,25 @@ internal static class CaptureProbe
 
     public static void Run(string output)
     {
-        Settings(output);
-        Bubble(output);
-        ModelSetup(output);
-        History(output);
-        Teach(output);
-        Vocabulary(output);
-        Prompts(output);
+        try
+        {
+            Settings(output);
+            Bubble(output);
+            ModelSetup(output);
+            History(output);
+            Teach(output);
+            Vocabulary(output);
+            Prompts(output);
+        }
+        finally
+        {
+            if (Directory.Exists(Fixtures))
+                Directory.Delete(Fixtures, recursive: true);
+        }
     }
+
+    // The files a drawn window reads, in a folder of this capture's own: captures run several at a time.
+    private static readonly string Fixtures = Path.Combine(Path.GetTempPath(), $"privatetype-capture-fixtures-{Guid.NewGuid():N}");
 
     private static void Settings(string output)
     {
@@ -125,7 +136,8 @@ internal static class CaptureProbe
         hoverPoint = element.TranslatePoint(new Point(element.ActualWidth / 2, element.ActualHeight / 2), window);
     }
 
-    // Windows and WPF only take a mouse move over a window that is really under the pointer.
+    // Windows and WPF only take a mouse move over a window that is really under the pointer. On the capture's own desktop
+    // no pointer can be read, so the position stays 0,0 and the window is put with the hovered point there.
     private static void MoveMouseOver(Window window, Point at)
     {
         var toDevice = PresentationSource.FromVisual(window)!.CompositionTarget!.TransformToDevice;
@@ -628,7 +640,7 @@ internal static class CaptureProbe
     private static string BundledLicenses(bool everyFile, [CallerFilePath] string source = "")
     {
         var repository = Path.Combine(Path.GetDirectoryName(source)!, "..", "..");
-        var folder = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), everyFile ? "privatetype-capture-licenses-full" : "privatetype-capture-licenses")).FullName;
+        var folder = Directory.CreateDirectory(Path.Combine(Fixtures, everyFile ? "licenses-full" : "licenses")).FullName;
         File.WriteAllText(Path.Combine(folder, OpenSourceLicensesWindow.NoticesFileName),
             "Stand-in for the capture: the release writes the notices here from Credits.json.");
         if (!everyFile)

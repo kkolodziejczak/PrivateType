@@ -19,7 +19,8 @@ if (args.Length >= 3 && string.Equals(args[0], "--cache-worker", StringCompariso
 // that on a desktop of its own, so nothing appears on the screen and nothing a person or another run does can change it.
 if (args.Length == 2 && string.Equals(args[0], "--capture", StringComparison.OrdinalIgnoreCase))
 {
-    Environment.ExitCode = HiddenDesktop.Run(Environment.ProcessPath!, $"--capture-on-this-desktop \"{args[1]}\"");
+    // Without its last backslash, which would swallow the closing quote.
+    Environment.ExitCode = HiddenDesktop.Run(Environment.ProcessPath!, $"--capture-on-this-desktop \"{Path.TrimEndingDirectorySeparator(args[1])}\"");
     return;
 }
 

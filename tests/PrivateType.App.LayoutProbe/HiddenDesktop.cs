@@ -11,7 +11,7 @@ internal static class HiddenDesktop
 {
     public static int Run(string program, string arguments)
     {
-        var name = $"{Prefix}{Environment.ProcessId}";
+        var name = $"{Prefix}{Guid.NewGuid():N}";
         var desktop = CreateDesktop(name, null, 0, 0, GenericAll, 0);
         if (desktop == 0)
             throw new Win32Exception();
