@@ -1,14 +1,29 @@
+using System.IO;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Windows;
-using System.IO;
+using System.Windows.Automation.Peers;
+using System.Windows.Controls;
+using System.Windows.Threading;
 
 namespace PrivateType.App;
 
 public partial class DiagnosticsWindow : Window
 {
+    internal const string CopyAction = "Copy report";
+    internal const string CopiedWord = "Copied";
+    // At rest every row is one line between hairlines, 37 DIP from hairline to hairline.
+    internal const double RowPitch = 37;
+    private static readonly TimeSpan CopiedFor = TimeSpan.FromSeconds(2);
     private readonly InMemoryDiagnostics diagnostics;
     private readonly TimeZoneInfo clock;
+    private readonly DispatcherTimer copiedTimer;
+
+    // Where the report goes; the capture replaces them, so it never touches the clipboard, opens a dialog or writes a file.
+    internal Action<string> SetClipboard { get; init; } = System.Windows.Clipboard.SetText;
+    internal Func<Window, string?> PickReportFile { get; init; } = AskWhereToSave;
+    internal Action<string, string> WriteReport { get; init; } = File.WriteAllText;
 
     public DiagnosticsWindow(InMemoryDiagnostics diagnostics) : this(diagnostics, TimeZoneInfo.Local)
     {
@@ -20,7 +35,12 @@ public partial class DiagnosticsWindow : Window
         InitializeComponent();
         this.diagnostics = diagnostics;
         this.clock = clock;
+        copiedTimer = new DispatcherTimer { Interval = CopiedFor };
+        copiedTimer.Tick += (_, _) => ShowCopied(false);
+        Closed += (_, _) => copiedTimer.Stop();
+        ShowCopied(false);
         Refresh();
+        Loaded += (_, _) => FitListToWholeRows();
     }
 
     // The panel holds the newest warning or error, whichever it is; the list holds every other entry, newest first.
@@ -36,12 +56,7 @@ public partial class DiagnosticsWindow : Window
 
         Entries.ItemsSource = rows.Where(row => row != latest).ToArray();
         EntriesLabel.Text = latest is null ? "RECORDED EVENTS" : "OTHER RECORDED EVENTS";
-        Counts.Text = string.Join(" · ", new[]
-        {
-            $"{rows.Length} recorded",
-            Counted(rows.Count(row => row.Severity == DiagnosticSeverity.Error), "error"),
-            Counted(rows.Count(row => row.Severity == DiagnosticSeverity.Warning), "warning"),
-        }.Where(part => !part.StartsWith("0 ", StringComparison.Ordinal)));
+        Counts.Text = LogCounts(rows);
 
         var any = rows.Length > 0;
         EntriesRegion.Visibility = any ? Visibility.Visible : Visibility.Collapsed;
@@ -50,16 +65,109 @@ public partial class DiagnosticsWindow : Window
         SaveButton.IsEnabled = any;
     }
 
+    // The counts name the whole retained log, not the rows under them: "In the log: 4 events · 1 error · 3 warnings".
+    internal static string LogCounts(IReadOnlyCollection<DiagnosticRow> rows) => "In the log: " + string.Join(" · ", new[]
+    {
+        Counted(rows.Count, "event"),
+        Counted(rows.Count(row => row.Severity == DiagnosticSeverity.Error), "error"),
+        Counted(rows.Count(row => row.Severity == DiagnosticSeverity.Warning), "warning"),
+    }.Where(part => !part.StartsWith("0 ", StringComparison.Ordinal)));
+
     private static string Counted(int count, string noun) => $"{count} {noun}{(count == 1 ? "" : "s")}";
 
+    // A long log shows whole rows only: the list is cut back to the last row that fits at the window's height, and a hairline
+    // marks where it ends. A selected row opens taller and may still run under that edge.
+    private void FitListToWholeRows()
+    {
+        Entries.ClearValue(HeightProperty);
+        UpdateLayout();
+        var scrolls = Descendants(Entries).OfType<ScrollViewer>().FirstOrDefault()?.ComputedVerticalScrollBarVisibility == Visibility.Visible;
+        ListEdge.Visibility = scrolls ? Visibility.Visible : Visibility.Collapsed;
+        if (scrolls)
+            Entries.Height = Math.Max(RowPitch, Math.Floor(Entries.ActualHeight / RowPitch) * RowPitch);
+    }
+
+    private static IEnumerable<DependencyObject> Descendants(DependencyObject root)
+    {
+        for (var index = 0; index < System.Windows.Media.VisualTreeHelper.GetChildrenCount(root); index++)
+        {
+            var child = System.Windows.Media.VisualTreeHelper.GetChild(root, index);
+            yield return child;
+            foreach (var descendant in Descendants(child))
+                yield return descendant;
+        }
+    }
+
     private string Report() => JsonSerializer.Serialize(new { schemaVersion = 1, generatedAt = DateTimeOffset.UtcNow, entries = diagnostics.Snapshot() }, new JsonSerializerOptions { WriteIndented = true, Converters = { new JsonStringEnumConverter() } });
-    private void CopyReport(object sender, RoutedEventArgs e) => System.Windows.Clipboard.SetText(Report());
+
+    // Copy says "Copied" on the key for two seconds; a clipboard another program holds is told in the footer instead of ending the app.
+    private void CopyReport(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            SetClipboard(Report());
+            ShowOutcome(null);
+            ShowCopied(true);
+        }
+        catch (ExternalException exception)
+        {
+            ShowCopied(false);
+            ShowOutcome($"Couldn't copy the report: {exception.Message}", failed: true);
+        }
+    }
+
+    // Save names the file it wrote, or says why it couldn't, in the footer.
     private void SaveReport(object sender, RoutedEventArgs e)
     {
-        var dialog = new Microsoft.Win32.SaveFileDialog { FileName = $"privatetype-diagnostics-{DateTime.Now:yyyyMMdd-HHmmss}.json", Filter = "JSON report|*.json" };
-        if (dialog.ShowDialog(this) == true) File.WriteAllText(dialog.FileName, Report());
+        if (PickReportFile(this) is not { } path)
+            return;
+        try
+        {
+            WriteReport(path, Report());
+            ShowOutcome($"Saved {Path.GetFileName(path)}");
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or System.Security.SecurityException)
+        {
+            ShowOutcome($"Couldn't save the report: {exception.Message}", failed: true);
+        }
     }
-    private void ClearReport(object sender, RoutedEventArgs e) { diagnostics.Clear(); Refresh(); }
+
+    private static string? AskWhereToSave(Window owner)
+    {
+        var dialog = new Microsoft.Win32.SaveFileDialog { FileName = $"privatetype-diagnostics-{DateTime.Now:yyyyMMdd-HHmmss}.json", Filter = "JSON report|*.json" };
+        return dialog.ShowDialog(owner) == true ? dialog.FileName : null;
+    }
+
+    private void ShowCopied(bool copied)
+    {
+        copiedTimer.Stop();
+        CopyLabel.Visibility = copied ? Visibility.Hidden : Visibility.Visible;
+        CopiedLabel.Visibility = copied ? Visibility.Visible : Visibility.Hidden;
+        System.Windows.Automation.AutomationProperties.SetName(CopyButton, copied ? CopiedWord : CopyAction);
+        if (!copied)
+            return;
+        copiedTimer.Start();
+        UIElementAutomationPeer.CreatePeerForElement(CopyButton)?.RaiseAutomationEvent(AutomationEvents.LiveRegionChanged);
+    }
+
+    // The footer's one line about the last report action; a failure carries the warning mark.
+    private void ShowOutcome(string? message, bool failed = false)
+    {
+        OutcomeText.Text = message ?? string.Empty;
+        Outcome.Visibility = message is null ? Visibility.Collapsed : Visibility.Visible;
+        OutcomeMark.Visibility = failed ? Visibility.Visible : Visibility.Collapsed;
+        if (message is not null)
+            UIElementAutomationPeer.CreatePeerForElement(OutcomeText)?.RaiseAutomationEvent(AutomationEvents.LiveRegionChanged);
+    }
+
+    private void ClearReport(object sender, RoutedEventArgs e)
+    {
+        diagnostics.Clear();
+        ShowCopied(false);
+        ShowOutcome(null);
+        Refresh();
+        FitListToWholeRows();
+    }
     private void Close(object sender, RoutedEventArgs e) => Close();
 
     private void DragWindow(object sender, System.Windows.Input.MouseButtonEventArgs e)

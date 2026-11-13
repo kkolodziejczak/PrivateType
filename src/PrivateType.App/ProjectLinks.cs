@@ -14,3 +14,15 @@ internal static class ProjectLinks
 
     public static void GetCompleteZip() => Process.Start(CompleteZipBrowserStartInfo());
 }
+
+// Microsoft's pages the app sends the person to, written once beside the project's own.
+internal static class SystemLinks
+{
+    public const string GetVisualCppRedistributableAction = "Get Visual C++ Redistributable";
+
+    public static Uri VisualCppRedistributable { get; } = new("https://learn.microsoft.com/cpp/windows/latest-supported-vc-redist");
+
+    public static ProcessStartInfo VisualCppRedistributableBrowserStartInfo() => new(VisualCppRedistributable.AbsoluteUri) { UseShellExecute = true };
+
+    public static void GetVisualCppRedistributable() => Process.Start(VisualCppRedistributableBrowserStartInfo());
+}

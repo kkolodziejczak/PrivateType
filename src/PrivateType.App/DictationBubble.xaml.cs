@@ -22,6 +22,7 @@ public partial class DictationBubble : Window
     internal const string FinalizingTitle = "Transcribing…";
     internal const string FinalizingHint = "Your text will be inserted in a moment.";
     internal const string ModelLoadingToggleHint = "This may take a few seconds. Listening starts when it's ready.";
+    internal const string NotInsertedTitle = "Not inserted";
 
     private const int GwlExStyle = -20;
     private const int WsExNoActivate = 0x08000000;
@@ -111,6 +112,7 @@ public partial class DictationBubble : Window
         StopRecordingIndicator();
         BubbleShell.Opacity = OpacityForReadyState(modelLoaded);
         ApplyReadyVisuals(modelLoaded);
+        AnnounceState(modelLoaded ? "Ready" : "Model not loaded");
         SetWidthAroundCenter(ReadyWidth);
         historyShortcutLabel = settings.HistoryShortcut.Label;
         Hint.Text = DescribeBindings(settings.Shortcuts);
@@ -175,6 +177,7 @@ public partial class DictationBubble : Window
         recordingVisualsActive = true;
         BubbleShell.Opacity = 1;
         ApplyRecordingVisuals(localeCode);
+        AnnounceState("Listening");
         ResetAudioVisuals();
         SetWidthAroundCenter(ActiveWidth, selectedWorkArea);
         StartRecordingIndicator();
@@ -195,6 +198,8 @@ public partial class DictationBubble : Window
         StopRecordingIndicator();
         BubbleShell.Opacity = 1;
         ApplyExpandedVisuals(ModelLoadingTitle);
+        AnnounceState(ModelLoadingTitle);
+        BreatheWhileWorking();
         SetWidthAroundCenter(ActiveWidth);
         Hint.Text = toggleMode ? ModelLoadingToggleHint : ModelLoadingHint;
         Hint.Visibility = Visibility.Visible;
@@ -260,6 +265,8 @@ public partial class DictationBubble : Window
         StopRecordingIndicator();
         BubbleShell.Opacity = 1;
         ApplyExpandedVisuals(FinalizingTitle);
+        AnnounceState(FinalizingTitle);
+        BreatheWhileWorking();
         SetWidthAroundCenter(ActiveWidth);
         WaveformBars.Visibility = Visibility.Collapsed;
         TranscriptViewport.Visibility = string.IsNullOrEmpty(Transcript.Text) ? Visibility.Collapsed : Visibility.Visible;
@@ -270,14 +277,16 @@ public partial class DictationBubble : Window
         ClampToWorkAreaAfterLayout();
     }
 
-    public void ShowCancellation(string message)
+    // A dictation that wasn't inserted, or another short notice about the text; the title says what happened.
+    public void ShowCancellation(string message, string title = NotInsertedTitle)
     {
         CloseMenu();
         active = false;
         recordingVisualsActive = false;
         StopRecordingIndicator();
         BubbleShell.Opacity = 1;
-        ApplyCancelledVisuals();
+        ApplyCancelledVisuals(title);
+        AnnounceState(title);
         SetWidthAroundCenter(ActiveWidth);
         Hint.Visibility = Visibility.Collapsed;
         WaveformBars.Visibility = Visibility.Collapsed;
@@ -286,6 +295,7 @@ public partial class DictationBubble : Window
         DrawShortcutAsKeys(historyShortcutLabel);
         TranscriptViewport.Visibility = Visibility.Visible;
         UpdateScrim();
+        AnnounceMessage();
         ClampToWorkAreaAfterLayout();
     }
 
@@ -341,6 +351,7 @@ public partial class DictationBubble : Window
         StopRecordingIndicator();
         BubbleShell.Opacity = 1;
         ApplyErrorVisuals(title);
+        AnnounceState(title);
         SetWidthAroundCenter(ActiveWidth);
         Hint.Visibility = Visibility.Collapsed;
         WaveformBars.Visibility = Visibility.Collapsed;
@@ -348,6 +359,7 @@ public partial class DictationBubble : Window
         SetTranscript(message);
         TranscriptViewport.Visibility = Visibility.Visible;
         UpdateScrim();
+        AnnounceMessage();
         ClampToWorkAreaAfterLayout();
     }
 
@@ -455,7 +467,8 @@ public partial class DictationBubble : Window
         Pill.Background = System.Windows.Media.Brushes.Transparent;
         Pill.BorderBrush = System.Windows.Media.Brushes.Transparent;
         SetPillContent(locale: null, title: null);
-        // Without a model the key is only an outline: nothing is loaded behind it yet.
+        // Without a model the key is only an outline: nothing is loaded behind it yet. It is drawn at full opacity, and
+        // ColorNeutral400 keeps 3:1 against the capture desktop (#5A636E) and a near-black backdrop alike.
         SetMicrophoneKey(modelLoaded ? "ColorKeycap" : null, modelLoaded ? "ColorText" : "ColorNeutral400", raised: modelLoaded);
     }
 
@@ -467,9 +480,9 @@ public partial class DictationBubble : Window
         SetMicrophoneKey("ColorAccent800", "ColorAccent100", raised: false);
     }
 
-    private void ApplyCancelledVisuals()
+    private void ApplyCancelledVisuals(string title)
     {
-        ApplyExpandedVisuals("Not inserted");
+        ApplyExpandedVisuals(title);
         SetMicrophoneKey("ColorNeutral900", "ColorNeutral400", raised: true);
     }
 
@@ -504,7 +517,8 @@ public partial class DictationBubble : Window
     {
         IconTile.Background = fill is null ? System.Windows.Media.Brushes.Transparent : Brush(fill);
         IconTile.BorderBrush = fill is null ? Brush(glyph) : Brush("ColorKeycapEdge");
-        IconTile.BorderThickness = fill is null ? new Thickness(1.5) : new Thickness(0, 0, 0, raised ? 3 : 0);
+        // 1.6 is two whole pixels at 125 %.
+        IconTile.BorderThickness = fill is null ? new Thickness(1.6) : new Thickness(0, 0, 0, raised ? 3 : 0);
         // The ring spans the whole key, so it reaches over the raised edge and stays centred on a pressed key.
         RecordingPulseRing.Margin = new Thickness(-IconTile.BorderThickness.Left, -IconTile.BorderThickness.Top, -IconTile.BorderThickness.Right, -IconTile.BorderThickness.Bottom);
         IconOutline.Fill = Brush(glyph);
@@ -543,10 +557,37 @@ public partial class DictationBubble : Window
 
     private void StopRecordingPulse()
     {
-        RecordingPulseRing.Opacity = 0;
+        CalmMotion.Still(RecordingPulseRing, 0);
+        RecordingPulseRing.Stroke = Brush("ColorAccent");
         RecordingPulseScale.ScaleX = 1;
         RecordingPulseScale.ScaleY = 1;
     }
+
+    // While the model loads or the words are transcribed, a quiet ring breathes just outside the key: work under way, not
+    // listening, so it is neutral, not the accent. With animations off there is no ring; the state word says it alone.
+    private void BreatheWhileWorking()
+    {
+        if (!CalmMotion.Allowed)
+            return;
+        RecordingPulseRing.Stroke = Brush("ColorNeutral400");
+        // 2 px outside the key, as far as the loudest level takes the listening ring.
+        var scale = 1 + (4.0 / 44);
+        RecordingPulseScale.ScaleX = scale;
+        RecordingPulseScale.ScaleY = scale;
+        CalmMotion.Breathe(RecordingPulseRing, full: 0.6, low: 0.1);
+    }
+
+    // The bubble's state word is its item status, so a screen reader can ask what the bubble is doing.
+    private void AnnounceState(string state)
+    {
+        System.Windows.Automation.AutomationProperties.SetItemStatus(this, state);
+        System.Windows.Automation.AutomationProperties.SetItemStatus(BubbleShell, state);
+    }
+
+    // A notice or a failure in the panel is read out once, politely, without moving focus.
+    private void AnnounceMessage() =>
+        System.Windows.Automation.Peers.UIElementAutomationPeer.CreatePeerForElement(Transcript)?
+            .RaiseAutomationEvent(System.Windows.Automation.Peers.AutomationEvents.LiveRegionChanged);
 
     private void SetTranscript(string text)
     {
@@ -875,7 +916,8 @@ public partial class DictationBubble : Window
     }
 
     internal const double ReadyOpacityWithModel = 0.7;
-    internal const double ReadyOpacityWithoutModel = 0.4;
+    // Without a model the key is quieter through its outline-only form, not through transparency.
+    internal const double ReadyOpacityWithoutModel = 1;
 
     internal static double OpacityForReadyState(bool modelLoaded) =>
         modelLoaded ? ReadyOpacityWithModel : ReadyOpacityWithoutModel;

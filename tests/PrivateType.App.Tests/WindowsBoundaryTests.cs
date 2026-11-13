@@ -549,9 +549,9 @@ public sealed class WindowsBoundaryTests
     }
 
     [Theory]
-    [InlineData(false, 0.4)]
+    [InlineData(false, 1.0)]
     [InlineData(true, 0.7)]
-    public void Uses_transparency_only_for_the_unloaded_ready_bubble(bool modelLoaded, double expected)
+    public void Keeps_the_unloaded_ready_bubble_opaque_and_dims_only_the_loaded_key(bool modelLoaded, double expected)
     {
         Assert.Equal(expected, DictationBubble.OpacityForReadyState(modelLoaded));
     }

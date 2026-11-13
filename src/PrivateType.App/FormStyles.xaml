@@ -622,6 +622,28 @@
       </Setter.Value>
     </Setter>
   </Style>
+  <!-- The success mark beside the warning mark: a filled circle with a tick, the tick drawn in the surface colour so it reads
+       as cut out. Drawn in the same 20-unit box; its colour is the foreground. -->
+  <Style x:Key="SuccessMark" TargetType="ContentControl">
+    <Setter Property="Width" Value="16" />
+    <Setter Property="Height" Value="16" />
+    <Setter Property="Focusable" Value="False" />
+    <Setter Property="IsTabStop" Value="False" />
+    <Setter Property="Foreground" Value="{DynamicResource ColorSuccess}" />
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="ContentControl">
+          <Viewbox>
+            <Canvas Width="20" Height="20">
+              <Ellipse Canvas.Left="1" Canvas.Top="1" Width="18" Height="18" Fill="{TemplateBinding Foreground}" />
+              <Path Stroke="{DynamicResource ColorSurface}" StrokeThickness="2" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                    Data="M6,10.4 L8.8,13.2 L14,7.2" />
+            </Canvas>
+          </Viewbox>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
   <!-- The ⓘ after a row label: its tooltip carries the row's explanation for pointer users. -->
   <!-- A 16 px stroked circle-i inside a 24 × 24 target that also takes keyboard focus and then shows the same tip.
        Its stroke and radius are multiples of 0.8, one pixel at 125 %, so the ring and the stem lie on whole pixels there. -->

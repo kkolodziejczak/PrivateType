@@ -37,6 +37,11 @@
         <Setter Property="LineHeight" Value="18" />
         <Setter Property="LineStackingStrategy" Value="BlockLineHeight" />
       </Style>
+      <!-- A link out of the app at body size, in the link colour "Read the terms" uses. -->
+      <Style x:Key="BodyLink" TargetType="Button" BasedOn="{StaticResource TextLinkButton}">
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Foreground" Value="{DynamicResource ColorAccent400}" />
+      </Style>
     </ResourceDictionary>
   </Window.Resources>
   <Border Margin="8" Background="{DynamicResource ColorSurface}" BorderBrush="{DynamicResource ColorDivider}" BorderThickness="1" CornerRadius="12">
@@ -253,7 +258,17 @@
         <StackPanel x:Name="ProgressPane" Grid.Row="1" Margin="0,16,0,0">
           <TextBlock x:Name="ProgressAmountText" FontSize="15" FontWeight="SemiBold" Typography.NumeralAlignment="Tabular" />
           <ProgressBar x:Name="ProgressBar" Margin="0,10,0,0" Height="6" Minimum="0" Maximum="100" />
-          <TextBlock x:Name="ProgressNextText" Margin="0,10,0,0" FontSize="13" Foreground="{DynamicResource ColorNeutral400}" TextWrapping="Wrap" />
+          <TextBlock x:Name="ProgressNextText" Margin="0,10,0,0" FontSize="13" Foreground="{DynamicResource ColorNeutral400}" TextWrapping="Wrap"
+                     Text="Next, the files are checked. Then dictation is ready." />
+          <!-- Checking: no bar, since nothing can be measured. What is done carries the tick; what is under way breathes. -->
+          <StackPanel x:Name="CheckingPanel" Visibility="Collapsed">
+            <StackPanel Orientation="Horizontal">
+              <ContentControl Width="16" Height="16" Margin="0,0,8,0" VerticalAlignment="Center" Style="{StaticResource SuccessMark}" />
+              <TextBlock x:Name="DownloadedText" VerticalAlignment="Center" FontSize="15" FontWeight="SemiBold" Typography.NumeralAlignment="Tabular" />
+            </StackPanel>
+            <TextBlock x:Name="CheckingText" Margin="0,10,0,0" FontSize="13" Foreground="{DynamicResource ColorNeutral400}" Text="Checking the files…"
+                       AutomationProperties.LiveSetting="Polite" />
+          </StackPanel>
           <TextBlock x:Name="ProgressModelText" Margin="0,16,0,0" FontFamily="{DynamicResource MonoFont}" FontSize="12" Foreground="{DynamicResource ColorNeutral600}" />
         </StackPanel>
 
@@ -262,6 +277,9 @@
           <TextBlock x:Name="StatusText" FontSize="13" Foreground="{DynamicResource ColorNeutral400}" TextWrapping="Wrap" />
           <!-- What to do next, in the text colour. -->
           <TextBlock x:Name="NextStepText" Margin="0,10,0,0" FontSize="13" TextWrapping="Wrap" />
+          <!-- A stopped engine: where to get what it needs, under the step that names it. -->
+          <Button x:Name="VisualCppLink" Margin="0,8,0,0" Style="{StaticResource BodyLink}" Click="GetVisualCppRedistributable"
+                  ToolTip="Open Microsoft's download page in your default browser" />
           <!-- The system's own words for a failure: labelled, quieter than the explanation, and selectable so it can be copied. -->
           <StackPanel x:Name="FailureDetailPanel">
             <TextBlock Style="{StaticResource GroupLabel}" Margin="0,20,0,6" Text="DETAILS" />

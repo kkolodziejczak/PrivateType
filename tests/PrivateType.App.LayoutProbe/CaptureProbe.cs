@@ -181,7 +181,42 @@ internal static class CaptureProbe
         var loadFailed = Ready(loaded: false);
         loadFailed.ShowError(DictationApplication.ModelLoadFailedTitle, DictationApplication.ModelLoadFailedText);
         Draw(loadFailed, output, "bubble", "bubble-load-failed");
+        // A recent dictation handed back from the list: copied instead of pasted, and neither.
+        var copied = Ready(loaded: true);
+        copied.ShowCancellation(DictationApplication.CopiedText, DictationApplication.CopiedTitle);
+        Draw(copied, output, "bubble", "bubble-copied");
+        var pasteFailed = Ready(loaded: true);
+        pasteFailed.ShowCancellation(DictationApplication.PasteFailedText, DictationApplication.PasteFailedTitle);
+        Draw(pasteFailed, output, "bubble", "bubble-paste-failed");
+        // With Recent dictations off nothing keeps the text, and the message says so instead of naming the shortcut.
+        var keptNoHistory = Ready(loaded: true);
+        keptNoHistory.ShowCancellation($"Text not inserted: the active window changed. {DictationApplication.NotKeptNotice}");
+        Draw(keptNoHistory, output, "bubble", "bubble-kept-no-history");
+        // The longest message the bubble shows.
+        var keptIneligible = Ready(loaded: true);
+        keptIneligible.ShowCancellation($"Text not inserted: the window does not accept input from PrivateType. {DictationApplication.KeptTextHint(KeyChord.DefaultHistory)}");
+        Draw(keptIneligible, output, "bubble", "bubble-kept-ineligible");
+        var loadingToggle = Ready(loaded: false);
+        loadingToggle.ShowModelLoading(toggleMode: true);
+        Draw(loadingToggle, output, "bubble", "bubble-loading-toggle");
+        // A language label longer than "EN", with a short synthetic Polish sentence.
+        var polish = Ready(loaded: true);
+        polish.ShowRecording("pl-PL");
+        polish.ShowAudioMeter(new AudioMeter(0.72, Enumerable.Range(0, 44).Select(index => index is > 15 and < 28 ? 0.95 : 0.24).ToArray()));
+        polish.ShowTranscript("Wyślę link do pobrania zespołowi jeszcze dziś.");
+        Draw(polish, output, "bubble", "bubble-recording-polish");
+        Draw(Ready(loaded: true), output, "bubble", "bubble-ready-hover", window => Hover(window, (FrameworkElement)window.FindName("IconTile")));
+        // The right-click menu on the resting key; it stays open for the drawing, which widens to hold it.
+        Draw(Ready(loaded: true), output, "bubble", "bubble-menu", window =>
+        {
+            var menu = BubbleMenu(window)!;
+            menu.StaysOpen = true;
+            menu.IsOpen = true;
+        });
     }
+
+    private static ContextMenu? BubbleMenu(Window window) =>
+        window is DictationBubble ? ((FrameworkElement)window.FindName("BubbleShell")).ContextMenu : null;
 
     // What the recognizer hands the bubble: one running text, wrapped by the bubble itself.
     private const string SpokenText = "Quick update on the release before the weekend. The installer is ready and the notes are written. I will send the download link to the team today and check the feedback on Monday morning.";
@@ -234,6 +269,18 @@ internal static class CaptureProbe
         var couldNotStart = new ModelSetupWindow();
         couldNotStart.ShowEngineStartPrerequisite();
         Draw(couldNotStart, output, "model-setup", "setup-engine-start");
+        // The whole file arrived but failed its check against the pinned size and hash.
+        var checkFailed = new ModelSetupWindow();
+        checkFailed.ShowProgress(total, total);
+        checkFailed.ShowFailure(new InvalidDataException("Downloaded model did not match the pinned size and SHA-256 hash."));
+        Draw(checkFailed, output, "model-setup", "setup-check-failed");
+        var diskFull = new ModelSetupWindow();
+        diskFull.ShowProgress(400L * 1024 * 1024, total);
+        diskFull.ShowFailure(new IOException("There is not enough space on the disk.", unchecked((int)0x80070070)), @"C:\");
+        Draw(diskFull, output, "model-setup", "setup-failure-disk-full");
+        var couldNotStartFocus = new ModelSetupWindow();
+        couldNotStartFocus.ShowEngineStartPrerequisite();
+        Draw(couldNotStartFocus, output, "model-setup", "setup-engine-start-focus", window => FocusKeyboard(window, (IInputElement)window.FindName("VisualCppLink")));
     }
 
     private static ModelSetupWindow Setup(string modelId, ModelStorageMode storage = ModelStorageMode.Shared)
@@ -386,6 +433,18 @@ internal static class CaptureProbe
         });
         Draw(new DiagnosticsWindow(BusyDiagnostics(), Clock), output, "diagnostics", "diagnostics-busy");
         Draw(new DiagnosticsWindow(InformationOnlyDiagnostics(), Clock), output, "diagnostics", "diagnostics-info-only");
+        // The report's outcomes, through seams that never touch the clipboard, open a dialog or write a file.
+        Draw(new DiagnosticsWindow(SampleDiagnostics(), Clock) { SetClipboard = _ => { } }, output, "diagnostics", "diagnostics-copied",
+            window => Click((Button)window.FindName("CopyButton")));
+        Draw(new DiagnosticsWindow(SampleDiagnostics(), Clock) { PickReportFile = _ => SavedReport, WriteReport = (_, _) => { } }, output, "diagnostics", "diagnostics-saved",
+            window => Click((Button)window.FindName("SaveButton")));
+        Draw(new DiagnosticsWindow(SampleDiagnostics(), Clock) { PickReportFile = _ => SavedReport, WriteReport = (_, _) => throw new UnauthorizedAccessException("Access to the path is denied.") },
+            output, "diagnostics", "diagnostics-save-failed", window => Click((Button)window.FindName("SaveButton")));
+        Draw(new DiagnosticsWindow(NextStepDiagnostics(), Clock), output, "diagnostics", "diagnostics-next-step");
+        Draw(new DiagnosticsWindow(RepeatedDiagnostics(), Clock), output, "diagnostics", "diagnostics-repeated");
+        Draw(new DiagnosticsWindow(SampleDiagnostics(), Clock), output, "diagnostics", "diagnostics-cleared", window => Click((Button)window.FindName("ClearButton")));
+        Draw(new DiagnosticsWindow(BusyDiagnostics(), Clock), output, "diagnostics", "diagnostics-busy-end",
+            window => Descendants((ListBox)window.FindName("Entries")).OfType<ScrollViewer>().First().ScrollToBottom());
         Draw(new OpenSourceLicensesWindow(), output, "licenses", "licenses");
         Draw(new OpenSourceLicensesWindow(BundledLicenses(everyFile: false)), output, "licenses", "licenses-bundled");
         Draw(new OpenSourceLicensesWindow(BundledLicenses(everyFile: false)), output, "licenses", "licenses-bundled-end",
@@ -407,6 +466,43 @@ internal static class CaptureProbe
         Record("d41a07", -9, "injection.skipped", details: [("reason", "empty-transcript")]);
         Record("e8802c", -6, "session.failed", new InvalidOperationException("synthetic"), ("phase", "capture.start"), ("state", "Ready"));
         Record("f3c95b", -2, "injection.skipped", details: [("reason", "target-ineligible"), ("targetEligibility", "Changed"), ("characters", "142")]);
+        return diagnostics;
+    }
+
+    private static readonly string SavedReport = Path.Combine(Path.GetTempPath(), "privatetype-diagnostics-20261002-140000.json");
+
+    // The short sample, then the model failing to load a minute ago: the latest problem is one with a next step.
+    private static InMemoryDiagnostics NextStepDiagnostics()
+    {
+        var diagnostics = SampleDiagnostics();
+        diagnostics.Record(new DictationDiagnostic("application", Now.AddMinutes(-1), "model.load.failed", new Dictionary<string, string>(), new InvalidOperationException("synthetic")));
+        return diagnostics;
+    }
+
+    // One fault that keeps happening: the microphone fails to start in four dictations over twenty minutes, with one
+    // dictation between them that recognized no words, and each dictation's own information events.
+    private static InMemoryDiagnostics RepeatedDiagnostics()
+    {
+        var diagnostics = new InMemoryDiagnostics();
+        void Record(string session, int minute, int second, string name, Exception? error = null, params (string Key, string Value)[] details) =>
+            diagnostics.Record(new DictationDiagnostic(session, Now.AddMinutes(minute).AddSeconds(second), name, details.ToDictionary(pair => pair.Key, pair => pair.Value), error));
+        void MicrophoneFailed(string session, int minute)
+        {
+            Record(session, minute, 0, "session.started", details: [("locale", "en-US")]);
+            Record(session, minute, 1, "session.failed", new InvalidOperationException("synthetic"), ("phase", "capture.start"), ("state", "Ready"));
+            Record(session, minute, 1, "session.state", details: [("state", "Error")]);
+        }
+
+        MicrophoneFailed("b71e04", -20);
+        MicrophoneFailed("c09a3d", -14);
+        Record("d41a07", -11, 0, "session.started", details: [("locale", "en-US")]);
+        Record("d41a07", -11, 6, "session.state", details: [("state", "Finalizing")]);
+        Record("d41a07", -11, 6, "session.finalizing", details: [("timeoutMilliseconds", "15000")]);
+        Record("d41a07", -11, 7, "injection.skipped", details: [("reason", "empty-transcript")]);
+        Record("d41a07", -11, 7, "session.completed");
+        Record("d41a07", -11, 7, "session.state", details: [("state", "Ready")]);
+        MicrophoneFailed("e8802c", -7);
+        MicrophoneFailed("f3c95b", -1);
         return diagnostics;
     }
 
@@ -557,15 +653,22 @@ internal static class CaptureProbe
             var shot = new RenderTargetBitmap(Pixels(width), Pixels(height), 96 * Scale, 96 * Scale, PixelFormats.Pbgra32);
             shot.Render(window);
 
+            // The bubble's menu opens to its right, so the drawing widens to hold it; every other window keeps its own size.
+            var menu = BubbleMenu(window) is { IsOpen: true } open ? open : null;
+            var sceneWidth = menu is null ? width : width + menu.HorizontalOffset + menu.ActualWidth;
+            var sceneHeight = menu is null ? height : Math.Max(height, menu.ActualHeight);
             var scene = new DrawingVisual();
             using (var context = scene.RenderOpen())
             {
-                context.DrawRectangle(new SolidColorBrush(Desktop), null, new Rect(0, 0, width + 2 * Backdrop, height + 2 * Backdrop));
+                context.DrawRectangle(new SolidColorBrush(Desktop), null, new Rect(0, 0, sceneWidth + 2 * Backdrop, sceneHeight + 2 * Backdrop));
                 context.DrawImage(shot, new Rect(Backdrop, Backdrop, width, height));
                 DrawOpenPopups(window, context);
+                if (menu is not null)
+                    context.DrawRectangle(new VisualBrush(menu) { Stretch = Stretch.None }, null,
+                        new Rect(Backdrop + width + menu.HorizontalOffset, Backdrop, menu.ActualWidth, menu.ActualHeight));
             }
 
-            var composed = new RenderTargetBitmap(Pixels(width + 2 * Backdrop), Pixels(height + 2 * Backdrop), 96 * Scale, 96 * Scale, PixelFormats.Pbgra32);
+            var composed = new RenderTargetBitmap(Pixels(sceneWidth + 2 * Backdrop), Pixels(sceneHeight + 2 * Backdrop), 96 * Scale, 96 * Scale, PixelFormats.Pbgra32);
             composed.Render(scene);
             var folder = Directory.CreateDirectory(Path.Combine(output, screen)).FullName;
             var encoder = new PngBitmapEncoder();
@@ -576,6 +679,8 @@ internal static class CaptureProbe
         finally
         {
             hovered = null;
+            if (window is DictationBubble bubble)
+                bubble.CloseMenu();
             window.Close();
         }
     }

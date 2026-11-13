@@ -391,7 +391,7 @@ internal sealed class DictationApplication : IDisposable
         }
         catch (Exception exception)
         {
-            window.ShowFailure(exception);
+            window.ShowFailure(exception, System.IO.Path.GetPathRoot(models.Storage(model).Directory));
             statusItem.Text = "Model setup failed";
         }
         finally
@@ -815,7 +815,8 @@ internal sealed class DictationApplication : IDisposable
             correctText: settings.CorrectAfterDictation
                 ? TranscriptCorrector.Create(settings.Vocabulary, settings.VocabularyPacks, settings.VocabularyCorrections, localeCode).Correct
                 : null,
-            keptTextHint: history.IsEnabled ? KeptTextHint(settings.HistoryShortcut) : null);
+            // A text that wasn't inserted is kept in Recent dictations; with that list off, the message says it is gone.
+            keptTextHint: history.IsEnabled ? KeptTextHint(settings.HistoryShortcut) : NotKeptNotice);
         session.PresentationChanged += presentation => Present(localeCode, presentation);
         // Only models that transcribe on release make the user wait for the text.
         var forecast = activeModel.Style == RecognitionStyle.Offline ? transcriptionForecast : null;
@@ -871,6 +872,13 @@ internal sealed class DictationApplication : IDisposable
     }
 
     internal static string KeptTextHint(KeyChord historyShortcut) => $"Press {historyShortcut.Label} to paste it.";
+    internal const string NotKeptNotice = "It wasn't kept, because Recent dictations is off.";
+
+    // What the bubble says after a recent dictation was handed back: its title names what happened.
+    internal const string CopiedTitle = "Copied";
+    internal const string CopiedText = "Copied. Press Ctrl+V to paste it.";
+    internal const string PasteFailedTitle = "Couldn't paste";
+    internal const string PasteFailedText = "The dictation could not be pasted or copied.";
 
     // A failed dictation names what failed in the bubble's title and says what to try next in words.
     // Every session failure is reported as the microphone's, with the step that fixes the microphone.
@@ -940,12 +948,12 @@ internal sealed class DictationApplication : IDisposable
 
             ClipboardPasteInjector.Copy(text, settings.IncludeInClipboardHistory);
             RecordDiagnostic("history.copied");
-            ShowTransientNotice("Copied. Press Ctrl+V to paste it.");
+            ShowTransientNotice(CopiedTitle, CopiedText);
         }
         catch (Exception exception)
         {
             RecordDiagnostic("history.paste.failed", exception);
-            ShowTransientNotice("The dictation could not be pasted or copied.");
+            ShowTransientNotice(PasteFailedTitle, PasteFailedText);
         }
     }
 
@@ -977,14 +985,14 @@ internal sealed class DictationApplication : IDisposable
     private static bool IsOwnWindow(nint handle) =>
         NativeMethods.GetWindowThreadProcessId(handle, out var processId) != 0 && processId == Environment.ProcessId;
 
-    private void ShowTransientNotice(string message)
+    private void ShowTransientNotice(string title, string message)
     {
         // Never cover a dictation that started meanwhile.
         if (shortcutHeld)
             return;
 
         var version = ++presentationVersion;
-        bubble.ShowCancellation(message);
+        bubble.ShowCancellation(message, title);
         cancellationVisibleUntil = DateTimeOffset.UtcNow + CancellationHoldTime;
         _ = ReturnToReadyWhenCurrentAsync(version, CancellationHoldTime);
     }
@@ -1181,8 +1189,10 @@ internal sealed class DictationApplication : IDisposable
                 break;
             case BubblePresentationKind.Error:
                 trayIcon.Icon = trayIcons.Ready;
+                // A failure stays as long as "Not inserted" does: three lines can't be read in two seconds.
                 bubble.ShowError(DictationStoppedTitle, DictationStoppedText(bubblePresentation.Text));
-                _ = ReturnToReadyWhenCurrentAsync(version, TimeSpan.FromSeconds(2));
+                cancellationVisibleUntil = DateTimeOffset.UtcNow + CancellationHoldTime;
+                _ = ReturnToReadyWhenCurrentAsync(version, CancellationHoldTime);
                 break;
             case BubblePresentationKind.Hide:
                 // A "Text not inserted" message stays readable even though Ready follows it at once.

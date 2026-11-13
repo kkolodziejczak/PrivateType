@@ -1,11 +1,11 @@
 using System.ComponentModel;
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Automation.Peers;
 using System.Windows.Controls;
-using System.Windows.Media.Animation;
 using System.Windows.Navigation;
 using PrivateType.Core;
 
@@ -30,11 +30,19 @@ public partial class ModelSetupWindow : Window
     internal const string DroppedConnectionCause = "The connection dropped before the model finished downloading.";
     internal const string UnfinishedDownloadCause = "The model didn't finish downloading.";
     internal const string StartsOverNotice = "Nothing was kept, so the download starts from the beginning.";
+    // The whole file arrived but isn't the published model: it failed the check, step 3.
+    internal const string CheckFailedHeading = "The download didn't pass the check";
+    internal const string CheckFailedCause = "The file arrived, but it doesn't match the published model, so it wasn't used.";
+    // A full disk: downloading again can't help until there is room.
+    internal const string DiskFullHeading = "Not enough free space";
+    internal const string DiskFullStep = "Free up space, then download again.";
+    internal const string CheckingFilesName = "Checking the files";
     internal const string SharedStorageNotice = "The model files stay on this computer and are shared by PrivateType versions on this Windows account.";
     internal const string PortableStorageNotice = "The model files stay in this copy's app\\models folder and aren't shared with other PrivateType versions.";
     private const int JourneySteps = 3;
     private SpeechModelDefinition chosenModel;
     private SetupView? shownView;
+    private SetupFailure failure;
     private string failureCause = string.Empty;
     private bool completed;
 
@@ -54,6 +62,8 @@ public partial class ModelSetupWindow : Window
         QuitButton.Content = QuitAction;
         CheckAgainButton.Content = CheckAgainAction;
         GetZipButton.Content = ProjectLinks.GetCompleteZipAction;
+        VisualCppLink.Content = SystemLinks.GetVisualCppRedistributableAction;
+        CheckingText.SetValue(AutomationProperties.NameProperty, CheckingFilesName);
         DownloadAgainButton.Content = DownloadAgainAction;
         ShowChosenModel();
         SetStorageMode(ModelStorageMode.Shared);
@@ -135,12 +145,10 @@ public partial class ModelSetupWindow : Window
         var checking = total > 0 && downloaded >= total;
         ShowView(checking ? SetupView.Checking : SetupView.Downloading);
         ProgressAmountText.Text = $"{Mebibytes(downloaded)} of {Mebibytes(total)} MiB";
-        ProgressNextText.Text = checking
-            ? $"{Mebibytes(total)} MiB downloaded. Checking the files…"
-            : "Next, the files are checked. Then dictation is ready.";
-        // Checking has no measurable progress, so its bar is whole and pulses: work under way, not a share done.
-        ProgressBar.Value = checking ? 100 : total == 0 ? 0 : Math.Min(100, downloaded * 100d / total);
-        ProgressBar.SetValue(AutomationProperties.NameProperty, checking ? "Checking the files" : ProgressAmountText.Text);
+        // Checking has no measurable progress, so it has no bar: what is done, with a tick, and what is under way, in words.
+        DownloadedText.Text = $"{Mebibytes(total)} MiB downloaded";
+        ProgressBar.Value = total == 0 ? 0 : Math.Min(100, downloaded * 100d / total);
+        ProgressBar.SetValue(AutomationProperties.NameProperty, checking ? CheckingFilesName : ProgressAmountText.Text);
     }
 
     private static string Mebibytes(long bytes) => $"{bytes / 1024d / 1024d:F0}";
@@ -157,15 +165,54 @@ public partial class ModelSetupWindow : Window
         return false;
     }
 
-    public void ShowFailure(Exception exception) => ShowFailure(exception.Message, IsDroppedConnection(exception));
+    // The provisioner throws InvalidDataException for a file that doesn't match the pinned size and hash.
+    internal static SetupFailure Classify(Exception exception)
+    {
+        for (var current = exception; current is not null; current = current.InnerException)
+        {
+            if (current is InvalidDataException)
+                return SetupFailure.CheckFailed;
+            if (current is IOException { HResult: DiskFullHResult or HandleDiskFullHResult })
+                return SetupFailure.DiskFull;
+        }
+
+        return IsDroppedConnection(exception) ? SetupFailure.ConnectionDropped : SetupFailure.Unfinished;
+    }
+
+    // ERROR_DISK_FULL and ERROR_HANDLE_DISK_FULL as HRESULTs.
+    private const int DiskFullHResult = unchecked((int)0x80070070);
+    private const int HandleDiskFullHResult = unchecked((int)0x80070027);
+
+    // The drive is where the model is kept ("C:"), named when the disk is full.
+    public void ShowFailure(Exception exception, string? drive = null) => ShowFailure(exception.Message, Classify(exception), drive);
+
+    internal void ShowFailure(string message, bool connectionDropped)
+        => ShowFailure(message, connectionDropped ? SetupFailure.ConnectionDropped : SetupFailure.Unfinished);
 
     // The plain cause and what Download again does lead; the system's message follows as a quieter, selectable detail.
-    internal void ShowFailure(string message, bool connectionDropped)
+    internal void ShowFailure(string message, SetupFailure kind, string? drive = null)
     {
-        failureCause = connectionDropped ? DroppedConnectionCause : UnfinishedDownloadCause;
+        failure = kind;
+        var size = SetupModelChoice.SizeOf(ChosenModel);
+        failureCause = kind switch
+        {
+            SetupFailure.ConnectionDropped => DroppedConnectionCause,
+            SetupFailure.CheckFailed => CheckFailedCause,
+            SetupFailure.DiskFull => string.IsNullOrEmpty(drive) ? $"The model needs {size} of free space." : $"The model needs {size} on {drive.TrimEnd('\\')}.",
+            _ => UnfinishedDownloadCause
+        };
         FailureDetailText.Text = message;
+        // Showing a different failure redraws the rail, so its mark lands on the step that failed.
+        shownView = null;
         ShowView(SetupView.Failed);
     }
+
+    private string FailedHeading => failure switch
+    {
+        SetupFailure.CheckFailed => CheckFailedHeading,
+        SetupFailure.DiskFull => DiskFullHeading,
+        _ => FailureHeading
+    };
 
     // The one place that decides what each view shows: the rail, the pane, and the footer.
     private void ShowView(SetupView view)
@@ -181,12 +228,16 @@ public partial class ModelSetupWindow : Window
             _ => StoppedPane
         }, ChoosePane, ReviewPane, ProgressPane, StoppedPane);
         ProgressAmountText.Visibility = Shown(view == SetupView.Downloading);
+        ProgressBar.Visibility = Shown(view == SetupView.Downloading);
+        ProgressNextText.Visibility = Shown(view == SetupView.Downloading);
+        CheckingPanel.Visibility = Shown(view == SetupView.Checking);
         FailureDetailPanel.Visibility = Shown(view == SetupView.Failed);
+        VisualCppLink.Visibility = Shown(view == SetupView.EngineCouldNotStart);
         (StatusText.Text, NextStepText.Text) = view switch
         {
             SetupView.EngineMissing => (MissingEngineCause, MissingEngineStep),
             SetupView.EngineCouldNotStart => (EngineCouldNotStartCause, EngineCouldNotStartStep),
-            SetupView.Failed => (failureCause, StartsOverNotice),
+            SetupView.Failed => (failureCause, failure == SetupFailure.DiskFull ? DiskFullStep : StartsOverNotice),
             _ => (string.Empty, string.Empty)
         };
 
@@ -210,7 +261,15 @@ public partial class ModelSetupWindow : Window
         if (!changed)
             return;
         ShowRail(view);
-        Pulse(ProgressBar, view is SetupView.Downloading or SetupView.Checking);
+        // Work under way breathes: the bar while it fills, the words while the files are checked. Nothing moves with animations off.
+        if (view == SetupView.Downloading)
+            CalmMotion.Breathe(ProgressBar, full: 1, low: 0.75);
+        else
+            CalmMotion.Still(ProgressBar, 1);
+        if (view == SetupView.Checking)
+            CalmMotion.Breathe(CheckingText, full: 1, low: 0.6);
+        else
+            CalmMotion.Still(CheckingText, 1);
     }
 
     private static string StepName(int number) => number switch
@@ -229,7 +288,7 @@ public partial class ModelSetupWindow : Window
             SetupView.Review => $"Download {name}",
             SetupView.Downloading => $"Downloading {name}",
             SetupView.Checking => "Checking the download",
-            SetupView.Failed => FailureHeading,
+            SetupView.Failed => FailedHeading,
             SetupView.EngineMissing => MissingEngineHeading,
             _ => EngineCouldNotStartHeading
         };
@@ -240,28 +299,31 @@ public partial class ModelSetupWindow : Window
     {
         var beforeSetup = view is SetupView.EngineMissing or SetupView.EngineCouldNotStart;
         BeforeSetupLabel.Visibility = Shown(beforeSetup);
+        // The rail names the engine's state in the heading's words.
+        var engineState = Heading(view);
         SetupRailStep[] steps = beforeSetup
-            ? [new(0, "Speech engine needed", SetupRailState.Needed, IsLast: true, "Before setup: speech engine needed")]
-            : [.. Enumerable.Range(1, JourneySteps).Select(number => JourneyStep(number, view))];
+            ? [new(0, engineState, SetupRailState.Needed, IsLast: true, $"Before setup: {engineState}")]
+            : [.. Enumerable.Range(1, JourneySteps).Select(number => JourneyStep(number, view, FailedHeading, failure))];
         RailSteps.ItemsSource = steps;
         var current = steps.First(step => step.State != SetupRailState.Done);
         RailSteps.SetValue(AutomationProperties.NameProperty, current.SpokenName);
         UIElementAutomationPeer.CreatePeerForElement(RailSteps)?.RaiseAutomationEvent(AutomationEvents.LiveRegionChanged);
     }
 
-    private static SetupRailStep JourneyStep(int number, SetupView view)
+    private static SetupRailStep JourneyStep(int number, SetupView view, string failedHeading, SetupFailure failure)
     {
         var currentNumber = view switch
         {
             SetupView.Choose => 1,
             SetupView.Checking => 3,
+            SetupView.Failed when failure == SetupFailure.CheckFailed => 3,
             _ => 2
         };
         var state = number < currentNumber ? SetupRailState.Done
             : number > currentNumber ? SetupRailState.ToCome
             : view == SetupView.Failed ? SetupRailState.Stopped
             : SetupRailState.Current;
-        var label = state == SetupRailState.Stopped ? FailureHeading : StepName(number);
+        var label = state == SetupRailState.Stopped ? failedHeading : StepName(number);
         return new(number, label, state, IsLast: number == JourneySteps, $"Step {number} of {JourneySteps}, {label}");
     }
 
@@ -272,12 +334,6 @@ public partial class ModelSetupWindow : Window
     }
 
     private static Visibility Shown(bool visible) => visible ? Visibility.Visible : Visibility.Collapsed;
-
-    // Work under way pulses, so a wait of several seconds still shows that something is happening.
-    private static void Pulse(UIElement step, bool underWay)
-        => step.BeginAnimation(OpacityProperty, underWay
-            ? new DoubleAnimation(1, 0.75, TimeSpan.FromSeconds(0.8)) { AutoReverse = true, RepeatBehavior = RepeatBehavior.Forever }
-            : null);
 
     public void CloseAfterSuccess() { completed = true; Close(); }
 
@@ -328,6 +384,7 @@ public partial class ModelSetupWindow : Window
     }
 
     private void GetCompleteZip(object sender, RoutedEventArgs e) => ProjectLinks.GetCompleteZip();
+    private void GetVisualCppRedistributable(object sender, RoutedEventArgs e) => SystemLinks.GetVisualCppRedistributable();
     private void Quit(object sender, RoutedEventArgs e) => CancelRequested?.Invoke();
     private void CloseWindow(object sender, RoutedEventArgs e) => Close();
     private void DragWindow(object sender, System.Windows.Input.MouseButtonEventArgs e) { if (e.LeftButton == System.Windows.Input.MouseButtonState.Pressed) DragMove(); }
@@ -342,6 +399,14 @@ internal enum SetupView
     Failed,
     EngineMissing,
     EngineCouldNotStart
+}
+
+internal enum SetupFailure
+{
+    Unfinished,
+    ConnectionDropped,
+    CheckFailed,
+    DiskFull
 }
 
 internal enum SetupRailState
