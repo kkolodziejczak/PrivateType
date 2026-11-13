@@ -31,8 +31,9 @@ Get-ChildItem -Path $temp -Directory -Filter 'privatetype-*' |
 $build = Join-Path $temp ("privatetype-capture-" + [Guid]::NewGuid().ToString('N'))
 $env:PRIVATETYPE_ENGINE_ROOT = Join-Path $build 'no-engine'
 try {
-    # Taken by renaming, so two captures of one commit never draw from the same folder.
-    if ($Output -and $kept -and (Test-Path $kept)) { Move-Item $kept $build -ErrorAction SilentlyContinue }
+    # Taken by renaming, so two captures of one commit never draw from the same folder. Directory.Move fails where
+    # Move-Item would put one folder inside another that is already there.
+    if ($Output -and $kept) { try { [IO.Directory]::Move($kept, $build) } catch { } }
     if (-not (Test-Path $build)) {
         # A full build into a private folder: no stale XAML, and overlapping builds never share an output.
         dotnet build $project -c Debug --no-incremental -nologo -v quiet -clp:ErrorsOnly --artifacts-path $build -nodeReuse:false -p:UseSharedCompilation=false
@@ -40,7 +41,7 @@ try {
     }
     if (-not $Output) {
         # Kept only if the checkout is still the commit the build began from, and no build of that commit is kept already.
-        if ($kept -and (Get-CommittedTree) -eq $tree -and -not (Test-Path $kept)) { Move-Item $build $kept -ErrorAction SilentlyContinue }
+        if ($kept -and (Get-CommittedTree) -eq $tree) { try { [IO.Directory]::Move($build, $kept) } catch { } }
         return
     }
 
