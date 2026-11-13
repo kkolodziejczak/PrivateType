@@ -11,8 +11,8 @@ using PrivateType.Core;
 
 namespace PrivateType.App;
 
-// Setup is a short journey: choose a model, review and download it, then wait while it is checked.
-// One fixed frame shows one step at a time; the rail says where the person is and what is left.
+// Setup is a short journey: choose how the words should appear, review and download the model behind that answer,
+// then wait while it is checked. From step 2 on, the chosen experience heads the window while the region below changes.
 public partial class ModelSetupWindow : Window
 {
     // Each stopped state: a title for what happened, one line of why, and one line of what to do.
@@ -39,7 +39,9 @@ public partial class ModelSetupWindow : Window
     internal const string CheckingFilesName = "Checking the files";
     internal const string SharedStorageNotice = "The model files stay on this computer and are shared by PrivateType versions on this Windows account.";
     internal const string PortableStorageNotice = "The model files stay in this copy's app\\models folder and aren't shared with other PrivateType versions.";
-    private const int JourneySteps = 3;
+    internal const string ChooseHeading = "How should your words appear?";
+    internal const string LocalProcessingNote = "Your voice is processed on this computer.";
+    internal const string QuitStopsDownloadNote = "Quitting stops the download.";
     private SpeechModelDefinition chosenModel;
     private SetupView? shownView;
     private SetupFailure failure;
@@ -85,12 +87,20 @@ public partial class ModelSetupWindow : Window
         ShowChosenModel();
     }
 
-    // Everything that names the chosen model: the buttons, the review, and the terms.
+    // Everything that names the chosen experience and its model: the buttons, the header, the review, and the terms.
     private void ShowChosenModel()
     {
         var model = ChosenModel;
         var name = ModelLibraryEditor.ShortName(model);
-        ContinueButton.Content = $"Continue with {name}";
+        var facts = SpeechModelFacts.For(model);
+        // Step 1's button names the behaviour; the model is named from step 2 on.
+        ContinueButton.Content = $"Continue with {facts.Behaviour}";
+        ChosenPhraseText.Text = SpeechModelFacts.SamplePhrase;
+        ChosenAnswerText.Text = facts.Appears;
+        ChosenModelText.Text = $"{name} · {SetupModelChoice.SizeOf(model)}";
+        LanguagesText.Text = facts.Languages;
+        LanguageChoiceText.Text = facts.LanguageChoice;
+        PhrasesText.Text = facts.Phrases;
         DownloadButton.Content = $"Download {name}";
         SizeText.Text = SetupModelChoice.SizeOf(model);
         LicenseNameText.Text = model.LicenseName;
@@ -202,7 +212,7 @@ public partial class ModelSetupWindow : Window
             _ => UnfinishedDownloadCause
         };
         FailureDetailText.Text = message;
-        // Showing a different failure redraws the rail, so its mark lands on the step that failed.
+        // A different failure is a new heading, announced again.
         shownView = null;
         ShowView(SetupView.Failed);
     }
@@ -214,7 +224,7 @@ public partial class ModelSetupWindow : Window
         _ => FailureHeading
     };
 
-    // The one place that decides what each view shows: the rail, the pane, and the footer.
+    // The one place that decides what each view shows: the header, the pane, and the footer.
     private void ShowView(SetupView view)
     {
         var changed = shownView != view;
@@ -222,11 +232,14 @@ public partial class ModelSetupWindow : Window
         HeadingText.Text = Heading(view);
         ShowOnly(view switch
         {
-            SetupView.Choose => ChoosePane,
+            SetupView.Choose => ModelChoices,
             SetupView.Review => ReviewPane,
             SetupView.Downloading or SetupView.Checking => ProgressPane,
             _ => StoppedPane
-        }, ChoosePane, ReviewPane, ProgressPane, StoppedPane);
+        }, ModelChoices, ReviewPane, ProgressPane, StoppedPane);
+        // The chosen experience heads every state after step 1. A missing or stopped engine comes before any choice.
+        ChosenHeader.Visibility = Shown(view is SetupView.Review or SetupView.Downloading or SetupView.Checking or SetupView.Failed);
+        ChangeLink.Visibility = Shown(view == SetupView.Review);
         ProgressAmountText.Visibility = Shown(view == SetupView.Downloading);
         ProgressBar.Visibility = Shown(view == SetupView.Downloading);
         ProgressNextText.Visibility = Shown(view == SetupView.Downloading);
@@ -241,9 +254,12 @@ public partial class ModelSetupWindow : Window
             _ => (string.Empty, string.Empty)
         };
 
-        // A download can't be left for step 1, so Back is only on the review.
-        BackButton.Visibility = Shown(view == SetupView.Review);
-        FooterNoteText.Visibility = Shown(view == SetupView.Downloading);
+        FooterNoteText.Text = view switch
+        {
+            SetupView.Choose or SetupView.Review => LocalProcessingNote,
+            SetupView.Downloading => QuitStopsDownloadNote,
+            _ => string.Empty
+        };
         ContinueButton.Visibility = Shown(view == SetupView.Choose);
         DownloadButton.Visibility = Shown(view == SetupView.Review);
         DownloadAgainButton.Visibility = Shown(view == SetupView.Failed);
@@ -260,7 +276,7 @@ public partial class ModelSetupWindow : Window
         ShowDownloadReadiness();
         if (!changed)
             return;
-        ShowRail(view);
+        UIElementAutomationPeer.CreatePeerForElement(HeadingText)?.RaiseAutomationEvent(AutomationEvents.LiveRegionChanged);
         // Work under way breathes: the bar while it fills, the words while the files are checked. Nothing moves with animations off.
         if (view == SetupView.Downloading)
             CalmMotion.Breathe(ProgressBar, full: 1, low: 0.75);
@@ -272,19 +288,12 @@ public partial class ModelSetupWindow : Window
             CalmMotion.Still(CheckingText, 1);
     }
 
-    private static string StepName(int number) => number switch
-    {
-        1 => "Choose",
-        2 => "Review and download",
-        _ => "Check"
-    };
-
     private string Heading(SetupView view)
     {
         var name = ModelLibraryEditor.ShortName(ChosenModel);
         return view switch
         {
-            SetupView.Choose => "Choose a speech model",
+            SetupView.Choose => ChooseHeading,
             SetupView.Review => $"Download {name}",
             SetupView.Downloading => $"Downloading {name}",
             SetupView.Checking => "Checking the download",
@@ -292,39 +301,6 @@ public partial class ModelSetupWindow : Window
             SetupView.EngineMissing => MissingEngineHeading,
             _ => EngineCouldNotStartHeading
         };
-    }
-
-    // The journey's three steps, or, while the engine is missing or stopped, the one thing needed before setup can start.
-    private void ShowRail(SetupView view)
-    {
-        var beforeSetup = view is SetupView.EngineMissing or SetupView.EngineCouldNotStart;
-        BeforeSetupLabel.Visibility = Shown(beforeSetup);
-        // The rail names the engine's state in the heading's words.
-        var engineState = Heading(view);
-        SetupRailStep[] steps = beforeSetup
-            ? [new(0, engineState, SetupRailState.Needed, IsLast: true, $"Before setup: {engineState}")]
-            : [.. Enumerable.Range(1, JourneySteps).Select(number => JourneyStep(number, view, FailedHeading, failure))];
-        RailSteps.ItemsSource = steps;
-        var current = steps.First(step => step.State != SetupRailState.Done);
-        RailSteps.SetValue(AutomationProperties.NameProperty, current.SpokenName);
-        UIElementAutomationPeer.CreatePeerForElement(RailSteps)?.RaiseAutomationEvent(AutomationEvents.LiveRegionChanged);
-    }
-
-    private static SetupRailStep JourneyStep(int number, SetupView view, string failedHeading, SetupFailure failure)
-    {
-        var currentNumber = view switch
-        {
-            SetupView.Choose => 1,
-            SetupView.Checking => 3,
-            SetupView.Failed when failure == SetupFailure.CheckFailed => 3,
-            _ => 2
-        };
-        var state = number < currentNumber ? SetupRailState.Done
-            : number > currentNumber ? SetupRailState.ToCome
-            : view == SetupView.Failed ? SetupRailState.Stopped
-            : SetupRailState.Current;
-        var label = state == SetupRailState.Stopped ? failedHeading : StepName(number);
-        return new(number, label, state, IsLast: number == JourneySteps, $"Step {number} of {JourneySteps}, {label}");
     }
 
     private static void ShowOnly(UIElement shown, params UIElement[] all)
@@ -343,13 +319,14 @@ public partial class ModelSetupWindow : Window
         KeepKeyboardFocus(TermsCheckBox);
     }
 
-    private void Back(object sender, RoutedEventArgs e)
+    // The header's Change link: back to step 1, with the chosen card focused.
+    private void ChangeChoice(object sender, RoutedEventArgs e)
     {
         ShowView(SetupView.Choose);
         KeepKeyboardFocus(ChosenRow());
     }
 
-    // The chosen model's row: a template's only child is the radio button.
+    // The chosen card: a template's only child is the radio button.
     private UIElement ChosenRow()
     {
         var chosen = ModelChoices.Items.Cast<SetupModelChoice>().First(choice => choice.IsChosen);
@@ -409,18 +386,6 @@ internal enum SetupFailure
     DiskFull
 }
 
-internal enum SetupRailState
-{
-    ToCome,
-    Current,
-    Done,
-    Stopped,
-    Needed
-}
-
-// One mark on the rail. It shows position only; the rail can't be clicked.
-internal sealed record SetupRailStep(int Number, string Label, SetupRailState State, bool IsLast, string SpokenName);
-
 internal sealed class SetupModelChoice(SpeechModelDefinition model, bool isChosen, Action<SpeechModelDefinition> chosen) : INotifyPropertyChanged
 {
     private bool isChosen = isChosen;
@@ -433,6 +398,13 @@ internal sealed class SetupModelChoice(SpeechModelDefinition model, bool isChose
     public SpeechModelFacts Facts { get; } = SpeechModelFacts.For(model);
     public bool IsRecommended => Model.Id == SpeechModelCatalog.DefaultId;
     public string Size => SizeOf(Model);
+    // The demonstration: what shows while the shortcut is still held, then the whole phrase once it is let go.
+    public bool HasHeldText => Facts.HeldText.Length > 0;
+    public bool WaitsForRelease => !HasHeldText;
+    public string Phrase => SpeechModelFacts.SamplePhrase;
+    // The model as the card's caption, "Parakeet · 681 MiB"; the answer is the card's name.
+    public string Caption => $"{ShortName} · {Size}";
+    public string SpokenName => IsRecommended ? $"{Facts.Appears}, recommended, {Caption}" : $"{Facts.Appears}, {Caption}";
 
     // The download size as a table value: "681 MiB".
     internal static string SizeOf(SpeechModelDefinition model) => $"{model.Manifest.ExpectedBytes / 1024d / 1024d:F0} MiB";
