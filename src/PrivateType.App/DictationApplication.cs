@@ -930,7 +930,7 @@ internal sealed class DictationApplication : IDisposable
     internal const string ModelLoadFailedTitle = "Model didn't load";
     // The session's own reason stays in Diagnostics; the bubble gives the one fix and the key to Windows' microphone page.
     internal const string DictationStoppedText = SystemLinks.MicrophoneFix;
-    internal const string ModelLoadFailedText = "Try again. If it keeps failing, Diagnostics shows what went wrong.";
+    internal const string ModelLoadFailedText = "Try again. If it keeps failing, Diagnostics shows why.";
 
     private ITextInjector CreateInjector() => settings.InsertionMode == TextInsertionModes.Paste
         ? new ClipboardPasteInjector(settings.IncludeInClipboardHistory)

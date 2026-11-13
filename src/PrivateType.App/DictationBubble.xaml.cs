@@ -297,8 +297,9 @@ public partial class DictationBubble : Window
         LeaveState(active: false);
         noticeShown = true;
         heldText = text;
+        // The line holds one detail: why, or, when nothing else keeps the words, that they aren't saved.
         var detail = NotInsertedCause(cause);
-        ShowCard(CardMark.Warning, NotInsertedTitle, savedToHistory ? detail : $"{detail}  ·  {NotSavedDetail}");
+        ShowCard(CardMark.Warning, NotInsertedTitle, savedToHistory ? detail : NotSavedDetail);
         AnnounceState(NotInsertedTitle);
         SetWidthAroundCenter(ActiveWidth);
         HeldWords.Text = text;
@@ -426,7 +427,9 @@ public partial class DictationBubble : Window
 
     // Hovering the resting key lists the shortcuts as keys, one line per language: under the key, or over it where
     // there is no room below. The key itself stays where it is.
-    private void EnterRestingKey(object sender, System.Windows.Input.MouseEventArgs e)
+    private void EnterRestingKey(object sender, System.Windows.Input.MouseEventArgs e) => ShowBindingsCard();
+
+    internal void ShowBindingsCard()
     {
         if (active || noticeShown || dragActive || Card.Visibility == Visibility.Visible || BindingsCard.Visibility == Visibility.Visible)
             return;

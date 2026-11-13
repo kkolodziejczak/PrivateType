@@ -87,7 +87,7 @@
                        FontSize="15" LineHeight="22" LineStackingStrategy="BlockLineHeight" TextWrapping="Wrap" />
           </ScrollViewer>
           <!-- The words of a dictation that wasn't inserted: three lines at most, cut with an ellipsis. Copy takes all of them. -->
-          <TextBlock x:Name="HeldWords" Margin="0,6,0,0" MaxHeight="66" Opacity="0.7" FontFamily="{DynamicResource AppFont}" Foreground="{DynamicResource ColorText}"
+          <TextBlock x:Name="HeldWords" Margin="0,6,0,0" MaxHeight="68" Opacity="0.7" FontFamily="{DynamicResource AppFont}" Foreground="{DynamicResource ColorText}"
                      FontSize="15" LineHeight="22" LineStackingStrategy="BlockLineHeight" TextWrapping="Wrap" TextTrimming="WordEllipsis" Visibility="Collapsed" />
           <StackPanel x:Name="ActionRow" Margin="0,6,0,0" Orientation="Horizontal" Visibility="Collapsed">
             <Button x:Name="HistoryAction" Style="{StaticResource MessageKey}" Content="Recent dictations" Click="OpenHistory" Margin="0,0,6,0" />

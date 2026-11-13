@@ -222,11 +222,11 @@ internal static class CaptureProbe
         polish.ShowAudioMeter(new AudioMeter(0.72, Enumerable.Range(0, 44).Select(index => index is > 15 and < 28 ? 0.95 : 0.24).ToArray()));
         polish.ShowTranscript("Wyślę link do pobrania zespołowi jeszcze dziś.");
         Draw(polish, output, "bubble", "bubble-recording-polish");
-        Draw(Ready(loaded: true), output, "bubble", "bubble-ready-hover", window => Hover(window, (FrameworkElement)window.FindName("IconTile")));
+        Draw(Ready(loaded: true), output, "bubble", "bubble-ready-hover", HoverRestingKey);
         // Four shortcuts: the hover lists every one, one line per language.
         var fourShortcuts = new DictationBubble();
         fourShortcuts.ShowReady(PortableSettings.Default with { Shortcuts = [.. ShortcutBinding.Defaults, new("de-DE", 0x47), new("fr-FR", 0x46)] }, modelLoaded: true);
-        Draw(fourShortcuts, output, "bubble", "bubble-ready-hover-bindings", window => Hover(window, (FrameworkElement)window.FindName("IconTile")));
+        Draw(fourShortcuts, output, "bubble", "bubble-ready-hover-bindings", HoverRestingKey);
         // Listening and transcribing over a page of text in another program: what the card covers.
         var onEditor = Ready(loaded: true);
         onEditor.ShowRecording("en-US");
@@ -245,6 +245,14 @@ internal static class CaptureProbe
             menu.StaysOpen = true;
             menu.IsOpen = true;
         });
+    }
+
+    // The pointer on the resting key: its shortcut card opens as entering the key opens it, then the pointer is put there.
+    private static void HoverRestingKey(Window window)
+    {
+        ((DictationBubble)window).ShowBindingsCard();
+        Flush(window);
+        Hover(window, (FrameworkElement)window.FindName("IconTile"));
     }
 
     private static ContextMenu? BubbleMenu(Window window) =>
