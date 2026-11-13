@@ -22,6 +22,7 @@ internal sealed class DictationApplication : IDisposable
     private readonly Forms.ToolStripMenuItem statusItem;
     private readonly Forms.ToolStripMenuItem settingsItem;
     private readonly Forms.ToolStripMenuItem vocabularyItem;
+    private readonly Forms.ToolStripMenuItem copyHeldItem;
     private readonly DictationSessionCoordinator sessions;
     private readonly LatestPresentationQueue pendingPresentations = new();
     private readonly LatestAudioMeterQueue pendingAudioMeters = new();
@@ -72,6 +73,9 @@ internal sealed class DictationApplication : IDisposable
         settingsItem.Enabled = false;
         vocabularyItem = (Forms.ToolStripMenuItem)trayIcon.ContextMenuStrip.Items.Add("Vocabulary…", null, (_, _) => ShowSettings(openVocabulary: true));
         vocabularyItem.Enabled = false;
+        // The keyboard's way to the bubble's Copy, since the bubble never takes focus. It is there only while a notice holds the text.
+        copyHeldItem = (Forms.ToolStripMenuItem)trayIcon.ContextMenuStrip.Items.Add(CopyHeldTrayText, null, (_, _) => CopyHeldText());
+        copyHeldItem.Visible = false;
         trayIcon.ContextMenuStrip.Items.Add("Quit", null, (_, _) => Quit());
         historyPruneTimer = new DispatcherTimer { Interval = TimeSpan.FromMinutes(1) };
         historyPruneTimer.Tick += (_, _) => history.Prune();
@@ -90,6 +94,10 @@ internal sealed class DictationApplication : IDisposable
         bubble.HistoryRequested += () => ShowHistory("menu");
         lastDictation.Changed += () => bubble.SetTeachAvailable(lastDictation.HasValue);
         bubble.QuitRequested += Quit;
+        bubble.DiagnosticsRequested += () => ShowDiagnostics(owner: null);
+        bubble.MicrophoneSettingsRequested += OpenMicrophoneSettings;
+        bubble.CopyRequested += _ => CopyHeldText();
+        bubble.HeldTextChanged += () => copyHeldItem.Visible = bubble.HeldText is not null;
         bubble.RecordingIndicatorChanged += visible => trayIcon.Icon = visible ? trayIcons.Listening : trayIcons.Ready;
         SystemEvents.DisplaySettingsChanged += OnDisplaySettingsChanged;
         SystemEvents.PowerModeChanged += OnPowerModeChanged;
@@ -699,11 +707,47 @@ internal sealed class DictationApplication : IDisposable
         }
     }
 
-    private void ShowDiagnostics(Wpf.Window owner)
+    // From Settings it opens over Settings; from the bubble it opens on its own.
+    private void ShowDiagnostics(Wpf.Window? owner)
     {
         var window = new DiagnosticsWindow(diagnostics) { Owner = owner };
+        if (owner is null)
+            window.Loaded += (_, _) => BringToForeground(window);
         window.ShowDialog();
     }
+
+    private void OpenMicrophoneSettings()
+    {
+        try
+        {
+            SystemLinks.OpenMicrophoneSettings();
+        }
+        catch (Exception exception)
+        {
+            RecordDiagnostic("microphone.settings.failed", exception);
+        }
+    }
+
+    // Copies the whole not-inserted dictation the bubble holds, never its cut preview, and says what happened there.
+    private void CopyHeldText()
+    {
+        if (bubble.HeldText is not { } text)
+            return;
+
+        try
+        {
+            ClipboardPasteInjector.Copy(text, settings.IncludeInClipboardHistory);
+            RecordDiagnostic("held.copied");
+            bubble.ShowCopyResult(copied: true);
+        }
+        catch (Exception exception)
+        {
+            RecordDiagnostic("held.copy.failed", exception);
+            bubble.ShowCopyResult(copied: false);
+        }
+    }
+
+    internal const string CopyHeldTrayText = "Copy the dictation that wasn't inserted";
 
     private static string ExecutablePath() =>
         Environment.ProcessPath ?? Process.GetCurrentProcess().MainModule?.FileName ?? throw new InvalidOperationException("The current executable path is unavailable.");
@@ -876,7 +920,7 @@ internal sealed class DictationApplication : IDisposable
 
     // What the bubble says after a recent dictation was handed back: its title names what happened.
     internal const string CopiedTitle = "Copied";
-    internal const string CopiedText = "Copied. Press Ctrl+V to paste it.";
+    internal const string CopiedText = "Press Ctrl+V to paste it.";
     internal const string PasteFailedTitle = "Couldn't paste";
     internal const string PasteFailedText = "The dictation could not be pasted or copied.";
 
@@ -884,9 +928,9 @@ internal sealed class DictationApplication : IDisposable
     // Every session failure is reported as the microphone's, with the step that fixes the microphone.
     internal const string DictationStoppedTitle = "Microphone unavailable";
     internal const string ModelLoadFailedTitle = "Model didn't load";
-    internal static string DictationStoppedText(string reason) =>
-        $"{reason} Check that a microphone is connected and allowed in Windows privacy settings, then try again.";
-    internal const string ModelLoadFailedText = "The local model could not load. Try again; if it keeps failing, open Diagnostics in Settings.";
+    // The session's own reason stays in Diagnostics; the bubble gives the one fix and the key to Windows' microphone page.
+    internal const string DictationStoppedText = SystemLinks.MicrophoneFix;
+    internal const string ModelLoadFailedText = "Try again. If it keeps failing, Diagnostics shows what went wrong.";
 
     private ITextInjector CreateInjector() => settings.InsertionMode == TextInsertionModes.Paste
         ? new ClipboardPasteInjector(settings.IncludeInClipboardHistory)
@@ -992,7 +1036,7 @@ internal sealed class DictationApplication : IDisposable
             return;
 
         var version = ++presentationVersion;
-        bubble.ShowCancellation(message, title);
+        bubble.ShowNotice(succeeded: title == CopiedTitle, title, message);
         cancellationVisibleUntil = DateTimeOffset.UtcNow + CancellationHoldTime;
         _ = ReturnToReadyWhenCurrentAsync(version, CancellationHoldTime);
     }
@@ -1039,7 +1083,7 @@ internal sealed class DictationApplication : IDisposable
             RecordDiagnostic("model.load.failed", exception);
             statusItem.Text = "Model could not load";
             trayIcon.ShowBalloonTip(5000, "PrivateType", $"The local model could not load: {exception.Message}", Forms.ToolTipIcon.Error);
-            bubble.ShowError(ModelLoadFailedTitle, ModelLoadFailedText);
+            bubble.ShowError(ModelLoadFailedTitle, ModelLoadFailedText, BubbleAction.Diagnostics);
         }
     }
 
@@ -1184,13 +1228,16 @@ internal sealed class DictationApplication : IDisposable
                 break;
             case BubblePresentationKind.Cancellation:
                 trayIcon.Icon = trayIcons.Ready;
-                bubble.ShowCancellation(bubblePresentation.Text);
+                if (bubblePresentation.NotInserted is { } cause)
+                    bubble.ShowNotInserted(cause, bubblePresentation.HeldText, savedToHistory: history.IsEnabled);
+                else
+                    bubble.ShowNotice(succeeded: false, DictationBubble.NotInsertedTitle, bubblePresentation.Text);
                 cancellationVisibleUntil = DateTimeOffset.UtcNow + CancellationHoldTime;
                 break;
             case BubblePresentationKind.Error:
                 trayIcon.Icon = trayIcons.Ready;
                 // A failure stays as long as "Not inserted" does: three lines can't be read in two seconds.
-                bubble.ShowError(DictationStoppedTitle, DictationStoppedText(bubblePresentation.Text));
+                bubble.ShowError(DictationStoppedTitle, DictationStoppedText, BubbleAction.MicrophoneSettings);
                 cancellationVisibleUntil = DateTimeOffset.UtcNow + CancellationHoldTime;
                 _ = ReturnToReadyWhenCurrentAsync(version, CancellationHoldTime);
                 break;
@@ -1205,12 +1252,26 @@ internal sealed class DictationApplication : IDisposable
     private static readonly TimeSpan HideDelay = TimeSpan.FromMilliseconds(700);
     private static readonly TimeSpan CancellationHoldTime = TimeSpan.FromSeconds(5);
 
+    // A notice stays up while the pointer rests on it, and closes a full hold after the pointer leaves.
     private async Task ReturnToReadyWhenCurrentAsync(int version, TimeSpan delay)
     {
-        await Task.Delay(delay);
-        if (version == presentationVersion)
-            ShowReadyPanel();
+        var closeAt = DateTimeOffset.UtcNow + delay;
+        while (true)
+        {
+            var remaining = closeAt - DateTimeOffset.UtcNow;
+            await Task.Delay(remaining < NoticeHoverPoll && remaining > TimeSpan.Zero ? remaining : NoticeHoverPoll);
+            if (version != presentationVersion)
+                return;
+            if (bubble.IsNoticeUnderPointer())
+                closeAt = DateTimeOffset.UtcNow + CancellationHoldTime;
+            else if (DateTimeOffset.UtcNow >= closeAt)
+                break;
+        }
+
+        ShowReadyPanel();
     }
+
+    private static readonly TimeSpan NoticeHoverPoll = TimeSpan.FromMilliseconds(250);
 
     private void ShowReadyPanel()
     {

@@ -11,7 +11,8 @@ internal enum BubblePresentationKind
     Hide
 }
 
-internal sealed record BubblePresentation(BubblePresentationKind Kind, string Text, double AudioLevel);
+// A not-inserted dictation also carries its cause and its whole text.
+internal sealed record BubblePresentation(BubblePresentationKind Kind, string Text, double AudioLevel, TargetEligibility? NotInserted = null, string HeldText = "");
 
 internal sealed record BubbleRenderRequest(string LocaleCode, DictationPresentation Presentation);
 
@@ -84,7 +85,7 @@ internal static class BubblePresentationMapper
         return presentation.State switch
         {
             DictationState.Recording => new(BubblePresentationKind.Recording, presentation.ProvisionalText, presentation.AudioLevel),
-            DictationState.Finalizing when presentation.Message is not null => new(BubblePresentationKind.Cancellation, presentation.Message, presentation.AudioLevel),
+            DictationState.Finalizing when presentation.Message is not null => new(BubblePresentationKind.Cancellation, presentation.Message, presentation.AudioLevel, presentation.NotInserted, presentation.ProvisionalText),
             DictationState.Finalizing => new(BubblePresentationKind.Finalizing, string.Empty, presentation.AudioLevel),
             DictationState.Error => new(BubblePresentationKind.Error, presentation.Message ?? "Dictation was interrupted.", presentation.AudioLevel),
             _ => new(BubblePresentationKind.Hide, string.Empty, presentation.AudioLevel)

@@ -11,25 +11,40 @@ using Forms = System.Windows.Forms;
 
 namespace PrivateType.App;
 
+// The one key a failure in the bubble offers beside its message.
+public enum BubbleAction
+{
+    MicrophoneSettings,
+    Diagnostics
+}
+
 public partial class DictationBubble : Window
 {
     internal const bool RecordingWaveformBlinks = false;
     internal const int SpectrumBarCount = 44;
     // The live level is drawn as a few bars, each the loudest of its group of spectrum bins.
     internal const int MeterBarCount = 5;
-    internal const string ModelLoadingTitle = "Loading local model…";
-    internal const string ModelLoadingHint = "This may take a few seconds. Keep holding to dictate.";
-    internal const string FinalizingTitle = "Transcribing…";
-    internal const string FinalizingHint = "Your text will be inserted in a moment.";
-    internal const string ModelLoadingToggleHint = "This may take a few seconds. Listening starts when it's ready.";
+    internal const string ModelLoadingTitle = "Loading the model";
+    internal const string ModelLoadingHint = "Keep holding. Listening starts when it's ready.";
+    internal const string ModelLoadingToggleHint = "Listening starts when it's ready.";
+    internal const string ModelStillLoadingHint = "Still loading. This can take up to a minute the first time.";
+    internal const string ListeningTitle = "Listening";
+    internal const string FinalizingTitle = "Transcribing";
+    internal const string FinalizingHint = "Your text goes in when it's ready.";
     internal const string NotInsertedTitle = "Not inserted";
+    internal const string NotSavedDetail = "not saved to Recent dictations";
+    internal const string CopiedTitle = "Copied";
+    internal const string CopiedDetail = "press Ctrl+V to paste it";
+    internal const string CopyFailedTitle = "Couldn't copy";
+    internal const string CopyFailedDetail = "the clipboard is busy, try again";
+    internal static readonly TimeSpan StillLoadingAfter = TimeSpan.FromSeconds(8);
 
     private const int GwlExStyle = -20;
     private const int WsExNoActivate = 0x08000000;
     private const int WmNchitTest = 0x0084;
     private const int WmExitSizeMove = 0x0232;
     private const double ReadyWidth = 64;
-    private const double ActiveWidth = 330;
+    internal const double ActiveWidth = 360;
     private const double WorkAreaBottomClearance = 8;
     private const double MinimumVisibleExtent = 24;
     private const nint HtClient = 1;
@@ -37,11 +52,17 @@ public partial class DictationBubble : Window
     private readonly AdaptiveAudioMeter adaptiveAudioMeter = new();
     private readonly List<ScaleTransform> meterScales = [];
     private readonly double[] smoothedSpectrum = new double[SpectrumBarCount];
+    private readonly DispatcherTimer stillLoadingTimer = new() { Interval = StillLoadingAfter };
     private bool active;
     private bool recordingIndicatorVisible;
     private bool recordingVisualsActive;
     private bool dragActive;
-    private string? historyShortcutLabel;
+    private bool noticeShown;
+    private IReadOnlyList<ShortcutBinding> bindings = ShortcutBinding.Defaults;
+    // A dictation that wasn't inserted, held in memory only while its notice is up; never written anywhere.
+    private string? heldText;
+    private double bindingsCardShift;
+    private bool restingModelLoaded;
     private PointInt dragGrabOffset;
     private readonly NativeMethods.MouseHookProc mouseHookProc;
     private nint mouseHook;
@@ -54,6 +75,12 @@ public partial class DictationBubble : Window
         Menu.Placement = PlacementMode.Right;
         Menu.HorizontalOffset = 8;
         CreateWaveformBars();
+        stillLoadingTimer.Tick += (_, _) =>
+        {
+            stillLoadingTimer.Stop();
+            Hint.Text = ModelStillLoadingHint;
+        };
+        MicrophoneAction.Content = SystemLinks.MicrophoneSettingsAction;
     }
 
     private System.Windows.Controls.ContextMenu Menu => BubbleShell.ContextMenu;
@@ -87,6 +114,14 @@ public partial class DictationBubble : Window
     public event Action? VocabularyRequested;
     public event Action? TeachRequested;
     public event Action? HistoryRequested;
+    public event Action? DiagnosticsRequested;
+    public event Action? MicrophoneSettingsRequested;
+    // Copy was pressed on a not-inserted notice; the handler copies the text and reports back through ShowCopyResult.
+    public event Action<string>? CopyRequested;
+    // Raised when a not-inserted dictation starts or stops being held, so the tray can offer the same Copy.
+    public event Action? HeldTextChanged;
+
+    internal string? HeldText => heldText;
 
     // The menu shows only whether a result exists, never its text.
     public void SetTeachAvailable(bool available) => TeachMenuItem.IsEnabled = available;
@@ -107,19 +142,14 @@ public partial class DictationBubble : Window
             ApplyPosition(settings);
         }
 
-        active = false;
-        recordingVisualsActive = false;
-        StopRecordingIndicator();
+        LeaveState(active: false);
         BubbleShell.Opacity = OpacityForReadyState(modelLoaded);
         ApplyReadyVisuals(modelLoaded);
         AnnounceState(modelLoaded ? "Ready" : "Model not loaded");
         SetWidthAroundCenter(ReadyWidth);
-        historyShortcutLabel = settings.HistoryShortcut.Label;
-        Hint.Text = DescribeBindings(settings.Shortcuts);
-        Hint.Visibility = Visibility.Collapsed;
-        WaveformBars.Visibility = Visibility.Collapsed;
-        TranscriptViewport.Visibility = Visibility.Collapsed;
-        UpdateScrim();
+        bindings = settings.Shortcuts;
+        RestLayer.Visibility = Visibility.Visible;
+        Card.Visibility = Visibility.Collapsed;
     }
 
     // Shows the bubble where the text will go: the monitor of the window being dictated into.
@@ -171,41 +201,29 @@ public partial class DictationBubble : Window
         if (recordingVisualsActive)
             return;
 
-        CloseMenu();
         var selectedWorkArea = CurrentWorkArea();
-        active = true;
+        LeaveState(active: true);
         recordingVisualsActive = true;
-        BubbleShell.Opacity = 1;
-        ApplyRecordingVisuals(localeCode);
-        AnnounceState("Listening");
+        ShowCard(CardMark.Listening, ListeningTitle, LanguageName(localeCode));
+        AnnounceState(ListeningTitle);
         ResetAudioVisuals();
         SetWidthAroundCenter(ActiveWidth, selectedWorkArea);
         StartRecordingIndicator();
-        Hint.Visibility = Visibility.Collapsed;
         WaveformBars.Visibility = Visibility.Visible;
-        SetTranscriptLines(fontSize: 15, lineHeight: 22, lines: 2, opacity: 1);
+        Transcript.Opacity = 1;
         SetTranscript(string.Empty);
         TranscriptViewport.Visibility = Visibility.Visible;
-        UpdateScrim();
         ClampToWorkAreaAfterLayout(selectedWorkArea);
     }
 
     public void ShowModelLoading(bool toggleMode = false)
     {
-        CloseMenu();
-        active = true;
-        recordingVisualsActive = false;
-        StopRecordingIndicator();
-        BubbleShell.Opacity = 1;
-        ApplyExpandedVisuals(ModelLoadingTitle);
+        LeaveState(active: true);
+        ShowCard(CardMark.Working, ModelLoadingTitle, detail: null);
         AnnounceState(ModelLoadingTitle);
-        BreatheWhileWorking();
         SetWidthAroundCenter(ActiveWidth);
-        Hint.Text = toggleMode ? ModelLoadingToggleHint : ModelLoadingHint;
-        Hint.Visibility = Visibility.Visible;
-        WaveformBars.Visibility = Visibility.Collapsed;
-        TranscriptViewport.Visibility = Visibility.Collapsed;
-        UpdateScrim();
+        ShowHint(toggleMode ? ModelLoadingToggleHint : ModelLoadingHint);
+        stillLoadingTimer.Start();
         ClampToWorkAreaAfterLayout();
     }
 
@@ -241,11 +259,6 @@ public partial class DictationBubble : Window
         }
 
         WaveformBars.Opacity = 0.7 + (level * 0.3);
-        RecordingPulseRing.Opacity = level < 0.025 ? 0 : 0.12 + (level * 0.5);
-        // At full level the ring grows 2 px on each side, staying 3 px inside the pill's 5 px padding.
-        var scale = 1 + (level * 4.0 / 44);
-        RecordingPulseScale.ScaleX = scale;
-        RecordingPulseScale.ScaleY = scale;
     }
 
     // Maps the raw level to a bar ceiling: about -32 dB keeps a quarter of the height, -6 dB and louder the full height.
@@ -255,113 +268,242 @@ public partial class DictationBubble : Window
         return Math.Clamp(0.25 + (0.75 * (decibels + 32) / 26), 0.25, 1);
     }
 
-    // After release the microphone is off but text has not arrived yet; say so, keeping any preview.
-    // It can arrive without a rendered recording state, so set up the expanded bubble itself.
+    // After release the microphone is off but text has not arrived yet; say so, keeping any preview, dimmed.
+    // It can arrive without a rendered recording state, so set up the card itself.
     public void ShowFinalizing()
     {
-        CloseMenu();
-        active = true;
-        recordingVisualsActive = false;
-        StopRecordingIndicator();
-        BubbleShell.Opacity = 1;
-        ApplyExpandedVisuals(FinalizingTitle);
+        var hasWords = !string.IsNullOrEmpty(Transcript.Text) && TranscriptViewport.Visibility == Visibility.Visible;
+        LeaveState(active: true);
+        ShowCard(CardMark.Working, FinalizingTitle, detail: null);
         AnnounceState(FinalizingTitle);
-        BreatheWhileWorking();
         SetWidthAroundCenter(ActiveWidth);
-        WaveformBars.Visibility = Visibility.Collapsed;
-        TranscriptViewport.Visibility = string.IsNullOrEmpty(Transcript.Text) ? Visibility.Collapsed : Visibility.Visible;
-        Hint.Text = FinalizingHint;
-        Hint.Visibility = string.IsNullOrEmpty(Transcript.Text) ? Visibility.Visible : Visibility.Collapsed;
-        Transcript.Opacity = 0.7;
-        UpdateScrim();
-        ClampToWorkAreaAfterLayout();
-    }
-
-    // A dictation that wasn't inserted, or another short notice about the text; the title says what happened.
-    public void ShowCancellation(string message, string title = NotInsertedTitle)
-    {
-        CloseMenu();
-        active = false;
-        recordingVisualsActive = false;
-        StopRecordingIndicator();
-        BubbleShell.Opacity = 1;
-        ApplyCancelledVisuals(title);
-        AnnounceState(title);
-        SetWidthAroundCenter(ActiveWidth);
-        Hint.Visibility = Visibility.Collapsed;
-        WaveformBars.Visibility = Visibility.Collapsed;
-        SetTranscriptLines(fontSize: 13, lineHeight: 19, lines: 3, opacity: 0.85);
-        SetTranscript(message);
-        DrawShortcutAsKeys(historyShortcutLabel);
-        TranscriptViewport.Visibility = Visibility.Visible;
-        UpdateScrim();
-        AnnounceMessage();
-        ClampToWorkAreaAfterLayout();
-    }
-
-    // A shortcut named in the message is drawn as the keys to press, like the empty recent-dictations list; the text stays its accessible name.
-    private void DrawShortcutAsKeys(string? label)
-    {
-        var message = Transcript.Text;
-        var at = string.IsNullOrEmpty(label) ? -1 : message.IndexOf(label, StringComparison.Ordinal);
-        if (at < 0)
-            return;
-
-        // The first key starts where the words start, so keys at the start of a line stand under the line above;
-        // the spaces of the sentence keep them apart from the words on either side.
-        var keys = new StackPanel { Orientation = System.Windows.Controls.Orientation.Horizontal };
-        foreach (var key in KeycapLegendsConverter.Split(label))
+        if (hasWords)
         {
-            keys.Children.Add(new Border
-            {
-                MinWidth = 22,
-                Height = 18,
-                Margin = new Thickness(keys.Children.Count == 0 ? 0 : 2, 3, 0, 0),
-                Padding = new Thickness(4, 0, 4, 0),
-                CornerRadius = new CornerRadius(4),
-                Background = Brush("ColorKeycap"),
-                BorderBrush = Brush("ColorKeycapEdge"),
-                BorderThickness = new Thickness(0, 0, 0, 2),
-                Child = new TextBlock
-                {
-                    Text = key.Legend,
-                    HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
-                    VerticalAlignment = System.Windows.VerticalAlignment.Center,
-                    FontFamily = (System.Windows.Media.FontFamily)System.Windows.Application.Current.Resources["MonoFont"],
-                    FontSize = 11,
-                    LineHeight = double.NaN,
-                    Foreground = Brush("ColorText")
-                }
-            });
+            Transcript.Opacity = 0.7;
+            TranscriptViewport.Visibility = Visibility.Visible;
+        }
+        else
+        {
+            ShowHint(FinalizingHint);
         }
 
-        System.Windows.Automation.AutomationProperties.SetName(Transcript, message);
-        Transcript.Inlines.Clear();
-        Transcript.Inlines.Add(new System.Windows.Documents.Run(message[..at]));
-        Transcript.Inlines.Add(new System.Windows.Documents.InlineUIContainer(keys) { BaselineAlignment = BaselineAlignment.Center });
-        Transcript.Inlines.Add(new System.Windows.Documents.Run(message[(at + label!.Length)..]));
-    }
-
-    // The title names what failed; the message says what to do next.
-    public void ShowError(string title, string message)
-    {
-        CloseMenu();
-        active = true;
-        recordingVisualsActive = false;
-        StopRecordingIndicator();
-        BubbleShell.Opacity = 1;
-        ApplyErrorVisuals(title);
-        AnnounceState(title);
-        SetWidthAroundCenter(ActiveWidth);
-        Hint.Visibility = Visibility.Collapsed;
-        WaveformBars.Visibility = Visibility.Collapsed;
-        SetTranscriptLines(fontSize: 13, lineHeight: 19, lines: 3, opacity: 0.85);
-        SetTranscript(message);
-        TranscriptViewport.Visibility = Visibility.Visible;
-        UpdateScrim();
-        AnnounceMessage();
         ClampToWorkAreaAfterLayout();
     }
+
+    // A dictation that wasn't inserted: the words themselves, with Copy, and Recent dictations when the list kept them.
+    // The text is held only for this notice's life; nothing is copied until Copy is pressed.
+    public void ShowNotInserted(TargetEligibility cause, string text, bool savedToHistory)
+    {
+        LeaveState(active: false);
+        noticeShown = true;
+        heldText = text;
+        var detail = NotInsertedCause(cause);
+        ShowCard(CardMark.Warning, NotInsertedTitle, savedToHistory ? detail : $"{detail}  ·  {NotSavedDetail}");
+        AnnounceState(NotInsertedTitle);
+        SetWidthAroundCenter(ActiveWidth);
+        HeldWords.Text = text;
+        HeldWords.Visibility = Visibility.Visible;
+        ShowActions(savedToHistory ? [HistoryAction, CopyAction] : [CopyAction]);
+        var kept = savedToHistory ? "It is in Recent dictations." : "It wasn't kept, because Recent dictations is off.";
+        AnnounceMessage($"{NotInsertedTitle}: {detail}. {kept}");
+        HeldTextChanged?.Invoke();
+        ClampToWorkAreaAfterLayout();
+    }
+
+    // What Copy did. The words stay either way, so a failed copy can be tried again.
+    public void ShowCopyResult(bool copied)
+    {
+        if (heldText is null)
+            return;
+
+        SetStateLine(copied ? CardMark.Success : CardMark.Failure, copied ? CopiedTitle : CopyFailedTitle, copied ? CopiedDetail : CopyFailedDetail);
+        AnnounceState(copied ? CopiedTitle : CopyFailedTitle);
+        AnnounceMessage(copied ? $"{CopiedTitle}. Press Ctrl+V to paste it." : $"{CopyFailedTitle}: the clipboard is busy. Try again.");
+    }
+
+    // A short notice about a recent dictation handed back: copied instead of pasted, or neither.
+    public void ShowNotice(bool succeeded, string title, string message)
+    {
+        LeaveState(active: false);
+        noticeShown = true;
+        ShowCard(succeeded ? CardMark.Success : CardMark.Failure, title, detail: null);
+        AnnounceState(title);
+        SetWidthAroundCenter(ActiveWidth);
+        ShowHint(message);
+        AnnounceMessage($"{title}. {message}");
+        ClampToWorkAreaAfterLayout();
+    }
+
+    // The title names what failed; one sentence says what to do, and one key takes the first step of it.
+    public void ShowError(string title, string message, BubbleAction action)
+    {
+        LeaveState(active: true);
+        noticeShown = true;
+        ShowCard(CardMark.Failure, title, detail: null);
+        AnnounceState(title);
+        SetWidthAroundCenter(ActiveWidth);
+        ShowHint(message);
+        ShowActions([action == BubbleAction.MicrophoneSettings ? MicrophoneAction : DiagnosticsAction]);
+        AnnounceMessage($"{title}. {message}");
+        ClampToWorkAreaAfterLayout();
+    }
+
+    internal static string NotInsertedCause(TargetEligibility cause) => cause switch
+    {
+        TargetEligibility.Changed => "the window changed",
+        TargetEligibility.Ineligible => "the window doesn't accept typing",
+        _ => "the window closed"
+    };
+
+    // The language as people say it: "English", not "English (United States)" or "EN".
+    internal static string LanguageName(string localeCode)
+    {
+        var name = RecognitionLocaleCatalog.Get(localeCode).DisplayName;
+        var bracket = name.IndexOf(" (", StringComparison.Ordinal);
+        return bracket < 0 ? name : name[..bracket];
+    }
+
+    // Every state starts from the same empty card: no words, no hint, no keys, no motion, no held text.
+    private void LeaveState(bool active)
+    {
+        CloseMenu();
+        HideBindingsCard();
+        this.active = active;
+        recordingVisualsActive = false;
+        noticeShown = false;
+        stillLoadingTimer.Stop();
+        StopRecordingIndicator();
+        BubbleShell.Opacity = 1;
+        Hint.Visibility = Visibility.Collapsed;
+        WaveformBars.Visibility = Visibility.Collapsed;
+        TranscriptViewport.Visibility = Visibility.Collapsed;
+        HeldWords.Visibility = Visibility.Collapsed;
+        HeldWords.Text = string.Empty;
+        ShowActions([]);
+        if (heldText is not null)
+        {
+            heldText = null;
+            HeldTextChanged?.Invoke();
+        }
+    }
+
+    private void ShowCard(CardMark mark, string title, string? detail)
+    {
+        RestLayer.Visibility = Visibility.Collapsed;
+        Card.Visibility = Visibility.Visible;
+        SetStateLine(mark, title, detail);
+    }
+
+    // The slim line over the words: a mark, the state word, then quieter detail.
+    private void SetStateLine(CardMark mark, string title, string? detail)
+    {
+        StateWord.Text = title;
+        StateDetail.Text = string.IsNullOrEmpty(detail) ? string.Empty : $"  ·  {detail}";
+        StateDot.Visibility = mark == CardMark.Listening ? Visibility.Visible : Visibility.Collapsed;
+        StateRing.Visibility = mark == CardMark.Working ? Visibility.Visible : Visibility.Collapsed;
+        WarningGlyph.Visibility = mark is CardMark.Warning or CardMark.Failure ? Visibility.Visible : Visibility.Collapsed;
+        WarningGlyph.Foreground = Brush(mark == CardMark.Failure ? "ColorDanger" : "ColorWarning");
+        SuccessGlyph.Visibility = mark == CardMark.Success ? Visibility.Visible : Visibility.Collapsed;
+        // Work under way breathes; with animations off the ring and the state word say it, still.
+        if (mark == CardMark.Working)
+            CalmMotion.Breathe(StateRing, full: 1, low: 0.25);
+        else
+            CalmMotion.Still(StateRing, 1);
+    }
+
+    private void ShowHint(string text)
+    {
+        Hint.Text = text;
+        Hint.Visibility = Visibility.Visible;
+    }
+
+    private void ShowActions(Button[] shown)
+    {
+        foreach (var key in new[] { HistoryAction, CopyAction, MicrophoneAction, DiagnosticsAction })
+            key.Visibility = shown.Contains(key) ? Visibility.Visible : Visibility.Collapsed;
+        ActionRow.Visibility = shown.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    // Hovering the resting key lists the shortcuts as keys, one line per language: under the key, or over it where
+    // there is no room below. The key itself stays where it is.
+    private void EnterRestingKey(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+        if (active || noticeShown || dragActive || Card.Visibility == Visibility.Visible || BindingsCard.Visibility == Visibility.Visible)
+            return;
+
+        BindingsList.Children.Clear();
+        foreach (var binding in HotkeyCatalog.FromBindings(bindings))
+            BindingsList.Children.Add(BindingRow(binding.Label, LanguageName(binding.LocaleCode)));
+        BindingsCard.Visibility = Visibility.Visible;
+        BindingsCard.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        var cardHeight = BindingsCard.DesiredSize.Height;
+        var above = Top + ActualHeight + cardHeight > CurrentWorkArea().Bottom - WorkAreaBottomClearance;
+        RestLayer.Children.Remove(BindingsCard);
+        RestLayer.Children.Insert(above ? 0 : 1, BindingsCard);
+        bindingsCardShift = above ? cardHeight : 0;
+        BubbleShell.Opacity = 1;
+        SetWidthAroundCenter(Math.Max(ReadyWidth, Math.Ceiling(BindingsCard.DesiredSize.Width)));
+        Top -= bindingsCardShift;
+        UpdateLayout();
+    }
+
+    private void LeaveRestingKey(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+        if (BindingsCard.Visibility != Visibility.Visible)
+            return;
+        HideBindingsCard();
+        BubbleShell.Opacity = OpacityForReadyState(restingModelLoaded);
+        SetWidthAroundCenter(ReadyWidth);
+    }
+
+    private void HideBindingsCard()
+    {
+        if (BindingsCard.Visibility != Visibility.Visible)
+            return;
+        BindingsCard.Visibility = Visibility.Collapsed;
+        Top += bindingsCardShift;
+        bindingsCardShift = 0;
+    }
+
+    // One shortcut: its keys, then the language it dictates in.
+    private static StackPanel BindingRow(string label, string language)
+    {
+        var row = new StackPanel { Orientation = System.Windows.Controls.Orientation.Horizontal, Margin = new Thickness(0, 2, 0, 2) };
+        foreach (var key in KeycapLegendsConverter.Split(label))
+            row.Children.Add(Keycap(key.Legend, first: row.Children.Count == 0));
+        row.Children.Add(new TextBlock
+        {
+            Text = language,
+            Margin = new Thickness(8, 0, 0, 0),
+            VerticalAlignment = System.Windows.VerticalAlignment.Center,
+            FontFamily = (System.Windows.Media.FontFamily)System.Windows.Application.Current.Resources["AppFont"],
+            FontSize = 12,
+            Foreground = Brush("ColorNeutral400")
+        });
+        System.Windows.Automation.AutomationProperties.SetName(row, $"{label}, {language}");
+        return row;
+    }
+
+    private static Border Keycap(string legend, bool first) => new()
+    {
+        MinWidth = 22,
+        Height = 20,
+        Margin = new Thickness(first ? 0 : 3, 0, 0, 0),
+        Padding = new Thickness(5, 0, 5, 0),
+        CornerRadius = new CornerRadius(4),
+        Background = Brush("ColorKeycap"),
+        BorderBrush = Brush("ColorKeycapEdge"),
+        BorderThickness = new Thickness(0, 0, 0, 2),
+        Child = new TextBlock
+        {
+            Text = legend,
+            HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
+            VerticalAlignment = System.Windows.VerticalAlignment.Center,
+            FontFamily = (System.Windows.Media.FontFamily)System.Windows.Application.Current.Resources["MonoFont"],
+            FontSize = 11,
+            Foreground = Brush("ColorText")
+        }
+    };
 
     protected override void OnSourceInitialized(EventArgs e)
     {
@@ -399,9 +541,10 @@ public partial class DictationBubble : Window
                 return HtClient;
             }
 
-            if (IsPointerOverIcon(lParam))
+            var cursor = CursorScreenPosition(lParam);
+            if (IsScreenPointOverIcon(cursor) || IsScreenPointOver(ActionRow, cursor))
             {
-                // The icon stays interactive and draggable.
+                // The drag handle and the card's keys stay interactive.
                 handled = true;
                 return HtClient;
             }
@@ -426,16 +569,27 @@ public partial class DictationBubble : Window
             unchecked((short)((packed >> 16) & 0xFFFF)));
     }
 
-    private bool IsPointerOverIcon(nint lParam) => IsScreenPointOverIcon(CursorScreenPosition(lParam));
+    // The drag handle: the key at rest, the card's state line while a card is up. While dictating the card can't be
+    // dragged, so its line stays click-through like the rest of it.
+    private bool IsScreenPointOverIcon(PointInt cursor) =>
+        Card.Visibility == Visibility.Visible ? !active && IsScreenPointOver(CardHeader, cursor) : IsScreenPointOver(IconTile, cursor);
 
-    private bool IsScreenPointOverIcon(PointInt cursor)
+    private static bool IsScreenPointOver(FrameworkElement element, PointInt cursor)
     {
-        if (IconTile.ActualWidth <= 0 || IconTile.ActualHeight <= 0)
+        if (!element.IsVisible || element.ActualWidth <= 0 || element.ActualHeight <= 0)
             return false;
 
-        var local = IconTile.PointFromScreen(new System.Windows.Point(cursor.X, cursor.Y));
-        return local.X >= 0 && local.X < IconTile.ActualWidth
-            && local.Y >= 0 && local.Y < IconTile.ActualHeight;
+        var local = element.PointFromScreen(new System.Windows.Point(cursor.X, cursor.Y));
+        return local.X >= 0 && local.X < element.ActualWidth
+            && local.Y >= 0 && local.Y < element.ActualHeight;
+    }
+
+    // A notice stays up while the pointer rests on it.
+    internal bool IsNoticeUnderPointer()
+    {
+        if (!noticeShown || !NativeMethods.GetCursorPos(out var cursor))
+            return false;
+        return IsScreenPointOver(Card, new PointInt(cursor.X, cursor.Y));
     }
 
     private void CreateWaveformBars()
@@ -460,89 +614,20 @@ public partial class DictationBubble : Window
         }
     }
 
-    // Every state is told apart by the microphone key itself, not only by a word.
+    // At rest only the key is a resting key; the card's keys are a pointer's only way to act on a notice.
     private void ApplyReadyVisuals(bool modelLoaded)
     {
-        StopRecordingPulse();
-        Pill.Background = System.Windows.Media.Brushes.Transparent;
-        Pill.BorderBrush = System.Windows.Media.Brushes.Transparent;
-        SetPillContent(locale: null, title: null);
+        restingModelLoaded = modelLoaded;
         // Without a model the key is only an outline: nothing is loaded behind it yet. It is drawn at full opacity, and
         // ColorNeutral400 keeps 3:1 against the capture desktop (#5A636E) and a near-black backdrop alike.
-        SetMicrophoneKey(modelLoaded ? "ColorKeycap" : null, modelLoaded ? "ColorText" : "ColorNeutral400", raised: modelLoaded);
-    }
-
-    private void ApplyRecordingVisuals(string localeCode)
-    {
-        ApplyExpandedVisuals(title: null);
-        SetPillContent(LocaleLegend(localeCode), title: null);
-        // Live: the key is pressed and lit.
-        SetMicrophoneKey("ColorAccent800", "ColorAccent100", raised: false);
-    }
-
-    private void ApplyCancelledVisuals(string title)
-    {
-        ApplyExpandedVisuals(title);
-        SetMicrophoneKey("ColorNeutral900", "ColorNeutral400", raised: true);
-    }
-
-    private void ApplyErrorVisuals(string title)
-    {
-        ApplyExpandedVisuals(title);
-        SetMicrophoneKey("ColorDangerSurface", "ColorDanger", raised: true);
-        MicrophoneMark.Visibility = Visibility.Collapsed;
-        IconLegend.Visibility = Visibility.Visible;
-    }
-
-    private void ApplyExpandedVisuals(string? title)
-    {
-        StopRecordingPulse();
-        Pill.Background = Brush("ColorSurface");
-        Pill.BorderBrush = Brush("ColorDivider");
-        SetPillContent(locale: null, title);
-        SetMicrophoneKey("ColorKeycap", "ColorText", raised: true);
-    }
-
-    private void SetPillContent(string? locale, string? title)
-    {
-        LocaleText.Text = locale ?? string.Empty;
-        LocaleText.Visibility = locale is null ? Visibility.Collapsed : Visibility.Visible;
-        ListeningText.Visibility = LocaleText.Visibility;
-        StatusTitle.Text = title ?? string.Empty;
-        StatusTitle.Visibility = title is null ? Visibility.Collapsed : Visibility.Visible;
-    }
-
-    // A null fill draws the key as an outline.
-    private void SetMicrophoneKey(string? fill, string glyph, bool raised)
-    {
+        var fill = modelLoaded ? "ColorKeycap" : null;
+        var glyph = modelLoaded ? "ColorText" : "ColorNeutral400";
         IconTile.Background = fill is null ? System.Windows.Media.Brushes.Transparent : Brush(fill);
         IconTile.BorderBrush = fill is null ? Brush(glyph) : Brush("ColorKeycapEdge");
         // 1.6 is two whole pixels at 125 %.
-        IconTile.BorderThickness = fill is null ? new Thickness(1.6) : new Thickness(0, 0, 0, raised ? 3 : 0);
-        // The ring spans the whole key, so it reaches over the raised edge and stays centred on a pressed key.
-        RecordingPulseRing.Margin = new Thickness(-IconTile.BorderThickness.Left, -IconTile.BorderThickness.Top, -IconTile.BorderThickness.Right, -IconTile.BorderThickness.Bottom);
+        IconTile.BorderThickness = fill is null ? new Thickness(1.6) : new Thickness(0, 0, 0, 3);
         IconOutline.Fill = Brush(glyph);
         IconStand.Stroke = Brush(glyph);
-        MicrophoneMark.Visibility = Visibility.Visible;
-        IconLegend.Visibility = Visibility.Collapsed;
-    }
-
-    private static string LocaleLegend(string localeCode) => localeCode.Split('-')[0].ToUpperInvariant();
-
-    // The viewport shows the last two whole lines of words, or up to three lines of a shorter message.
-    private void SetTranscriptLines(double fontSize, double lineHeight, int lines, double opacity)
-    {
-        Transcript.FontSize = fontSize;
-        Transcript.LineHeight = lineHeight;
-        Transcript.Opacity = opacity;
-        TranscriptViewport.MaxHeight = lineHeight * lines;
-    }
-
-    // The scrim under the pill holds the words or the hint, and is hidden while it has neither.
-    private void UpdateScrim()
-    {
-        var words = TranscriptViewport.Visibility == Visibility.Visible && !string.IsNullOrEmpty(Transcript.Text);
-        Scrim.Visibility = Hint.Visibility == Visibility.Visible || words ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void ResetAudioVisuals()
@@ -551,30 +636,6 @@ public partial class DictationBubble : Window
         Array.Fill(smoothedSpectrum, 0.08);
         foreach (var scale in meterScales)
             scale.ScaleY = 0.15;
-
-        StopRecordingPulse();
-    }
-
-    private void StopRecordingPulse()
-    {
-        CalmMotion.Still(RecordingPulseRing, 0);
-        RecordingPulseRing.Stroke = Brush("ColorAccent");
-        RecordingPulseScale.ScaleX = 1;
-        RecordingPulseScale.ScaleY = 1;
-    }
-
-    // While the model loads or the words are transcribed, a quiet ring breathes just outside the key: work under way, not
-    // listening, so it is neutral, not the accent. With animations off there is no ring; the state word says it alone.
-    private void BreatheWhileWorking()
-    {
-        if (!CalmMotion.Allowed)
-            return;
-        RecordingPulseRing.Stroke = Brush("ColorNeutral400");
-        // 2 px outside the key, as far as the loudest level takes the listening ring.
-        var scale = 1 + (4.0 / 44);
-        RecordingPulseScale.ScaleX = scale;
-        RecordingPulseScale.ScaleY = scale;
-        CalmMotion.Breathe(RecordingPulseRing, full: 0.6, low: 0.1);
     }
 
     // The bubble's state word is its item status, so a screen reader can ask what the bubble is doing.
@@ -584,16 +645,17 @@ public partial class DictationBubble : Window
         System.Windows.Automation.AutomationProperties.SetItemStatus(BubbleShell, state);
     }
 
-    // A notice or a failure in the panel is read out once, politely, without moving focus.
-    private void AnnounceMessage() =>
-        System.Windows.Automation.Peers.UIElementAutomationPeer.CreatePeerForElement(Transcript)?
+    // A notice or a failure is read out once, politely, in full, without moving focus.
+    private void AnnounceMessage(string message)
+    {
+        System.Windows.Automation.AutomationProperties.SetName(Card, message);
+        System.Windows.Automation.Peers.UIElementAutomationPeer.CreatePeerForElement(Card)?
             .RaiseAutomationEvent(System.Windows.Automation.Peers.AutomationEvents.LiveRegionChanged);
+    }
 
     private void SetTranscript(string text)
     {
-        Transcript.ClearValue(System.Windows.Automation.AutomationProperties.NameProperty);
         Transcript.Text = text;
-        UpdateScrim();
         TranscriptViewport.UpdateLayout();
         TranscriptViewport.ScrollToEnd();
         Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(TranscriptViewport.ScrollToEnd));
@@ -697,6 +759,7 @@ public partial class DictationBubble : Window
 
     private void StartDrag(nint lParam)
     {
+        HideBindingsCard();
         var handle = new WindowInteropHelper(this).Handle;
         var cursor = CursorInWindowSpace(lParam, handle);
         NativeMethods.GetWindowRect(handle, out var window);
@@ -857,6 +920,19 @@ public partial class DictationBubble : Window
         Dispatcher.BeginInvoke(() => HistoryRequested?.Invoke(), System.Windows.Threading.DispatcherPriority.Background);
     }
 
+    // The card's keys act after the click is done, so nothing the click starts can take focus from the dictation target.
+    private void OpenDiagnostics(object sender, RoutedEventArgs e) =>
+        Dispatcher.BeginInvoke(() => DiagnosticsRequested?.Invoke(), DispatcherPriority.Background);
+
+    private void OpenMicrophoneSettings(object sender, RoutedEventArgs e) =>
+        Dispatcher.BeginInvoke(() => MicrophoneSettingsRequested?.Invoke(), DispatcherPriority.Background);
+
+    private void CopyHeldText(object sender, RoutedEventArgs e)
+    {
+        if (heldText is { } text)
+            CopyRequested?.Invoke(text);
+    }
+
     private void Quit(object sender, RoutedEventArgs e)
     {
         CloseMenu();
@@ -1009,6 +1085,13 @@ public partial class DictationBubble : Window
         public double Bottom => Top + Height;
     }
 
-    private static string DescribeBindings(IReadOnlyList<ShortcutBinding> bindings) =>
-        string.Join("\n", HotkeyCatalog.FromBindings(bindings).Select(binding => $"{RecognitionLocaleCatalog.Get(binding.LocaleCode).DisplayName} — {binding.Label}"));
+    private enum CardMark
+    {
+        Listening,
+        Working,
+        Warning,
+        Failure,
+        Success
+    }
+
 }

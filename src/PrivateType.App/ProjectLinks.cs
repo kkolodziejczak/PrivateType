@@ -25,4 +25,14 @@ internal static class SystemLinks
     public static ProcessStartInfo VisualCppRedistributableBrowserStartInfo() => new(VisualCppRedistributable.AbsoluteUri) { UseShellExecute = true };
 
     public static void GetVisualCppRedistributable() => Process.Start(VisualCppRedistributableBrowserStartInfo());
+
+    // Windows' microphone privacy page, and the words of the fix that sends the person there.
+    public const string MicrophoneSettingsAction = "Microphone settings";
+    public const string MicrophoneFix = "Check that a microphone is connected and that Windows lets apps use it, then try again.";
+
+    public static Uri MicrophonePrivacy { get; } = new("ms-settings:privacy-microphone");
+
+    public static ProcessStartInfo MicrophonePrivacyStartInfo() => new(MicrophonePrivacy.OriginalString) { UseShellExecute = true };
+
+    public static void OpenMicrophoneSettings() => Process.Start(MicrophonePrivacyStartInfo());
 }

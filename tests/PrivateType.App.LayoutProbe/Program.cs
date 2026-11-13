@@ -157,17 +157,17 @@ static void RenderWindows(bool monitorPlacementOnly)
 
     var cancelledPanel = new DictationBubble();
     cancelledPanel.ShowReady(PortableSettings.Default, modelLoaded: true);
-    cancelledPanel.ShowCancellation("Text not inserted: the window does not accept input from PrivateType.");
+    cancelledPanel.ShowNotInserted(TargetEligibility.Ineligible, "Send the installer link to the team.", savedToHistory: false);
     Render(cancelledPanel, Path.Combine(outputDirectory, "status-panel-cancelled.png"));
 
     var keptPanel = new DictationBubble();
     keptPanel.ShowReady(PortableSettings.Default, modelLoaded: true);
-    keptPanel.ShowCancellation($"Text not inserted: the active window changed. {DictationApplication.KeptTextHint(KeyChord.DefaultHistory)}");
+    keptPanel.ShowNotInserted(TargetEligibility.Changed, "Send the installer link to the team.", savedToHistory: true);
     Render(keptPanel, Path.Combine(outputDirectory, "status-panel-kept.png"));
 
     var errorPanel = new DictationBubble();
     errorPanel.ShowReady(PortableSettings.Default, modelLoaded: true);
-    errorPanel.ShowError(DictationApplication.DictationStoppedTitle, DictationApplication.DictationStoppedText("Couldn't reach the microphone."));
+    errorPanel.ShowError(DictationApplication.DictationStoppedTitle, DictationApplication.DictationStoppedText, BubbleAction.MicrophoneSettings);
     Render(errorPanel, Path.Combine(outputDirectory, "status-panel-error.png"));
 
     VerifyTargetMonitorPlacement();

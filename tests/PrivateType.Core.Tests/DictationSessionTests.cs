@@ -68,6 +68,8 @@ public sealed class DictationSessionTests
         await session.StopAsync();
 
         Assert.Contains(presentations, presentation => presentation.Message == "Text not inserted: the active window changed.");
+        // The notice carries the cause and the whole text, so the bubble can show and copy it.
+        Assert.Contains(presentations, presentation => presentation.NotInserted == TargetEligibility.Changed && presentation.ProvisionalText == "bezpieczny tekst");
     }
 
     [Fact]

@@ -4,6 +4,24 @@
         Width="64" SizeToContent="Height" WindowStyle="None" UseLayoutRounding="True" AllowsTransparency="True"
         Background="Transparent" ShowInTaskbar="False" Topmost="True" Focusable="False" ShowActivated="False"
         AutomationProperties.Name="PrivateType dictation bubble">
+  <Window.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="FormStyles.xaml" />
+      </ResourceDictionary.MergedDictionaries>
+      <!-- A small raised key at 12 semibold for the one action beside a message. It never takes focus: the bubble mustn't. -->
+      <Style x:Key="MessageKey" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+        <Setter Property="Height" Value="24" />
+        <Setter Property="Padding" Value="10,0" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="FontFamily" Value="{DynamicResource AppFont}" />
+        <Setter Property="Focusable" Value="False" />
+        <Setter Property="IsTabStop" Value="False" />
+        <Setter Property="Visibility" Value="Collapsed" />
+      </Style>
+    </ResourceDictionary>
+  </Window.Resources>
   <Border x:Name="BubbleShell" Background="Transparent" Padding="0" AutomationProperties.Name="PrivateType dictation bubble">
     <Border.ContextMenu>
       <ContextMenu Placement="Right" HorizontalOffset="8" MinWidth="132" UseLayoutRounding="True" Background="{DynamicResource ColorSurface}" BorderBrush="{DynamicResource ColorDivider}" BorderThickness="1" Foreground="{DynamicResource ColorText}" FontFamily="{DynamicResource AppFont}">
@@ -18,50 +36,67 @@
         <MenuItem Header="Quit" Click="Quit" AutomationProperties.Name="Quit" />
       </ContextMenu>
     </Border.ContextMenu>
-    <!-- A pill of keys: the microphone key, the state word, the language and a level meter. The words appear in a scrim below it, on the pill's centre axis. -->
-    <StackPanel>
-      <Border x:Name="Pill" HorizontalAlignment="Center" Background="{DynamicResource ColorSurface}" BorderBrush="{DynamicResource ColorDivider}" BorderThickness="1" CornerRadius="27" Padding="5">
-        <StackPanel x:Name="BubbleHeader" Orientation="Horizontal" Height="44">
+    <Grid>
+      <!-- At rest: the round microphone key. Hovered, a small card under it (or over it, where there is no room below) lists the shortcuts as keys. -->
+      <StackPanel x:Name="RestLayer" HorizontalAlignment="Center">
+        <Border x:Name="Pill" HorizontalAlignment="Center" Background="Transparent" BorderBrush="Transparent" BorderThickness="1" CornerRadius="27" Padding="5">
           <Border x:Name="IconTile" Width="44" Height="44" CornerRadius="22" Background="{DynamicResource ColorKeycap}"
-                  BorderBrush="{DynamicResource ColorKeycapEdge}" BorderThickness="0,0,0,3">
+                  BorderBrush="{DynamicResource ColorKeycapEdge}" BorderThickness="0,0,0,3" MouseEnter="EnterRestingKey" MouseLeave="LeaveRestingKey">
             <Grid ClipToBounds="False">
-              <Ellipse x:Name="RecordingPulseRing" Width="44" Height="44" Opacity="0" Stroke="{DynamicResource ColorAccent}" StrokeThickness="1.5" IsHitTestVisible="False" RenderTransformOrigin="0.5,0.5">
-                <Ellipse.RenderTransform>
-                  <ScaleTransform x:Name="RecordingPulseScale" />
-                </Ellipse.RenderTransform>
-              </Ellipse>
               <Viewbox x:Name="MicrophoneMark" Width="24" Height="24">
                 <Grid Width="32" Height="32">
                   <Path x:Name="IconOutline" Data="{StaticResource MicrophoneCapsuleGlyph}" Fill="{DynamicResource ColorText}" />
                   <Path x:Name="IconStand" Data="{StaticResource MicrophoneStandGlyph}" Stroke="{DynamicResource ColorText}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
                 </Grid>
               </Viewbox>
-              <TextBlock x:Name="IconLegend" HorizontalAlignment="Center" VerticalAlignment="Center" FontFamily="{DynamicResource MonoFont}" FontSize="18" FontWeight="Bold"
-                         Foreground="{DynamicResource ColorDanger}" Text="!" Visibility="Collapsed" />
             </Grid>
           </Border>
-          <!-- While recording the state is said in a word; the language follows it, quieter. -->
-          <TextBlock x:Name="ListeningText" Margin="12,0,0,0" VerticalAlignment="Center" FontFamily="{DynamicResource AppFont}" FontSize="13"
-                     Foreground="{DynamicResource ColorText}" Text="Listening" Visibility="Collapsed" />
-          <TextBlock x:Name="LocaleText" Margin="8,0,0,0" VerticalAlignment="Center" FontFamily="{DynamicResource MonoFont}" FontSize="13"
-                     Foreground="{DynamicResource ColorNeutral400}" Visibility="Collapsed" />
-          <StackPanel x:Name="WaveformBars" Margin="12,0,10,0" Orientation="Horizontal" VerticalAlignment="Center" Height="20" Visibility="Collapsed" />
-          <TextBlock x:Name="StatusTitle" Margin="12,0,14,0" VerticalAlignment="Center" FontFamily="{DynamicResource AppFont}" FontSize="13" FontWeight="SemiBold"
-                     Foreground="{DynamicResource ColorText}" Text="PrivateType" Visibility="Collapsed" />
-        </StackPanel>
-      </Border>
-      <Border x:Name="Scrim" Margin="0,6,0,0" Padding="14,9" CornerRadius="10" Background="#F2141518" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="1">
+        </Border>
+        <Border x:Name="BindingsCard" Margin="0,4,0,0" Padding="10,8" CornerRadius="10" Background="{DynamicResource ColorSurface}" BorderBrush="{DynamicResource ColorDivider}" BorderThickness="1"
+                HorizontalAlignment="Center" Visibility="Collapsed" IsHitTestVisible="False">
+          <StackPanel x:Name="BindingsList" />
+        </Border>
+      </StackPanel>
+      <!-- Active: one caption card. The words dominate; the state is a slim line over them, which is also the handle to drag the card by. -->
+      <Border x:Name="Card" AutomationProperties.LiveSetting="Polite" Background="{DynamicResource ColorSurface}" BorderBrush="{DynamicResource ColorDivider}" BorderThickness="1" CornerRadius="12" Padding="12" Visibility="Collapsed">
         <StackPanel>
-          <TextBlock x:Name="Hint" FontFamily="{DynamicResource AppFont}" Foreground="{DynamicResource ColorNeutral400}"
+          <Grid x:Name="CardHeader" Height="18" Background="Transparent">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="Auto" />
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Grid Width="12" Height="12" Margin="0,0,7,0" VerticalAlignment="Center">
+              <!-- Listening: a lit dot. Working: the same dot as a ring, breathing. -->
+              <Ellipse x:Name="StateDot" Width="10" Height="10" Fill="{DynamicResource ColorAccent}" />
+              <Ellipse x:Name="StateRing" Width="10" Height="10" Stroke="{DynamicResource ColorNeutral400}" StrokeThickness="1.6" Visibility="Collapsed" />
+              <ContentControl x:Name="WarningGlyph" Style="{StaticResource WarningMark}" Width="12" Height="12" Visibility="Collapsed" />
+              <ContentControl x:Name="SuccessGlyph" Style="{StaticResource SuccessMark}" Width="12" Height="12" Visibility="Collapsed" />
+            </Grid>
+            <TextBlock Grid.Column="1" VerticalAlignment="Center" FontSize="12" TextTrimming="CharacterEllipsis" FontFamily="{DynamicResource AppFont}">
+              <Run x:Name="StateWord" FontWeight="SemiBold" Foreground="{DynamicResource ColorText}" /><Run x:Name="StateDetail" Foreground="{DynamicResource ColorNeutral400}" />
+            </TextBlock>
+            <StackPanel x:Name="WaveformBars" Grid.Column="2" Margin="8,0,0,0" Orientation="Horizontal" VerticalAlignment="Center" Height="20" Visibility="Collapsed" />
+          </Grid>
+          <TextBlock x:Name="Hint" Margin="0,6,0,0" FontFamily="{DynamicResource AppFont}" Foreground="{DynamicResource ColorNeutral400}"
                      FontSize="13" LineHeight="19" LineStackingStrategy="BlockLineHeight" TextWrapping="Wrap" Visibility="Collapsed" />
-          <ScrollViewer x:Name="TranscriptViewport" MaxHeight="44"
+          <ScrollViewer x:Name="TranscriptViewport" Margin="0,6,0,0" MaxHeight="66"
                         VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Disabled"
                         Visibility="Collapsed">
             <TextBlock x:Name="Transcript" AutomationProperties.LiveSetting="Polite" FontFamily="{DynamicResource AppFont}" Foreground="{DynamicResource ColorText}"
                        FontSize="15" LineHeight="22" LineStackingStrategy="BlockLineHeight" TextWrapping="Wrap" />
           </ScrollViewer>
+          <!-- The words of a dictation that wasn't inserted: three lines at most, cut with an ellipsis. Copy takes all of them. -->
+          <TextBlock x:Name="HeldWords" Margin="0,6,0,0" MaxHeight="66" Opacity="0.7" FontFamily="{DynamicResource AppFont}" Foreground="{DynamicResource ColorText}"
+                     FontSize="15" LineHeight="22" LineStackingStrategy="BlockLineHeight" TextWrapping="Wrap" TextTrimming="WordEllipsis" Visibility="Collapsed" />
+          <StackPanel x:Name="ActionRow" Margin="0,6,0,0" Orientation="Horizontal" Visibility="Collapsed">
+            <Button x:Name="HistoryAction" Style="{StaticResource MessageKey}" Content="Recent dictations" Click="OpenHistory" Margin="0,0,6,0" />
+            <Button x:Name="CopyAction" Style="{StaticResource MessageKey}" Content="Copy" Click="CopyHeldText" Margin="0,0,6,0" />
+            <Button x:Name="MicrophoneAction" Style="{StaticResource MessageKey}" Click="OpenMicrophoneSettings" Margin="0,0,6,0" />
+            <Button x:Name="DiagnosticsAction" Style="{StaticResource MessageKey}" Content="Open diagnostics" Click="OpenDiagnostics" Margin="0,0,6,0" />
+          </StackPanel>
         </StackPanel>
       </Border>
-    </StackPanel>
+    </Grid>
   </Border>
 </Window>

@@ -11,7 +11,8 @@ public enum DictationState
 
 public sealed record TranscriptUpdate(string Text, bool IsCommitted, string? CommitId = null, int BoundaryOverlap = 0);
 
-public sealed record DictationPresentation(DictationState State, string ProvisionalText, string? Message = null, double AudioLevel = 0);
+// A dictation that wasn't inserted carries why (NotInserted) and its whole text (ProvisionalText), so the bubble can show and copy it.
+public sealed record DictationPresentation(DictationState State, string ProvisionalText, string? Message = null, double AudioLevel = 0, TargetEligibility? NotInserted = null);
 
 public sealed record AudioMeter(double Level, IReadOnlyList<double> Spectrum);
 

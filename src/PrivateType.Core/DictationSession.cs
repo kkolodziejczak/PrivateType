@@ -184,7 +184,7 @@ public sealed class DictationSession : IAsyncDisposable
             if (eligibility != TargetEligibility.Eligible)
             {
                 Diagnose("injection.skipped", ("reason", "target-ineligible"), ("targetEligibility", eligibility), ("characters", text.Length));
-                Publish(DictationState.Finalizing, message: TargetCancellationMessage(eligibility, keptTextHint));
+                Publish(DictationState.Finalizing, provisionalText: text, message: TargetCancellationMessage(eligibility, keptTextHint), notInserted: eligibility);
                 return;
             }
 
@@ -386,12 +386,12 @@ public sealed class DictationSession : IAsyncDisposable
         await recognizer.DisposeAsync();
     }
 
-    private void Publish(DictationState state, string? provisionalText = null, string? message = null)
+    private void Publish(DictationState state, string? provisionalText = null, string? message = null, TargetEligibility? notInserted = null)
     {
         State = state;
         if (state != DictationState.Recording)
             Diagnose("session.state", ("state", state));
-        PresentationChanged?.Invoke(new DictationPresentation(state, provisionalText ?? commits.ProvisionalText, message, Volatile.Read(ref audioLevel)));
+        PresentationChanged?.Invoke(new DictationPresentation(state, provisionalText ?? commits.ProvisionalText, message, Volatile.Read(ref audioLevel), notInserted));
     }
 
     private void Diagnose(string eventName, params (string Name, object? Value)[] properties) =>

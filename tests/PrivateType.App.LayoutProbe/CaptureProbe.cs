@@ -172,30 +172,47 @@ internal static class CaptureProbe
         finalizingPreview.ShowTranscript(SpokenText);
         finalizingPreview.ShowFinalizing();
         Draw(finalizingPreview, output, "bubble", "bubble-finalizing-preview");
+        // A dictation that wasn't inserted shows its own words, with Recent dictations (when the list kept it) and Copy.
         var kept = Ready(loaded: true);
-        kept.ShowCancellation($"Text not inserted: the active window changed. {DictationApplication.KeptTextHint(KeyChord.DefaultHistory)}");
+        kept.ShowNotInserted(TargetEligibility.Changed, ShortDictation, savedToHistory: true);
         Draw(kept, output, "bubble", "bubble-kept");
         var error = Ready(loaded: true);
-        error.ShowError(DictationApplication.DictationStoppedTitle, DictationApplication.DictationStoppedText("Couldn't reach the microphone."));
+        error.ShowError(DictationApplication.DictationStoppedTitle, DictationApplication.DictationStoppedText, BubbleAction.MicrophoneSettings);
         Draw(error, output, "bubble", "bubble-error");
         var loadFailed = Ready(loaded: false);
-        loadFailed.ShowError(DictationApplication.ModelLoadFailedTitle, DictationApplication.ModelLoadFailedText);
+        loadFailed.ShowError(DictationApplication.ModelLoadFailedTitle, DictationApplication.ModelLoadFailedText, BubbleAction.Diagnostics);
         Draw(loadFailed, output, "bubble", "bubble-load-failed");
         // A recent dictation handed back from the list: copied instead of pasted, and neither.
         var copied = Ready(loaded: true);
-        copied.ShowCancellation(DictationApplication.CopiedText, DictationApplication.CopiedTitle);
+        copied.ShowNotice(succeeded: true, DictationApplication.CopiedTitle, DictationApplication.CopiedText);
         Draw(copied, output, "bubble", "bubble-copied");
         var pasteFailed = Ready(loaded: true);
-        pasteFailed.ShowCancellation(DictationApplication.PasteFailedText, DictationApplication.PasteFailedTitle);
+        pasteFailed.ShowNotice(succeeded: false, DictationApplication.PasteFailedTitle, DictationApplication.PasteFailedText);
         Draw(pasteFailed, output, "bubble", "bubble-paste-failed");
-        // With Recent dictations off nothing keeps the text, and the message says so instead of naming the shortcut.
+        // With Recent dictations off nothing else keeps the text: the notice says so, and only Copy is offered.
         var keptNoHistory = Ready(loaded: true);
-        keptNoHistory.ShowCancellation($"Text not inserted: the active window changed. {DictationApplication.NotKeptNotice}");
+        keptNoHistory.ShowNotInserted(TargetEligibility.Changed, ShortDictation, savedToHistory: false);
         Draw(keptNoHistory, output, "bubble", "bubble-kept-no-history");
-        // The longest message the bubble shows.
+        // The longest cause the bubble names.
         var keptIneligible = Ready(loaded: true);
-        keptIneligible.ShowCancellation($"Text not inserted: the window does not accept input from PrivateType. {DictationApplication.KeptTextHint(KeyChord.DefaultHistory)}");
+        keptIneligible.ShowNotInserted(TargetEligibility.Ineligible, ShortDictation, savedToHistory: true);
         Draw(keptIneligible, output, "bubble", "bubble-kept-ineligible");
+        // A three-sentence dictation held with Recent dictations off: cut at three lines, copied whole.
+        var keptText = Ready(loaded: true);
+        keptText.ShowNotInserted(TargetEligibility.Changed, SpokenText, savedToHistory: false);
+        Draw(keptText, output, "bubble", "bubble-kept-text");
+        var keptCopied = Ready(loaded: true);
+        keptCopied.ShowNotInserted(TargetEligibility.Changed, SpokenText, savedToHistory: true);
+        keptCopied.ShowCopyResult(copied: true);
+        Draw(keptCopied, output, "bubble", "bubble-kept-copied");
+        var keptCopyFailed = Ready(loaded: true);
+        keptCopyFailed.ShowNotInserted(TargetEligibility.Changed, SpokenText, savedToHistory: true);
+        keptCopyFailed.ShowCopyResult(copied: false);
+        Draw(keptCopyFailed, output, "bubble", "bubble-kept-copy-failed");
+        // The pointer resting on the notice's Copy key, which holds the notice open.
+        var keptHover = Ready(loaded: true);
+        keptHover.ShowNotInserted(TargetEligibility.Changed, SpokenText, savedToHistory: true);
+        Draw(keptHover, output, "bubble", "bubble-kept-hover", window => Hover(window, (FrameworkElement)window.FindName("CopyAction")));
         var loadingToggle = Ready(loaded: false);
         loadingToggle.ShowModelLoading(toggleMode: true);
         Draw(loadingToggle, output, "bubble", "bubble-loading-toggle");
@@ -206,6 +223,21 @@ internal static class CaptureProbe
         polish.ShowTranscript("Wyślę link do pobrania zespołowi jeszcze dziś.");
         Draw(polish, output, "bubble", "bubble-recording-polish");
         Draw(Ready(loaded: true), output, "bubble", "bubble-ready-hover", window => Hover(window, (FrameworkElement)window.FindName("IconTile")));
+        // Four shortcuts: the hover lists every one, one line per language.
+        var fourShortcuts = new DictationBubble();
+        fourShortcuts.ShowReady(PortableSettings.Default with { Shortcuts = [.. ShortcutBinding.Defaults, new("de-DE", 0x47), new("fr-FR", 0x46)] }, modelLoaded: true);
+        Draw(fourShortcuts, output, "bubble", "bubble-ready-hover-bindings", window => Hover(window, (FrameworkElement)window.FindName("IconTile")));
+        // Listening and transcribing over a page of text in another program: what the card covers.
+        var onEditor = Ready(loaded: true);
+        onEditor.ShowRecording("en-US");
+        onEditor.ShowAudioMeter(new AudioMeter(0.72, Enumerable.Range(0, 44).Select(index => index is > 15 and < 28 ? 0.95 : 0.24).ToArray()));
+        onEditor.ShowTranscript(SpokenText);
+        Draw(onEditor, output, "bubble", "bubble-on-editor", onEditor: true);
+        var finalizingOnEditor = Ready(loaded: true);
+        finalizingOnEditor.ShowRecording("en-US");
+        finalizingOnEditor.ShowTranscript(SpokenText);
+        finalizingOnEditor.ShowFinalizing();
+        Draw(finalizingOnEditor, output, "bubble", "bubble-finalizing-on-editor", onEditor: true);
         // The right-click menu on the resting key; it stays open for the drawing, which widens to hold it.
         Draw(Ready(loaded: true), output, "bubble", "bubble-menu", window =>
         {
@@ -219,6 +251,8 @@ internal static class CaptureProbe
         window is DictationBubble ? ((FrameworkElement)window.FindName("BubbleShell")).ContextMenu : null;
 
     // What the recognizer hands the bubble: one running text, wrapped by the bubble itself.
+    private const string ShortDictation = "Send the installer link to the team and ask them to test it before Friday.";
+
     private const string SpokenText = "Quick update on the release before the weekend. The installer is ready and the notes are written. I will send the download link to the team today and check the feedback on Monday morning.";
 
     private static DictationBubble Ready(bool loaded)
@@ -613,7 +647,7 @@ internal static class CaptureProbe
     }
 
     // Shows the window without focus, lets it settle, stops animations so two captures match, and draws it on the desktop colour.
-    private static void Draw(Window window, string output, string screen, string state, Action<Window>? arrange = null)
+    private static void Draw(Window window, string output, string screen, string state, Action<Window>? arrange = null, bool onEditor = false)
     {
         window.ShowInTaskbar = false;
         window.ShowActivated = false;
@@ -661,6 +695,8 @@ internal static class CaptureProbe
             using (var context = scene.RenderOpen())
             {
                 context.DrawRectangle(new SolidColorBrush(Desktop), null, new Rect(0, 0, sceneWidth + 2 * Backdrop, sceneHeight + 2 * Backdrop));
+                if (onEditor)
+                    DrawEditor(context, sceneWidth + 2 * Backdrop, sceneHeight + 2 * Backdrop);
                 context.DrawImage(shot, new Rect(Backdrop, Backdrop, width, height));
                 DrawOpenPopups(window, context);
                 if (menu is not null)
@@ -683,6 +719,18 @@ internal static class CaptureProbe
                 bubble.CloseMenu();
             window.Close();
         }
+    }
+
+    // A synthetic page of text in another program, behind the bubble, so a capture shows what the bubble covers.
+    private static void DrawEditor(DrawingContext context, double width, double height)
+    {
+        context.DrawRectangle(new SolidColorBrush(Color.FromRgb(0xFA, 0xFA, 0xF8)), null, new Rect(0, 0, width, height));
+        const string page = "The quarterly plan covers the installer, the release notes and the support rota. Each team lists its open items " +
+            "and the date it expects to close them. Testing starts on Monday with the portable build and the setup flow on a clean machine.";
+        var text = new FormattedText(page + " " + page, System.Globalization.CultureInfo.InvariantCulture, FlowDirection.LeftToRight,
+            new Typeface("Segoe UI"), 14, new SolidColorBrush(Color.FromRgb(0x2B, 0x2B, 0x2B)), 1.25)
+        { MaxTextWidth = width - 32, LineHeight = 22 };
+        context.DrawText(text, new Point(16, 10));
     }
 
     // An open dropdown is its own window, so it is drawn where it opens: below the control that owns it.

@@ -626,6 +626,23 @@ public sealed class WindowsBoundaryTests
     }
 
     [Fact]
+    public void Hands_the_bubble_the_whole_text_and_cause_of_a_dictation_that_was_not_inserted()
+    {
+        var presentation = new DictationPresentation(DictationState.Finalizing, "the whole dictation", "Text not inserted", 0, TargetEligibility.Ineligible);
+
+        var bubble = BubblePresentationMapper.Map(presentation);
+
+        Assert.Equal(TargetEligibility.Ineligible, bubble.NotInserted);
+        Assert.Equal("the whole dictation", bubble.HeldText);
+    }
+
+    [Theory]
+    [InlineData("en-US", "English")]
+    [InlineData("pl-PL", "Polish")]
+    public void Names_the_dictation_language_in_full_without_its_region(string localeCode, string expected) =>
+        Assert.Equal(expected, DictationBubble.LanguageName(localeCode));
+
+    [Fact]
     public void Maps_recording_audio_level_to_the_bubble()
     {
         var presentation = new DictationPresentation(DictationState.Recording, "tekst", null, 0.75);
