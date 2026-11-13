@@ -24,7 +24,7 @@ internal sealed record SpeechModelFacts(string Behaviour, string Appears, string
             "Word by word, as you speak",
             "Send the notes to",
             "32 languages, including Asian ones",
-            "You set the language for each shortcut",
+            "Each shortcut sets its language",
             "Listens for the phrases you add. Fixes you save correct the text too."),
         _ => new(ModelLibraryEditor.ShortName(model), model.Summary, string.Empty, string.Empty, string.Empty, string.Empty)
     };

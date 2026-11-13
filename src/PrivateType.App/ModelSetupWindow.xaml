@@ -119,9 +119,10 @@
                       <Border x:Name="Card" Padding="16,14,16,16" CornerRadius="8" Background="Transparent" BorderBrush="{DynamicResource ColorDivider}" BorderThickness="1">
                         <StackPanel>
                           <!-- The same phrase at the same two moments: while the shortcut is held, and after it is let go. -->
-                          <Grid>
-                            <TextBlock Style="{StaticResource DemoLabel}" Text="STILL HOLDING" />
-                            <Border Margin="0,0,0,6" HorizontalAlignment="Right" Style="{StaticResource StatusChip}" Visibility="{Binding IsRecommended, Converter={StaticResource BoolToVisibility}}">
+                          <!-- As tall as the Recommended tag on every card, so both cards' frames start on the same line. -->
+                          <Grid Height="22" Margin="0,0,0,6">
+                            <TextBlock Margin="0" Style="{StaticResource DemoLabel}" Text="STILL HOLDING" />
+                            <Border HorizontalAlignment="Right" Style="{StaticResource StatusChip}" Visibility="{Binding IsRecommended, Converter={StaticResource BoolToVisibility}}">
                               <TextBlock FontWeight="SemiBold" Text="RECOMMENDED" />
                             </Border>
                           </Grid>
