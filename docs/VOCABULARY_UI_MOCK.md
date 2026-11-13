@@ -9,7 +9,7 @@ This is the interaction template for the PrivateType vocabulary and expanded-lan
 - **Sample data only:** `MVVM`, `PrivateType`, `PostgreSQL`, and the example transcript. Do not ship these as built-in vocabulary and do not use real dictated text in fixtures, screenshots, documentation, or diagnostics.
 - **Implementation boundary:** this mock authorizes only explicit local import/export of the simple weighted-entry pack format described below. It does not authorize transcript history, correction-pair replacement, automatic rewriting of injected text, network discovery/download, synchronization/updates, bundled packs, or UI localization.
 
-The existing visual references remain [settings.png](images/settings.png) and [recording-bubble.png](images/recording-bubble.png).
+The existing visual references remain [settings-vocabulary.png](images/settings-vocabulary.png) and [recording-bubble.png](images/recording-bubble.png).
 
 ## Settings shell
 

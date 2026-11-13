@@ -10,7 +10,7 @@ everything you changed since opening the window.
 **Quick start:** the defaults suit most people. Usually you only need to:
 
 1. pick your **Microphone**,
-2. check the **Shortcuts** match the languages you speak,
+2. check **Dictate with** matches the languages you speak,
 3. add words the model keeps getting wrong to **Vocabulary**.
 
 ## General
@@ -30,9 +30,9 @@ The recording device used for every shortcut.
 device if Windows sometimes switches the default to a webcam or monitor
 microphone.
 
-### Shortcuts
+### Dictate with
 
-Each row is one shortcut: a **language** and a **key combination**.
+Each row is one shortcut: a **key combination** and a **language**.
 
 | Default shortcut | Language |
 | --- | --- |
@@ -42,10 +42,10 @@ Each row is one shortcut: a **language** and a **key combination**.
 - **Language** tells the model which language to expect. Choose one of 32
   languages and regions, or **Automatic** to let the model decide. The
   language also chooses which [vocabulary](#vocabulary) is used.
-- **Key**: click the shortcut box, then press `Ctrl+Shift` plus a letter,
+- **Keys**: click the keys, then press `Ctrl+Shift` plus a letter,
   number, or function key. Each shortcut needs a different key.
-- **+ Add shortcut** adds another row. **—** removes one. At least one shortcut
-  must stay.
+- **+ Add shortcut** adds another row. Point at a row and click its bin icon to
+  remove it. At least one shortcut must stay.
 
 **Recommended:** one shortcut per language you dictate in. Use **Automatic**
 only if you switch languages often; it uses shared vocabulary only, never a
@@ -86,8 +86,8 @@ A dictation that wasn't inserted is marked **Not inserted**.
 | **For 1 hour** / **For 15 minutes** | Each dictation is removed after that time. |
 | **Don't keep** | No list. The shortcut is left to Windows and other apps. |
 
-**Shortcut** opens the list (default `Win+Shift+V`). Click the box, then press
-the new combination. It needs **Win**, or two of **Ctrl**, **Alt**, and
+**Picker shortcut** opens the list (default `Win+Shift+V`). Click the keys,
+then press the new combination. It needs **Win**, or two of **Ctrl**, **Alt**, and
 **Shift**, plus a letter, number, or function key. PrivateType refuses:
 
 - a single modifier such as `Ctrl+V`, which would block typing or pasting,
@@ -109,7 +109,7 @@ with **Pasting**.
 
 ![Settings, General tab, bottom](images/settings-general-bottom.png)
 
-### Startup & resources
+### Startup
 
 **Start PrivateType with Windows** (off by default) starts PrivateType when you
 sign in, using an entry for your Windows account only. If you later start a
@@ -127,13 +127,13 @@ model…** is shown.
 **Recommended:** turn on startup if you dictate daily. Choose 30 minutes if you
 dictate often and have 8 GB of RAM or more. Choose 5 minutes if memory is tight.
 
-### Ready sound
+### Sound
 
 The ready sound plays when the microphone starts listening, so you know you
 can speak.
 
-- **Sound**: **Ping** (default), **Chime**, **Bell**, or **Custom file**.
-  **▶ Preview** plays your choice right away.
+- **Ready sound**: **Ping** (default), **Chime**, **Bell**, or **Custom file**.
+  **▶** plays your choice right away.
 - **Volume**: 0–100%, default 80%. 0% mutes the ready sound and the spoken cues.
 - **Custom file**: with **Custom file** selected, choose **Browse…** to pick a
   WAV or MP3. It is copied into PrivateType's storage when you save, and only
@@ -161,7 +161,7 @@ one you changed most recently and asks **Bring over your settings?**
   changed.
 - **Start fresh** (or **×**) uses the defaults. You aren't asked again.
 
-**Import settings from another copy…** does the same at any time: choose the
+**Settings from another copy → Import…** does the same at any time: choose the
 folder you unpacked the other copy into, confirm, and Settings shows its
 values. Nothing changes until you choose **Save changes**. If that copy's
 speech model isn't downloaded here, your current model stays selected until
@@ -176,7 +176,7 @@ somewhere else, or for a portable copy.
 Vocabulary helps the model write names, acronyms, and technical terms
 correctly. Add a phrase only when the model keeps getting it wrong.
 
-![Settings, Vocabulary tab, top](images/settings-vocabulary-top.png)
+![Settings, Vocabulary tab](images/settings-vocabulary.png)
 
 ### Language
 
@@ -206,12 +206,12 @@ from about 1 in 5 to about half.
 ### Your phrases
 
 Type each word or phrase exactly as it should be written. **+ Add phrase** adds
-a row, **—** removes one, and **Export…** saves this list as a pack file you
-can share.
+a row, the bin icon that appears when you point at a row removes one, and
+**Export…** saves this list as a pack file you can share.
 
 The quickest way to add phrases is **Teach from last dictation…** in the
 bubble menu. Click the words it got wrong, type the correct spelling, and
-choose **Add fix**.
+choose **Save fix**.
 
 ### After dictation
 
@@ -221,15 +221,13 @@ D printing" or "fusion three sixty". This step turns that into "3D printing"
 and "Fusion 360", whether the numbers and letters are spoken in English or
 Polish.
 
-The **Heard as → Write as** list adds your own replacements. Teach adds them
+The **Heard → Write** list adds your own replacements. Teach adds them
 for you. You can also add one with **+ Add correction**, or edit and remove
 them here. Only whole words are replaced, and never across a full stop or
 comma.
 
 **Recommended:** keep it on. It also works with Parakeet, which has no
 vocabulary boosting.
-
-![Settings, Vocabulary tab, bottom](images/settings-vocabulary-bottom.png)
 
 ### Packs
 
@@ -259,9 +257,7 @@ The line under Packs shows how many phrases the selected language uses.
 
 ## Model
 
-![Settings, Model tab, top](images/settings-model-top.png)
-
-![Settings, Model tab, bottom](images/settings-model-bottom.png)
+![Settings, Model tab](images/settings-model.png)
 
 PrivateType can use either of two local NVIDIA speech models.
 
@@ -278,12 +274,12 @@ PrivateType version already downloaded, so updating never asks you to download
 again. If you have both models, it starts with Nemotron, as earlier versions
 did; switch in **Settings → Model**.
 
-- **Download** fetches a model. Downloading accepts its terms (**Terms** link).
+- **Download** fetches a model. Downloading accepts its terms (**terms** link).
 - **Use** selects a downloaded model. It takes effect when you save.
 - **Delete…** removes a model you no longer need. The model in use can't be
   deleted; switch to the other one first.
 
-**Show a live preview with Parakeet** (on by default) re-transcribes what you've
+**Live preview with Parakeet** (on by default) re-transcribes what you've
 said about once a second while you hold the shortcut, so you can spot mistakes
 early. It uses more CPU while you speak. The inserted text still comes from one
 pass on release. Turn it off on a slow computer.
@@ -310,9 +306,9 @@ These work anywhere in Windows:
 
 | Shortcut | What it does | Change it |
 | --- | --- | --- |
-| `Ctrl+Shift+R` | Dictate in Polish | **General → Shortcuts** |
-| `Ctrl+Shift+E` | Dictate in English | **General → Shortcuts** |
-| `Win+Shift+V` | Open **Recent dictations** to paste one again, including one marked **Not inserted** | **General → Recent dictations → Shortcut**. Off when **Keep dictations** is **Don't keep** |
+| `Ctrl+Shift+R` | Dictate in Polish | **General → Dictate with** |
+| `Ctrl+Shift+E` | Dictate in English | **General → Dictate with** |
+| `Win+Shift+V` | Open **Recent dictations** to paste one again, including one marked **Not inserted** | **General → Recent dictations → Picker shortcut**. Off when **Keep dictations** is **Don't keep** |
 
 In **Recent dictations**:
 
