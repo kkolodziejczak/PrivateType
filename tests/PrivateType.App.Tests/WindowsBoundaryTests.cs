@@ -592,7 +592,7 @@ public sealed class WindowsBoundaryTests
     [Fact]
     public void Uses_the_model_loading_copy_for_a_cold_start()
     {
-        Assert.Contains("Loading local model", DictationBubble.ModelLoadingTitle);
+        Assert.Contains("Loading the model", DictationBubble.ModelLoadingTitle);
         Assert.Contains("Keep holding", DictationBubble.ModelLoadingHint);
     }
 
