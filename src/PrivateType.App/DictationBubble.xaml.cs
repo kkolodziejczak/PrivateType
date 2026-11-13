@@ -417,7 +417,7 @@ public partial class DictationBubble : Window
         Hint.Visibility = Visibility.Visible;
     }
 
-    private void ShowActions(Button[] shown)
+    private void ShowActions(System.Windows.Controls.Button[] shown)
     {
         foreach (var key in new[] { HistoryAction, CopyAction, MicrophoneAction, DiagnosticsAction })
             key.Visibility = shown.Contains(key) ? Visibility.Visible : Visibility.Collapsed;
@@ -435,7 +435,7 @@ public partial class DictationBubble : Window
         foreach (var binding in HotkeyCatalog.FromBindings(bindings))
             BindingsList.Children.Add(BindingRow(binding.Label, LanguageName(binding.LocaleCode)));
         BindingsCard.Visibility = Visibility.Visible;
-        BindingsCard.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        BindingsCard.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
         var cardHeight = BindingsCard.DesiredSize.Height;
         var above = Top + ActualHeight + cardHeight > CurrentWorkArea().Bottom - WorkAreaBottomClearance;
         RestLayer.Children.Remove(BindingsCard);
