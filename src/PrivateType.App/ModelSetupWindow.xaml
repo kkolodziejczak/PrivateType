@@ -128,8 +128,8 @@
                           </Grid>
                           <Border Style="{StaticResource DemoStrip}">
                             <Grid VerticalAlignment="Center">
-                              <StackPanel Orientation="Horizontal" Visibility="{Binding HasHeldText, Converter={StaticResource BoolToVisibility}}">
-                                <TextBlock FontSize="13" Text="{Binding Facts.HeldText}" />
+                              <StackPanel Orientation="Horizontal" Visibility="{Binding ShowsWordsWhileHolding, Converter={StaticResource BoolToVisibility}}">
+                                <TextBlock FontSize="13" Text="{Binding Facts.WhileHolding}" />
                                 <Rectangle Width="2" Height="16" Margin="3,0,0,0" VerticalAlignment="Center" Fill="{DynamicResource ColorAccent}" />
                               </StackPanel>
                               <TextBlock FontSize="13" Foreground="{DynamicResource ColorNeutral600}" Text="Appears after you let go" Visibility="{Binding WaitsForRelease, Converter={StaticResource BoolToVisibility}}" />

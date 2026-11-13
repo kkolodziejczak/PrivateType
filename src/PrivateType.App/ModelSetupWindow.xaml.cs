@@ -399,8 +399,8 @@ internal sealed class SetupModelChoice(SpeechModelDefinition model, bool isChose
     public bool IsRecommended => Model.Id == SpeechModelCatalog.DefaultId;
     public string Size => SizeOf(Model);
     // The demonstration: what shows while the shortcut is still held, then the whole phrase once it is let go.
-    public bool HasHeldText => Facts.HeldText.Length > 0;
-    public bool WaitsForRelease => !HasHeldText;
+    public bool ShowsWordsWhileHolding => Facts.WhileHolding.Length > 0;
+    public bool WaitsForRelease => !ShowsWordsWhileHolding;
     public string Phrase => SpeechModelFacts.SamplePhrase;
     // The model as the card's caption, "Parakeet · 681 MiB"; the answer is the card's name.
     public string Caption => $"{ShortName} · {Size}";

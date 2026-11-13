@@ -5,7 +5,7 @@ namespace PrivateType.App;
 // What a person needs to pick a model, written once. Setup leads with how the words appear, shown on one synthetic phrase
 // at the same two moments for every model; then the same four facts for each: when the text appears, the languages,
 // how the language is chosen, and your own phrases.
-internal sealed record SpeechModelFacts(string Behaviour, string Appears, string HeldText, string Languages, string LanguageChoice, string Phrases)
+internal sealed record SpeechModelFacts(string Behaviour, string Appears, string WhileHolding, string Languages, string LanguageChoice, string Phrases)
 {
     // The demonstration's phrase. It is the same for every model, because every model ends with the whole phrase.
     public const string SamplePhrase = "Send the notes to the team today.";

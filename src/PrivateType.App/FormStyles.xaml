@@ -600,9 +600,9 @@
       </DataTrigger>
     </Style.Triggers>
   </Style>
-  <!-- The warning mark, the one triangle with ! that every window uses: Licenses' missing-texts notice (16), the setup rail (20)
+  <!-- The warning mark, the one triangle with ! that every window uses: Licenses' missing-texts notice (16), the bubble's state mark (12)
        and the diagnostics severity marks (14). Drawn in a 20-unit box and scaled to the control's size; the ! is cut out, so
-       whatever lies behind shows through it. Its colour is the foreground: warning by default, danger where a step failed. -->
+       whatever lies behind shows through it. Its colour is the foreground: warning by default, danger for the bubble's failures. -->
   <Style x:Key="WarningMark" TargetType="ContentControl">
     <Setter Property="Width" Value="16" />
     <Setter Property="Height" Value="16" />
