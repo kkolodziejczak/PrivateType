@@ -450,7 +450,7 @@
           <ItemsControl x:Name="VocabularyList" ItemsSource="{Binding Visible}" KeyboardNavigation.TabNavigation="Continue">
             <ItemsControl.ItemTemplate>
               <DataTemplate>
-                <!-- A 30 field draws half a pixel low at 125 %; the remove glyph's 1.6 top padding (one pixel down) keeps it on the field's centre. -->
+                <!-- A 30 field draws half a pixel low at 125 %; the remove glyph's 0.8 top padding puts its top on a whole pixel, one lower, on the field's centre. -->
                 <Border Style="{StaticResource TableRow}" MinHeight="36" Padding="0,3" Background="Transparent">
                   <Grid>
                     <Grid.ColumnDefinitions>
@@ -458,7 +458,7 @@
                       <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <TextBox Style="{StaticResource ListField}" MaxLength="120" Text="{Binding Phrase, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Vocabulary phrase" />
-                    <Button Grid.Column="1" Margin="8,0,0,0" Style="{StaticResource RowRemoveButton}" Padding="0,1.6,0,0" Tag="{Binding}" Click="RemoveVocabularyPhrase"
+                    <Button Grid.Column="1" Margin="8,0,0,0" Style="{StaticResource RowRemoveButton}" Padding="0,0.8,0,0" Tag="{Binding}" Click="RemoveVocabularyPhrase"
                             ToolTip="Remove phrase" AutomationProperties.Name="Remove phrase" />
                   </Grid>
                 </Border>
@@ -503,7 +503,7 @@
                     <TextBox Style="{StaticResource ListField}" MaxLength="120" Text="{Binding Heard, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Heard as" />
                     <TextBlock Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource ColorNeutral600}" Text="→" />
                     <TextBox Grid.Column="2" Style="{StaticResource ListField}" MaxLength="120" Text="{Binding Phrase, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Write as" />
-                    <Button Grid.Column="3" Margin="8,0,0,0" Style="{StaticResource RowRemoveButton}" Padding="0,1.6,0,0" Tag="{Binding}" Click="RemoveCorrection"
+                    <Button Grid.Column="3" Margin="8,0,0,0" Style="{StaticResource RowRemoveButton}" Padding="0,0.8,0,0" Tag="{Binding}" Click="RemoveCorrection"
                             ToolTip="Remove correction" AutomationProperties.Name="Remove correction" />
                   </Grid>
                 </Border>
