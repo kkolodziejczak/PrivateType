@@ -51,7 +51,7 @@ reputation. Releases up to 1.5.3 are unsigned. Download only from this repositor
 You can change every shortcut in **Settings**.
 
 Hold a dictation shortcut while you speak, then release it to insert the text.
-A short ping means PrivateType is listening. In **Settings → Shortcuts** you
+A short ping means PrivateType is listening. In **Settings → General** you
 can:
 
 - add more shortcuts, each with one of 32 languages or Automatic,

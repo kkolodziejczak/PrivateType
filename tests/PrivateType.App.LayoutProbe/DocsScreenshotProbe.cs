@@ -65,7 +65,10 @@ internal static class DocsScreenshotProbe
             var scroll = (ScrollViewer)window.FindName("SettingsScrollViewer");
             if (scroll.ScrollableHeight < 1)
             {
-                Capture(window, Path.Combine(directory, name), scroll);
+                // Shrink the window to the page so the image ends at the Save button row, sidebar intact.
+                window.Height -= Math.Floor(scroll.ViewportHeight - scroll.ExtentHeight);
+                Flush(window);
+                Save(Snapshot(window), Path.Combine(directory, name));
                 return;
             }
 
@@ -79,30 +82,6 @@ internal static class DocsScreenshotProbe
         {
             window.Close();
         }
-    }
-
-    // Crops the empty space below the page so the image ends at the Save button row.
-    private static void Capture(Window window, string path, ScrollViewer scroll)
-    {
-        var bitmap = Snapshot(window);
-        var width = bitmap.PixelWidth;
-        var fullHeight = bitmap.PixelHeight;
-
-        var unusedHeight = (int)Math.Floor(scroll.ViewportHeight - scroll.ExtentHeight);
-        var pageBottom = (int)Math.Ceiling(scroll.TranslatePoint(new Point(0, scroll.ExtentHeight), window).Y);
-        var top = new CroppedBitmap(bitmap, new Int32Rect(0, 0, width, pageBottom));
-        var bottom = new CroppedBitmap(bitmap, new Int32Rect(0, pageBottom + unusedHeight, width, fullHeight - pageBottom - unusedHeight));
-
-        var visual = new DrawingVisual();
-        using (var context = visual.RenderOpen())
-        {
-            context.DrawImage(top, new Rect(0, 0, width, top.PixelHeight));
-            context.DrawImage(bottom, new Rect(0, top.PixelHeight, width, bottom.PixelHeight));
-        }
-
-        var cropped = new RenderTargetBitmap(width, top.PixelHeight + bottom.PixelHeight, 96, 96, PixelFormats.Pbgra32);
-        cropped.Render(visual);
-        Save(cropped, path);
     }
 
     private static RenderTargetBitmap Snapshot(Window window)
