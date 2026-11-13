@@ -9,17 +9,18 @@
       <ResourceDictionary.MergedDictionaries>
         <ResourceDictionary Source="FormStyles.xaml" />
       </ResourceDictionary.MergedDictionaries>
-      <!-- A slim scrollbar inside the list's column: a 10 lane (MinWidth would widen it to the system's 17) whose thumb is a
-           4 wide bar on the column's right edge, as long as the track gives it, so even a long log shows a bar, not a block. -->
+      <!-- A slim scrollbar inside the list's column: a 12 lane, 15 whole pixels at 125 % (MinWidth would widen it to the
+           system's 17), whose thumb is a 4 wide bar on the column's right edge, as long as the track gives it, so even a long
+           log shows a bar, not a block. -->
       <Style TargetType="ScrollBar">
-        <Setter Property="Width" Value="10" />
+        <Setter Property="Width" Value="12" />
         <Setter Property="MinWidth" Value="0" />
         <Setter Property="Template">
           <Setter.Value>
             <ControlTemplate TargetType="ScrollBar">
               <Track x:Name="PART_Track" Orientation="Vertical" IsDirectionReversed="True" Minimum="{TemplateBinding Minimum}" Maximum="{TemplateBinding Maximum}" Value="{TemplateBinding Value}" ViewportSize="{TemplateBinding ViewportSize}">
                 <Track.DecreaseRepeatButton><RepeatButton Command="ScrollBar.PageUpCommand" Focusable="False"><RepeatButton.Template><ControlTemplate TargetType="RepeatButton"><Border Background="Transparent" /></ControlTemplate></RepeatButton.Template></RepeatButton></Track.DecreaseRepeatButton>
-                <Track.Thumb><Thumb><Thumb.Template><ControlTemplate TargetType="Thumb"><Border Margin="6,0,0,0" Background="{DynamicResource ColorNeutral800}" CornerRadius="2" /></ControlTemplate></Thumb.Template></Thumb></Track.Thumb>
+                <Track.Thumb><Thumb><Thumb.Template><ControlTemplate TargetType="Thumb"><Border Margin="8,0,0,0" Background="{DynamicResource ColorNeutral800}" CornerRadius="2" /></ControlTemplate></Thumb.Template></Thumb></Track.Thumb>
                 <Track.IncreaseRepeatButton><RepeatButton Command="ScrollBar.PageDownCommand" Focusable="False"><RepeatButton.Template><ControlTemplate TargetType="RepeatButton"><Border Background="Transparent" /></ControlTemplate></RepeatButton.Template></RepeatButton></Track.IncreaseRepeatButton>
               </Track>
             </ControlTemplate>

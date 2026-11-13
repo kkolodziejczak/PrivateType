@@ -61,8 +61,11 @@
         <Grid Grid.Column="1">
           <ScrollViewer x:Name="SettingsScrollViewer" Grid.Row="0" VerticalScrollBarVisibility="Visible" HorizontalScrollBarVisibility="Disabled" Focusable="False" ScrollChanged="ShowScrollFade">
             <ScrollViewer.Resources>
+              <!-- 16 wide, with no system minimum (17, 21.25 px at 125 %): the page column keeps a whole-pixel width, so its
+                   content never rounds a pixel wider than the window and pushes the footer keys sideways. -->
               <Style TargetType="ScrollBar">
-                <Setter Property="Width" Value="10" />
+                <Setter Property="Width" Value="16" />
+                <Setter Property="MinWidth" Value="0" />
                 <Setter Property="Template">
                   <Setter.Value>
                     <ControlTemplate TargetType="ScrollBar">
@@ -447,6 +450,7 @@
           <ItemsControl x:Name="VocabularyList" ItemsSource="{Binding Visible}" KeyboardNavigation.TabNavigation="Continue">
             <ItemsControl.ItemTemplate>
               <DataTemplate>
+                <!-- A 30 field draws half a pixel low at 125 %; the remove glyph's 1.6 top padding (one pixel down) keeps it on the field's centre. -->
                 <Border Style="{StaticResource TableRow}" MinHeight="36" Padding="0,3" Background="Transparent">
                   <Grid>
                     <Grid.ColumnDefinitions>
@@ -454,7 +458,7 @@
                       <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <TextBox Style="{StaticResource ListField}" MaxLength="120" Text="{Binding Phrase, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Vocabulary phrase" />
-                    <Button Grid.Column="1" Margin="8,0,0,0" Style="{StaticResource RowRemoveButton}" Tag="{Binding}" Click="RemoveVocabularyPhrase"
+                    <Button Grid.Column="1" Margin="8,0,0,0" Style="{StaticResource RowRemoveButton}" Padding="0,1.6,0,0" Tag="{Binding}" Click="RemoveVocabularyPhrase"
                             ToolTip="Remove phrase" AutomationProperties.Name="Remove phrase" />
                   </Grid>
                 </Border>
@@ -499,7 +503,7 @@
                     <TextBox Style="{StaticResource ListField}" MaxLength="120" Text="{Binding Heard, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Heard as" />
                     <TextBlock Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource ColorNeutral600}" Text="→" />
                     <TextBox Grid.Column="2" Style="{StaticResource ListField}" MaxLength="120" Text="{Binding Phrase, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Write as" />
-                    <Button Grid.Column="3" Margin="8,0,0,0" Style="{StaticResource RowRemoveButton}" Tag="{Binding}" Click="RemoveCorrection"
+                    <Button Grid.Column="3" Margin="8,0,0,0" Style="{StaticResource RowRemoveButton}" Padding="0,1.6,0,0" Tag="{Binding}" Click="RemoveCorrection"
                             ToolTip="Remove correction" AutomationProperties.Name="Remove correction" />
                   </Grid>
                 </Border>
@@ -658,7 +662,7 @@
         </Grid>
           </ScrollViewer>
           <!-- Page scrolled: it fades out under the title bar, so a row divider passing under the header line never reads as a second line. -->
-          <Rectangle x:Name="ScrollFadeTop" Grid.Row="0" Height="16" Margin="0,0,12,0" VerticalAlignment="Top" IsHitTestVisible="False" Visibility="Hidden">
+          <Rectangle x:Name="ScrollFadeTop" Grid.Row="0" Height="16" Margin="0,0,16,0" VerticalAlignment="Top" IsHitTestVisible="False" Visibility="Hidden">
             <Rectangle.Fill>
               <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
                 <GradientStop Offset="0" Color="#FF1B1C20" />
@@ -667,7 +671,7 @@
             </Rectangle.Fill>
           </Rectangle>
           <!-- More page below: it fades into the footer. At the end the fade goes, so the page visibly stops. -->
-          <Rectangle x:Name="ScrollFade" Grid.Row="0" Height="16" Margin="0,0,12,0" VerticalAlignment="Bottom" IsHitTestVisible="False">
+          <Rectangle x:Name="ScrollFade" Grid.Row="0" Height="16" Margin="0,0,16,0" VerticalAlignment="Bottom" IsHitTestVisible="False">
             <Rectangle.Fill>
               <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
                 <GradientStop Offset="0" Color="#001B1C20" />
