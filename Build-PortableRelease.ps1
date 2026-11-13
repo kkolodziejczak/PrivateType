@@ -1,7 +1,9 @@
 [CmdletBinding()]
 param(
     [string] $OutputDirectory,
-    [string] $Version = '0.0.0'
+    [string] $Version = '0.0.0',
+    # Leaves the folder unzipped, so its executables can be signed before the ZIP and its hash are made.
+    [switch] $SkipArchive
 )
 
 $ErrorActionPreference = 'Stop'
@@ -202,13 +204,14 @@ https://github.com/kkolodziejczak/PrivateType
     if (Test-Path -LiteralPath (Join-Path $appPublishDirectory 'models')) {
         throw 'Portable release must not include a downloaded model.'
     }
-    $archiveCreated = $true
-    Compress-Archive -LiteralPath $publishDirectory -DestinationPath $archivePath -CompressionLevel Optimal
     $folderBytes = (Get-ChildItem -LiteralPath $publishDirectory -Recurse -File | Measure-Object -Property Length -Sum).Sum
-    $archiveBytes = (Get-Item -LiteralPath $archivePath).Length
-    Write-Host "SUCCESS: $publishDirectory"
     Write-Host "Folder bytes: $folderBytes"
-    Write-Host "ZIP bytes: $archiveBytes"
+    if (!$SkipArchive) {
+        $archiveCreated = $true
+        Compress-Archive -LiteralPath $publishDirectory -DestinationPath $archivePath -CompressionLevel Optimal
+        Write-Host "ZIP bytes: $((Get-Item -LiteralPath $archivePath).Length)"
+    }
+    Write-Host "SUCCESS: $publishDirectory"
 }
 catch {
     if ($archiveCreated -and (Test-Path -LiteralPath $archivePath)) {

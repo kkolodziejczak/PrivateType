@@ -65,6 +65,20 @@ The smoke script validates the top-level launcher, embedded application version,
 
 Pushing a version tag such as `v1.0.6` requires a matching `.github/release-notes/v1.0.6.md`, builds `PrivateType-1.0.6-win-x64.zip` and its checksum, and creates a GitHub draft release from those polished notes. Download and test those exact draft assets on a clean supported Windows installation before publishing the draft. Do not rebuild or replace an accepted ZIP between acceptance and publication.
 
+## Signed releases
+
+`.github/workflows/release.yml` builds the folder unzipped, signs both `PrivateType.exe` files (the launcher and `app\PrivateType.exe`) through the shared [gh-release-signing](https://github.com/kkolodziejczak/gh-release-signing) workflow, and only then zips, hashes and drafts the release. `Test-PortableRelease.ps1 -ExpectedSignerThumbprint` fails unless both carry a valid, timestamped signature from that certificate. NVIDIA's engine files, the Vulkan loader and the .NET runtime keep their publishers' signatures, or none, so they stay unmodified.
+
+After pushing the tag, run this in the repository folder and keep the window open:
+
+```powershell
+gh release-signing approve -Tag v1.0.6
+```
+
+It asks you to approve the `code-signing` environment, then for the SimplySign phone code. The environment only accepts `v*.*.*` tags. A manual run of the workflow from a branch skips signing and builds an unsigned test ZIP without a release. If the code expires, run `gh run rerun <run-id> --failed`, then `gh release-signing approve -RunId <run-id> -Tag v1.0.6`.
+
+Release notes for a signed version should say, under **Download and start**, that `PrivateType.exe` is signed by **Open Source Developer Krzysztof Kołodziejczak** (Certum), which users can check under the file's **Properties → Digital Signatures**. Windows SmartScreen may still show "Windows protected your PC" while the new certificate builds reputation; **More info** then shows that publisher, and **Run anyway** starts the app.
+
 ## Recorded package evidence
 
 On 2026-11-02, a manual run of the release workflow produced a 242,530,596-byte application folder and a 96,739,709-byte ZIP from the 1.5.2 sources (.NET 10). The excluded models are 742,090,464 bytes (Nemotron) and 713,975,456 bytes (Parakeet). Re-record these values whenever the runtime or publish output changes.

@@ -88,7 +88,7 @@ Choose one route before packaging:
 - [ ] Produce the final `v1.0.0` ZIP and SHA-256 in a GitHub draft release from a clean checkout, including the exact native dependency/import inventory.
 - [ ] Download the exact draft assets and run the documented clean-machine acceptance test, including the VC++ prerequisite path.
 - [ ] Publish the accepted draft without rebuilding or replacing its ZIP or SHA-256.
-- [ ] Consider code signing for a future release. The initial direct ZIP is intentionally unsigned; document that clearly and do not imply it is signed.
+- [x] Sign PrivateType's own executables (both `PrivateType.exe` files) in the release workflow; see [PORTABLE_RELEASE.md](../PORTABLE_RELEASE.md#signed-releases). Third-party binaries keep their publishers' signatures, or none. Releases up to 1.5.3 are unsigned.
 
 ## Evidence reviewed in this repository
 
