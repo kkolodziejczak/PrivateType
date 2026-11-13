@@ -183,7 +183,7 @@ public partial class ModelSetupWindow : Window
     private const int DiskFullHResult = unchecked((int)0x80070070);
     private const int HandleDiskFullHResult = unchecked((int)0x80070027);
 
-    // The drive is where the model is kept ("C:"), named when the disk is full.
+    // The drive is where the model is kept ("C:\"), named when the disk is full as "drive C".
     public void ShowFailure(Exception exception, string? drive = null) => ShowFailure(exception.Message, Classify(exception), drive);
 
     internal void ShowFailure(string message, bool connectionDropped)
@@ -198,7 +198,7 @@ public partial class ModelSetupWindow : Window
         {
             SetupFailure.ConnectionDropped => DroppedConnectionCause,
             SetupFailure.CheckFailed => CheckFailedCause,
-            SetupFailure.DiskFull => string.IsNullOrEmpty(drive) ? $"The model needs {size} of free space." : $"The model needs {size} on {drive.TrimEnd('\\')}.",
+            SetupFailure.DiskFull => string.IsNullOrEmpty(drive) ? $"The model needs {size} of free space." : $"The model needs {size} on drive {drive.TrimEnd('\\').TrimEnd(':')}.",
             _ => UnfinishedDownloadCause
         };
         FailureDetailText.Text = message;
