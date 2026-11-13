@@ -12,13 +12,20 @@ $ErrorActionPreference = 'Stop'
 $project = Join-Path $Checkout 'tests\PrivateType.App.LayoutProbe\PrivateType.App.LayoutProbe.csproj'
 $temp = [IO.Path]::GetTempPath()
 
-# A build is kept under the tree of the commit it was made from, and only for a checkout with nothing uncommitted.
-$uncommitted = git -C $Checkout status --porcelain
-$tree = if ($LASTEXITCODE -eq 0 -and -not $uncommitted) { git -C $Checkout rev-parse 'HEAD^{tree}' }
+# The tree of the checkout's commit, or nothing when the folder isn't a repository's own or holds uncommitted work.
+function Get-CommittedTree {
+    $uncommitted = git -C $Checkout status --porcelain
+    if ($LASTEXITCODE -ne 0 -or $uncommitted) { return }
+    if (git -C $Checkout rev-parse --show-prefix) { return }  # a folder inside a repository is not that repository's commit
+    git -C $Checkout rev-parse 'HEAD^{tree}'
+}
+
+# A build is kept under the tree of the commit it was made from.
+$tree = Get-CommittedTree
 $kept = if ($tree) { Join-Path $temp "privatetype-ui-built-$tree" }
-# A build nobody drew from, such as one whose capture was stopped while it waited.
-Get-ChildItem -Path $temp -Directory -Filter 'privatetype-ui-built-*' |
-    Where-Object { $_.LastWriteTime -lt (Get-Date).AddHours(-1) } |
+# Builds nobody used up: one whose capture never came, or one whose script was stopped before it could delete it.
+Get-ChildItem -Path $temp -Directory -Filter 'privatetype-*' |
+    Where-Object { $_.Name -match '^privatetype-(ui-built-[0-9a-f]{40,64}|capture-[0-9a-f]{32})$' -and $_.LastWriteTime -lt (Get-Date).AddHours(-1) } |
     Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
 
 $build = Join-Path $temp ("privatetype-capture-" + [Guid]::NewGuid().ToString('N'))
@@ -32,10 +39,8 @@ try {
         if ($LASTEXITCODE -ne 0) { throw "The build failed." }
     }
     if (-not $Output) {
-        if ($kept) {
-            Remove-Item -Recurse -Force $kept -ErrorAction SilentlyContinue
-            Move-Item $build $kept -ErrorAction SilentlyContinue
-        }
+        # Kept only if the checkout is still the commit the build began from, and no build of that commit is kept already.
+        if ($kept -and (Get-CommittedTree) -eq $tree -and -not (Test-Path $kept)) { Move-Item $build $kept -ErrorAction SilentlyContinue }
         return
     }
 
