@@ -15,6 +15,8 @@ internal sealed class DictationApplication : IDisposable
     private TranscriptionTimeForecast transcriptionForecast = new();
     private readonly EngineLoadCoordinator engineLoads;
     private readonly HoldHotkeyHook hotkey = new();
+    // A newer copy that the user chose over this one asks it to quit through this.
+    private IDisposable? quitRequests;
     private readonly DictationBubble bubble = new();
     private readonly HttpModelDownloadClient downloader = new();
     private readonly TrayIconSet trayIcons = new();
@@ -126,6 +128,7 @@ internal sealed class DictationApplication : IDisposable
         SystemEvents.PowerModeChanged -= OnPowerModeChanged;
         SystemEvents.SessionSwitch -= OnSessionSwitch;
         // Each step is isolated so one failure cannot skip the rest of the teardown.
+        DisposeStep(() => quitRequests?.Dispose());
         DisposeStep(lastDictation.Clear);
         DisposeStep(historyPruneTimer.Stop);
         DisposeStep(history.Clear);
@@ -213,11 +216,18 @@ internal sealed class DictationApplication : IDisposable
         {
             PortablePaths.EnsureWritable();
             LegacyDiagnosticsCleanup.DeleteKnownLogs(PortablePaths.DataDirectory, diagnostics);
+            // Before the shared settings are read: a copy closed here may still write them on its way out.
+            if (!SettleCopies(out var startWithWindows))
+            {
+                Wpf.Application.Current.Shutdown();
+                return;
+            }
+            quitRequests = CopyQuitSignal.Listen(Environment.ProcessId, () => Wpf.Application.Current?.Dispatcher.BeginInvoke(new Action(Quit)));
             settingsStore = new PortableSettingsStore(PortablePaths.SettingsDirectory);
             if (!File.Exists(settingsStore.SettingsPath))
                 OfferEarlierSettings(settingsStore);
             var loaded = settingsStore.Load();
-            settings = ReconcileStartupPreference(loaded.Settings);
+            settings = startWithWindows is { } starts ? loaded.Settings with { StartWithWindows = starts } : loaded.Settings;
             if (!loaded.HasSavedModel)
             {
                 settings = settings with { SpeechModel = SpeechModelCatalog.ChooseWithoutSavedChoice(model => models.Provisioner(model).IsAvailable()) };
@@ -246,59 +256,95 @@ internal sealed class DictationApplication : IDisposable
         }
     }
 
-    private PortableSettings ReconcileStartupPreference(PortableSettings loadedSettings)
+    // One copy runs at a time. Another running copy, or a different copy that Windows starts, means asking which to use;
+    // using this one closes the others and then takes Windows startup. False means this copy closes instead.
+    // startWithWindows is whether any copy starts with Windows, or null when that couldn't be read.
+    private bool SettleCopies(out bool? startWithWindows)
     {
+        var currentExecutablePath = ExecutablePath();
+        var currentVersion = WindowsStartupRegistration.VersionOf(currentExecutablePath);
+        var (startup, registeredVersion) = ReadStartupOwnership(currentExecutablePath, out startWithWindows);
+        var others = RunningCopies.FindOthers();
+        switch (CopyStartPolicy.Decide(currentExecutablePath, others.Select(copy => copy.ExecutablePath).ToArray(), startup))
+        {
+            case CopyStartDecision.AlreadyRunning:
+                RecordDiagnostic("copy.already.running");
+                Wpf.MessageBox.Show(AlreadyRunningMessage, "PrivateType", Wpf.MessageBoxButton.OK, Wpf.MessageBoxImage.Information);
+                return false;
+
+            case CopyStartDecision.Ask:
+                var running = others.FirstOrDefault();
+                var claimsStartup = startup is StartupOwnershipDecision.ClaimCurrent or StartupOwnershipDecision.ConfirmCurrent;
+                var quitsCleanly = running is null || CopyQuitSignal.IsListening(running.ProcessId);
+                if (new ChooseVersionWindow(running, registeredVersion, claimsStartup, currentVersion, quitsCleanly).ShowDialog() != true)
+                {
+                    RecordDiagnostic("copy.kept.other");
+                    return running is null;
+                }
+
+                foreach (var other in others)
+                    RunningCopies.Close(other);
+                RecordDiagnostic("copy.used.this", details: [("closed", others.Count)]);
+                if (claimsStartup)
+                    ClaimStartup(currentExecutablePath);
+                return true;
+
+            default:
+                if (startup == StartupOwnershipDecision.ClaimCurrent)
+                    ClaimStartup(currentExecutablePath);
+                return true;
+        }
+    }
+
+    internal const string AlreadyRunningMessage = "PrivateType is already running. Its icon is in the notification area.";
+
+    // Reading the Windows startup entries can fail; this copy then starts without changing them.
+    private (StartupOwnershipDecision Decision, Version? RegisteredVersion) ReadStartupOwnership(string currentExecutablePath, out bool? startWithWindows)
+    {
+        startWithWindows = null;
         try
         {
             var registration = windowsStartup.Capture();
-            if (!registration.HasPrivateTypeRegistration && !registration.HasLegacyRegistration)
-                return loadedSettings with { StartWithWindows = false };
-
+            startWithWindows = registration.HasPrivateTypeRegistration || registration.HasLegacyRegistration;
             if (StartupOwnershipPolicy.RemovesLegacy(registration.HasPrivateTypeRegistration, registration.HasLegacyRegistration, EngineHost.IsReleaseCopy))
             {
                 windowsStartup.RemoveLegacy();
                 registration = registration with { LegacyCommand = null };
             }
 
-            var currentExecutablePath = ExecutablePath();
             var registeredTarget = windowsStartup.ReadTarget(registration);
-            var currentVersion = WindowsStartupRegistration.VersionOf(currentExecutablePath);
             var decision = StartupOwnershipPolicy.Decide(
                 registration.HasPrivateTypeRegistration,
                 registration.HasLegacyRegistration,
                 registeredTarget.ExecutablePath,
-                registeredTarget.Version,
                 EngineHost.IsReleaseCopy,
-                currentExecutablePath,
-                currentVersion);
-
-            if (decision == StartupOwnershipDecision.ClaimCurrent)
-            {
-                windowsStartup.Claim(currentExecutablePath);
-                RecordDiagnostic("startup.claimed");
-            }
-            else if (decision == StartupOwnershipDecision.ConfirmCurrent)
-            {
-                var prompt = new StartupVersionPromptWindow(registeredTarget.Version, currentVersion);
-                if (prompt.ShowDialog() == true)
-                {
-                    windowsStartup.Claim(currentExecutablePath);
-                    RecordDiagnostic("startup.claimed.confirmed");
-                }
-                else
-                {
-                    RecordDiagnostic("startup.claim.declined");
-                }
-            }
-
-            return loadedSettings with { StartWithWindows = true };
+                currentExecutablePath);
+            return (decision, registeredTarget.Version);
         }
         catch (Exception exception)
         {
-            RecordDiagnostic("startup.failed", exception);
-            trayIcon.ShowBalloonTip(5000, "PrivateType", $"Windows startup setting could not be updated: {exception.Message}", Forms.ToolTipIcon.Warning);
-            return loadedSettings;
+            ReportStartupFailure(exception);
+            return (StartupOwnershipDecision.KeepRegistered, null);
         }
+    }
+
+    private void ClaimStartup(string currentExecutablePath)
+    {
+        try
+        {
+            windowsStartup.Claim(currentExecutablePath);
+            RecordDiagnostic("startup.claimed");
+        }
+        catch (Exception exception)
+        {
+            ReportStartupFailure(exception);
+        }
+    }
+
+    private void ReportStartupFailure(Exception exception)
+    {
+        RecordDiagnostic("startup.failed", exception);
+        trayIcon.ShowBalloonTip(5000, "PrivateType", $"Windows startup setting could not be updated: {exception.Message}", Forms.ToolTipIcon.Warning);
     }
 
     // Asked once, when there are no settings yet: either choice creates the settings file, so the next

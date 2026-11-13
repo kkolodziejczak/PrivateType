@@ -474,7 +474,11 @@ internal static class CaptureProbe
         var deepCopy = new EarlierCopy(@"D:\Users\Shared\Portable applications\Dictation tools\PrivateType portable releases\PrivateType 1.3.0 (September build)",
             new Version(1, 3, 0), new DateTime(2026, 9, 28, 9, 0, 0, DateTimeKind.Utc));
         Draw(new ImportSettingsPromptWindow(deepCopy), output, "import-prompt", "import-prompt-long-path");
-        Draw(new StartupVersionPromptWindow(new Version(2, 4, 0), new Version(1, 9, 3)), output, "version-prompt", "version-prompt");
+        // The version choice: another copy running (one too old to ask, one that quits on request) and Windows starting another copy.
+        var earlier = new RunningCopy(1, @"C:\Apps\PrivateType 1.5.3\app\PrivateType.exe", DateTime.UnixEpoch, new Version(1, 5, 3));
+        Draw(new ChooseVersionWindow(earlier, new Version(1, 5, 3), claimsStartup: true, new Version(1, 6, 1), quitsCleanly: false), output, "version-prompt", "version-running-ended");
+        Draw(new ChooseVersionWindow(earlier, new Version(1, 5, 3), claimsStartup: true, new Version(1, 6, 1), quitsCleanly: true), output, "version-prompt", "version-running-quits");
+        Draw(new ChooseVersionWindow(null, new Version(1, 5, 3), claimsStartup: true, new Version(1, 6, 1), quitsCleanly: true), output, "version-prompt", "version-startup");
         Draw(new DiagnosticsWindow(new InMemoryDiagnostics(), Clock), output, "diagnostics", "diagnostics-empty");
         Draw(new DiagnosticsWindow(SampleDiagnostics(), Clock), output, "diagnostics", "diagnostics-entries");
         // The Error row reached with the arrow keys: selected, focused and open on its raw line.

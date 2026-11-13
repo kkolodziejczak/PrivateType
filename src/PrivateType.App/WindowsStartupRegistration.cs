@@ -25,10 +25,8 @@ internal static class StartupOwnershipPolicy
         bool hasPrivateTypeRegistration,
         bool hasLegacyRegistration,
         string? registeredExecutablePath,
-        Version? registeredVersion,
         bool currentIsRelease,
-        string currentExecutablePath,
-        Version? currentVersion)
+        string currentExecutablePath)
     {
         if (!hasPrivateTypeRegistration && !hasLegacyRegistration)
             return StartupOwnershipDecision.LeaveDisabled;
@@ -48,12 +46,8 @@ internal static class StartupOwnershipPolicy
         if (!hasPrivateTypeRegistration && hasLegacyRegistration)
             return StartupOwnershipDecision.ClaimCurrent;
 
-        if (currentVersion is null || registeredVersion is null)
-            return StartupOwnershipDecision.ConfirmCurrent;
-
-        return currentVersion.CompareTo(registeredVersion) >= 0
-            ? StartupOwnershipDecision.ClaimCurrent
-            : StartupOwnershipDecision.ConfirmCurrent;
+        // Another PrivateType copy, older or newer: the user chooses which one Windows starts.
+        return StartupOwnershipDecision.ConfirmCurrent;
     }
 
     internal static bool RemovesLegacy(bool hasPrivateTypeRegistration, bool hasLegacyRegistration, bool currentIsRelease) =>

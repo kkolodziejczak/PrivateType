@@ -114,7 +114,10 @@ with **Pasting**.
 **Start PrivateType with Windows** (off by default) starts PrivateType when you
 sign in, using an entry for your Windows account only. If you later start a
 different version, PrivateType asks whether that version should start with
-Windows instead.
+Windows instead. Only one copy runs at a time: starting another copy while one
+runs asks which to use, and **Use** closes the running one. A copy from 1.6.0
+or earlier can't be asked to quit, so it is closed at once, and a dictation in
+progress is lost.
 
 **Unload model after** frees the model's memory (about 0.8–1.1 GiB) after
 5, 10 (default), 15, or 30 minutes without dictation. The next dictation loads
