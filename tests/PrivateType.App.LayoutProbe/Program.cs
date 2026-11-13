@@ -15,20 +15,45 @@ if (args.Length >= 3 && string.Equals(args[0], "--cache-worker", StringCompariso
     return;
 }
 
+// A capture and the layout checks show windows, give them keyboard focus and hold them under the pointer. Each run does
+// that on a desktop of its own, so nothing appears on the screen and nothing a person or another run does can change it.
 if (args.Length == 2 && string.Equals(args[0], "--capture", StringComparison.OrdinalIgnoreCase))
+{
+    Environment.ExitCode = HiddenDesktop.Run(Environment.ProcessPath!, $"--capture-on-this-desktop \"{args[1]}\"");
+    return;
+}
+
+if (args.Length == 2 && string.Equals(args[0], "--capture-on-this-desktop", StringComparison.OrdinalIgnoreCase))
 {
     RunOnStaThread(() =>
     {
+        HiddenDesktop.RequireCurrent();
         // Load only the theme: instantiating App would start a real PrivateType (hotkeys, tray, model load).
         var application = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
         application.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("/PrivateType;component/Theme.xaml", UriKind.Relative) });
+        // As on the app's own UI thread, what a window reports or awaits comes back here, where the drawing waits for it.
+        // Without it a download's progress arrived on another thread, and one capture in sixty drew "0 of 708 MiB".
+        SynchronizationContext.SetSynchronizationContext(new System.Windows.Threading.DispatcherSynchronizationContext());
         CaptureProbe.Run(args[1]);
     });
     return;
 }
 
-var monitorPlacementOnly =args.Length == 1 && string.Equals(args[0], "--monitor-placement-only", StringComparison.OrdinalIgnoreCase);
-RunOnStaThread(() => RenderWindows(monitorPlacementOnly));
+// The monitor placement checks alone stay on the visible desktop, as they were: nobody has tried them on a hidden one.
+var monitorPlacementOnly = args.Length == 1 && string.Equals(args[0], "--monitor-placement-only", StringComparison.OrdinalIgnoreCase);
+var checksOnThisDesktop = args.Length == 1 && string.Equals(args[0], "--checks-on-this-desktop", StringComparison.OrdinalIgnoreCase);
+if (!monitorPlacementOnly && !checksOnThisDesktop)
+{
+    Environment.ExitCode = HiddenDesktop.Run(Environment.ProcessPath!, "--checks-on-this-desktop");
+    return;
+}
+
+RunOnStaThread(() =>
+{
+    if (checksOnThisDesktop)
+        HiddenDesktop.RequireCurrent();
+    RenderWindows(monitorPlacementOnly);
+});
 
 static void RunOnStaThread(Action work)
 {
