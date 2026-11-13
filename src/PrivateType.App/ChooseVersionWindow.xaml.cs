@@ -43,14 +43,14 @@ public partial class ChooseVersionWindow : Window
             return $"{Shared} You can run either version; this chooses the one that starts with Windows.";
 
         var self = current is null ? "this copy" : ApplicationVersion.Number(current);
-        var closes = $"{Shared} Using {self} closes {Name(other, "the other copy")}";
+        var closes = $"{Shared} Using {self} closes {CopyName(other, "the other copy")}";
         return claimsStartup ? $"{closes} and starts {self} with Windows." : $"{closes}.";
     }
 
     internal static string ForcedCloseText(Version? running) =>
-        $"{Name(running, "The other copy")} is closed at once. A dictation in progress is lost.";
+        $"{CopyName(running, "The other copy")} is closed at once. A dictation in progress is lost.";
 
-    private static string Name(Version? version, string unknown) => version is null ? unknown : ApplicationVersion.Number(version);
+    private static string CopyName(Version? version, string unknown) => version is null ? unknown : ApplicationVersion.Number(version);
 
     private void UseThisCopy(object sender, RoutedEventArgs e) => DialogResult = true;
 

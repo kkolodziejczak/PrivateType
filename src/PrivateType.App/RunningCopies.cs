@@ -34,22 +34,33 @@ internal static class RunningCopies
     private static readonly TimeSpan QuitTimeout = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan EndTimeout = TimeSpan.FromSeconds(5);
 
-    internal static IReadOnlyList<RunningCopy> FindOthers()
+    // The other copies in this session that started before this one. A copy started later weighs this one in turn, so
+    // two copies started together never both ask, or both give way.
+    internal static IReadOnlyList<RunningCopy> FindStartedEarlier()
     {
-        var sessionId = Process.GetCurrentProcess().SessionId;
+        using var self = Process.GetCurrentProcess();
         var copies = new List<RunningCopy>();
         foreach (var process in Process.GetProcessesByName("PrivateType"))
         {
             using (process)
             {
-                if (process.Id == Environment.ProcessId || process.SessionId != sessionId)
+                if (process.Id == self.Id || !InSession(process, self.SessionId))
                     continue;
                 var copy = Identify(process);
-                if (copy is not null && !IsLauncher(copy.ExecutablePath))
+                if (copy is not null && !IsLauncher(copy.ExecutablePath) && StartedBefore(copy, self.StartTime, self.Id))
                     copies.Add(copy);
             }
         }
         return copies;
+    }
+
+    internal static bool StartedBefore(RunningCopy copy, DateTime startTime, int processId) =>
+        copy.StartTime < startTime || (copy.StartTime == startTime && copy.ProcessId < processId);
+
+    internal static bool IsRunning(RunningCopy copy)
+    {
+        using var process = Reopen(copy);
+        return process is not null;
     }
 
     // The launcher shares the application's name and lives only long enough to start it, beside its app folder.
@@ -65,9 +76,21 @@ internal static class RunningCopies
         if (CopyQuitSignal.TryRequest(copy.ProcessId) && process.WaitForExit(QuitTimeout))
             return;
 
-        process.Kill(entireProcessTree: true);
-        if (!process.WaitForExit(EndTimeout))
-            throw new InvalidOperationException($"{ApplicationVersion.Label(copy.Version)} did not close. Quit it from its tray icon, then start this copy again.");
+        try
+        {
+            process.Kill(entireProcessTree: true);
+            if (process.WaitForExit(EndTimeout))
+                return;
+        }
+        catch (Exception exception) when (exception is Win32Exception or InvalidOperationException && process.HasExited)
+        {
+            return;
+        }
+        catch (Win32Exception)
+        {
+            // Not ours to end, for example a copy running as administrator.
+        }
+        throw new InvalidOperationException($"{ApplicationVersion.Label(copy.Version)} did not close. Quit it from its tray icon, then start this copy again.");
     }
 
     // The same process that was found, or null once it has exited; never a new process that reused the id.
@@ -92,18 +115,43 @@ internal static class RunningCopies
         return null;
     }
 
+    private static bool InSession(Process process, int sessionId)
+    {
+        try
+        {
+            return process.SessionId == sessionId;
+        }
+        catch (Exception exception) when (exception is Win32Exception or InvalidOperationException)
+        {
+            // Exited since the list was taken.
+            return false;
+        }
+    }
+
     private static RunningCopy? Identify(Process process)
     {
         try
         {
             var path = process.MainModule?.FileName;
-            return path is null ? null : new RunningCopy(process.Id, path, process.StartTime, WindowsStartupRegistration.VersionOf(path));
+            return path is null || !IsPrivateType(path)
+                ? null
+                : new RunningCopy(process.Id, path, process.StartTime, WindowsStartupRegistration.VersionOf(path));
         }
         catch (Exception exception) when (exception is Win32Exception or InvalidOperationException)
         {
             // Exited, or not ours to inspect.
             return null;
         }
+    }
+
+    // Every PrivateType build carries these in its version resource; another program named PrivateType.exe does not.
+    internal static bool IsPrivateType(string executablePath)
+    {
+        if (!File.Exists(executablePath))
+            return false;
+
+        var info = FileVersionInfo.GetVersionInfo(executablePath);
+        return info.ProductName == "PrivateType" && string.Equals(info.InternalName, "PrivateType.dll", StringComparison.OrdinalIgnoreCase);
     }
 }
 

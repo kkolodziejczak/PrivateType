@@ -36,6 +36,31 @@ public sealed class CopySwitchTests
             CopyStartPolicy.Decide(Current, [Earlier, Current.ToLowerInvariant()], StartupOwnershipDecision.ConfirmCurrent));
     }
 
+    // Two copies started together must not both ask, or both give way: only the later one weighs the earlier one.
+    [Fact]
+    public void Weighs_only_copies_that_started_before_this_one()
+    {
+        var start = new DateTime(2026, 11, 13, 20, 0, 0, DateTimeKind.Local);
+        RunningCopy CopyAt(DateTime startTime, int processId) => new(processId, Earlier, startTime, new Version(1, 5, 3));
+
+        Assert.True(RunningCopies.StartedBefore(CopyAt(start.AddSeconds(-1), 900), start, 500));
+        Assert.False(RunningCopies.StartedBefore(CopyAt(start.AddSeconds(1), 100), start, 500));
+        // The same instant: the lower process id counts as first, so exactly one of the two gives way.
+        Assert.True(RunningCopies.StartedBefore(CopyAt(start, 100), start, 500));
+        Assert.False(RunningCopies.StartedBefore(CopyAt(start, 900), start, 500));
+    }
+
+    // Another program that happens to be called PrivateType.exe is never treated as a copy, so never closed.
+    [Fact]
+    public void Recognises_only_PrivateType_by_its_product_identity()
+    {
+        var directory = AppContext.BaseDirectory;
+
+        Assert.True(RunningCopies.IsPrivateType(Path.Combine(directory, "PrivateType.dll")));
+        Assert.False(RunningCopies.IsPrivateType(Path.Combine(directory, "PrivateType.App.Tests.dll")));
+        Assert.False(RunningCopies.IsPrivateType(Path.Combine(directory, "missing.exe")));
+    }
+
     [Fact]
     public void Tells_a_launcher_from_the_application_it_starts()
     {

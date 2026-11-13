@@ -264,7 +264,7 @@ internal sealed class DictationApplication : IDisposable
         var currentExecutablePath = ExecutablePath();
         var currentVersion = WindowsStartupRegistration.VersionOf(currentExecutablePath);
         var (startup, registeredVersion) = ReadStartupOwnership(currentExecutablePath, out startWithWindows);
-        var others = RunningCopies.FindOthers();
+        var others = RunningCopies.FindStartedEarlier();
         switch (CopyStartPolicy.Decide(currentExecutablePath, others.Select(copy => copy.ExecutablePath).ToArray(), startup))
         {
             case CopyStartDecision.AlreadyRunning:
@@ -273,13 +273,15 @@ internal sealed class DictationApplication : IDisposable
                 return false;
 
             case CopyStartDecision.Ask:
-                var running = others.FirstOrDefault();
+                // The copy the choice names: one that can only be ended, if any, so its warning names the right copy.
+                var running = others.FirstOrDefault(copy => !CopyQuitSignal.IsListening(copy.ProcessId)) ?? others.FirstOrDefault();
                 var claimsStartup = startup is StartupOwnershipDecision.ClaimCurrent or StartupOwnershipDecision.ConfirmCurrent;
-                var quitsCleanly = running is null || CopyQuitSignal.IsListening(running.ProcessId);
+                var quitsCleanly = others.All(copy => CopyQuitSignal.IsListening(copy.ProcessId));
                 if (new ChooseVersionWindow(running, registeredVersion, claimsStartup, currentVersion, quitsCleanly).ShowDialog() != true)
                 {
                     RecordDiagnostic("copy.kept.other");
-                    return running is null;
+                    // The other copy may have quit while the choice was open; then this one runs.
+                    return !others.Any(RunningCopies.IsRunning);
                 }
 
                 foreach (var other in others)
