@@ -1,0 +1,139 @@
+name: Build portable PrivateType
+
+# A version tag builds the folder, signs PrivateType's own executables after the owner's approval
+# (gh release-signing approve -Tag vX.Y.Z), then zips, hashes, verifies and drafts the release.
+# A manual run from a branch builds an unsigned test ZIP and never signs or releases.
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Test and build the unsigned folder
+    runs-on: windows-2022
+    timeout-minutes: 90
+    outputs:
+      version: ${{ steps.build.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Checked before signing, so a missing file never costs an approval and a phone code.
+      - name: Check the release notes
+        if: github.ref_type == 'tag'
+        shell: pwsh
+        run: |
+          $notesPath = ".github/release-notes/$env:GITHUB_REF_NAME.md"
+          if (!(Test-Path -LiteralPath $notesPath -PathType Leaf)) {
+            throw "Release notes are required before tagging: $notesPath"
+          }
+
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Download pinned NeMo-Speech.cpp runtime
+        shell: pwsh
+        run: ./Get-NemoSpeechRuntime.ps1
+
+      - name: Test .NET projects and rendered layouts
+        shell: pwsh
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          dotnet test ./tests/PrivateType.Core.Tests/PrivateType.Core.Tests.csproj --configuration Release
+          dotnet test ./tests/PrivateType.App.Tests/PrivateType.App.Tests.csproj --configuration Release
+          dotnet run --project ./tests/PrivateType.App.LayoutProbe/PrivateType.App.LayoutProbe.csproj --configuration Release
+
+      - name: Build the portable folder
+        id: build
+        shell: pwsh
+        run: |
+          $version = if ($env:GITHUB_REF_NAME -match '^v(\d+\.\d+\.\d+(?:\.\d+)?)(?:[-+].+)?$') { $Matches[1] } else { '0.0.0' }
+          ./Build-PortableRelease.ps1 -Version $version -SkipArchive
+          "version=$version" >> $env:GITHUB_OUTPUT
+
+      # Holds the folder "PrivateType <version>" exactly as it goes into the ZIP.
+      - name: Keep the unsigned folder
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: unsigned-release
+          path: artifacts/PrivateType-${{ steps.build.outputs.version }}-win-x64/
+          if-no-files-found: error
+          retention-days: 7
+
+  sign:
+    needs: build
+    if: github.ref_type == 'tag'
+    uses: kkolodziejczak/gh-release-signing/.github/workflows/sign.yml@main
+    secrets: inherit # without it the signing job sees no secrets, not even its environment's
+    permissions:
+      contents: read
+      id-token: write
+    with:
+      artifact: unsigned-release
+      # Both PrivateType.exe files: the launcher and app\PrivateType.exe. Third-party binaries keep their own signatures.
+      files: PrivateType.exe
+      signed-artifact: signed-release
+      retention-days: 7
+
+  release:
+    name: Zip, verify and draft the release
+    needs: [build, sign]
+    # A tag always goes through signing; a manual run from a branch skips it.
+    if: ${{ !cancelled() && needs.build.result == 'success' && (needs.sign.result == 'success' || (needs.sign.result == 'skipped' && github.ref_type != 'tag')) }}
+    runs-on: windows-2022
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.build.outputs.version }}
+      SIGNER_THUMBPRINT: ${{ needs.sign.outputs.thumbprint }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Download the release folder
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ${{ github.ref_type == 'tag' && 'signed-release' || 'unsigned-release' }}
+          path: artifacts/PrivateType-${{ needs.build.outputs.version }}-win-x64
+
+      - name: Zip and verify the portable release
+        id: package
+        shell: pwsh
+        run: |
+          if ($env:GITHUB_REF_TYPE -eq 'tag' -and [string]::IsNullOrWhiteSpace($env:SIGNER_THUMBPRINT)) {
+            throw 'The signing job reported no certificate thumbprint.'
+          }
+          $archiveName = "PrivateType-$env:VERSION-win-x64.zip"
+          $archivePath = "./artifacts/$archiveName"
+          Compress-Archive -LiteralPath "./artifacts/PrivateType-$env:VERSION-win-x64/PrivateType $env:VERSION" -DestinationPath $archivePath -CompressionLevel Optimal
+          ./Test-PortableRelease.ps1 -ExpectedVersion $env:VERSION -ExpectedSignerThumbprint $env:SIGNER_THUMBPRINT
+          $hash = (Get-FileHash $archivePath -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  $archiveName" | Set-Content "$archivePath.sha256" -NoNewline
+          Write-Host "ZIP bytes: $((Get-Item -LiteralPath $archivePath).Length)"
+          "archive_name=$archiveName" >> $env:GITHUB_OUTPUT
+
+      - name: Upload portable artifacts
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: PrivateType-${{ needs.build.outputs.version }}-win-x64
+          path: |
+            artifacts/${{ steps.package.outputs.archive_name }}
+            artifacts/${{ steps.package.outputs.archive_name }}.sha256
+          if-no-files-found: error
+
+      - name: Create GitHub draft release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          $archivePath = "./artifacts/${{ steps.package.outputs.archive_name }}"
+          gh release create $env:GITHUB_REF_NAME $archivePath "$archivePath.sha256" --draft --verify-tag --title "PrivateType $env:GITHUB_REF_NAME" --notes-file ".github/release-notes/$env:GITHUB_REF_NAME.md"

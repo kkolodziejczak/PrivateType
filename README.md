@@ -33,7 +33,10 @@ exactly:
 Get-FileHash .\PrivateType-1.3.0-win-x64.zip -Algorithm SHA256
 ```
 
-Releases are unsigned, so download them only from this repository.
+Releases after 1.5.3 sign `PrivateType.exe` as **Open Source Developer Krzysztof
+Kołodziejczak** (Certum); check it under the file's **Properties → Digital
+Signatures**. Windows SmartScreen may still warn while the certificate builds
+reputation. Releases up to 1.5.3 are unsigned. Download only from this repository.
 </details>
 
 ## Use it

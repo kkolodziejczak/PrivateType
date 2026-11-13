@@ -2,7 +2,9 @@
 param(
     [string] $ArchivePath,
     [string] $WorkingDirectory,
-    [string] $ExpectedVersion = '0.0.0'
+    [string] $ExpectedVersion = '0.0.0',
+    # When given, both PrivateType executables must carry a valid, timestamped signature from this certificate.
+    [string] $ExpectedSignerThumbprint
 )
 
 $ErrorActionPreference = 'Stop'
@@ -87,6 +89,18 @@ try {
             $actualText = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($versionedExecutable).FileVersion
             if (![Version]::TryParse($actualText, [ref] $actual) -or $actual -ne $expected) {
                 throw "Portable executable version mismatch for $versionedExecutable. Expected $expected; actual $actualText."
+            }
+        }
+    }
+    if (![string]::IsNullOrWhiteSpace($ExpectedSignerThumbprint)) {
+        foreach ($signedExecutable in @($launcherPath, $executablePath)) {
+            $signature = Get-AuthenticodeSignature -LiteralPath $signedExecutable
+            if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Thumbprint -ne $ExpectedSignerThumbprint) {
+                throw "Portable executable signature for $signedExecutable is '$($signature.Status)' from '$($signature.SignerCertificate.Subject)'; expected certificate $ExpectedSignerThumbprint."
+            }
+            # Without a timestamp the signature stops validating when the certificate expires.
+            if ($null -eq $signature.TimeStamperCertificate) {
+                throw "Portable executable signature for $signedExecutable has no timestamp."
             }
         }
     }
