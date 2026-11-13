@@ -224,7 +224,7 @@ internal static class SettingsModelProbe
             terms.IsChecked = true;
             Flush(setup);
             Require(((Button)setup.FindName("DownloadButton")).IsEnabled, "Ticking the terms must allow the download.");
-            VisibleButton(setup, "Change").RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+            VisibleButton(setup, "Change how your words appear").RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
             Flush(setup);
             Require(cards[0].IsChecked == true && terms.IsChecked == true, "Change must keep the choice and the consent given for it.");
             cards[1].IsChecked = true;
