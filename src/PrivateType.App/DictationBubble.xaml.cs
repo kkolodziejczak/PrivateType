@@ -302,7 +302,8 @@ public partial class DictationBubble : Window
         ShowCard(CardMark.Warning, NotInsertedTitle, savedToHistory ? detail : NotSavedDetail);
         AnnounceState(NotInsertedTitle);
         SetWidthAroundCenter(ActiveWidth);
-        HeldWords.Text = text;
+        HeldWords.Text = CutToLines(text, HeldLines);
+        System.Windows.Automation.AutomationProperties.SetName(HeldWords, text);
         HeldWords.Visibility = Visibility.Visible;
         ShowActions(savedToHistory ? [HistoryAction, CopyAction] : [CopyAction]);
         var kept = savedToHistory ? "It is in Recent dictations." : "It wasn't kept, because Recent dictations is off.";
@@ -347,6 +348,37 @@ public partial class DictationBubble : Window
         ShowActions([action == BubbleAction.MicrophoneSettings ? MicrophoneAction : DiagnosticsAction]);
         AnnounceMessage($"{title}. {message}");
         ClampToWorkAreaAfterLayout();
+    }
+
+    private const int HeldLines = 3;
+
+    // The most whole words that, with an ellipsis, wrap to the given lines across the card. WPF's own trimming under a
+    // height limit drops the last line instead of ending it with the ellipsis.
+    private string CutToLines(string text, int lines)
+    {
+        // The card's inner width: its width less the 1 px border and 12 px padding on each side.
+        var width = ActiveWidth - 2 - 24;
+        var typeface = new Typeface(HeldWords.FontFamily, HeldWords.FontStyle, HeldWords.FontWeight, HeldWords.FontStretch);
+        var pixelsPerDip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
+        bool Fits(string candidate) =>
+            new FormattedText(candidate, System.Globalization.CultureInfo.CurrentUICulture, System.Windows.FlowDirection.LeftToRight, typeface,
+                HeldWords.FontSize, System.Windows.Media.Brushes.Black, pixelsPerDip) { MaxTextWidth = width, LineHeight = HeldWords.LineHeight }
+            .Height <= (lines * HeldWords.LineHeight) + 0.5;
+
+        if (Fits(text))
+            return text;
+        var words = text.Split(' ');
+        var (low, high) = (0, words.Length);
+        while (low < high)
+        {
+            var middle = (low + high + 1) / 2;
+            if (Fits(string.Join(' ', words[..middle]) + "…"))
+                low = middle;
+            else
+                high = middle - 1;
+        }
+
+        return string.Join(' ', words[..low]) + "…";
     }
 
     internal static string NotInsertedCause(TargetEligibility cause) => cause switch
