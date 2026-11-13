@@ -213,8 +213,8 @@ internal static class SettingsModelProbe
             Require(badges.SequenceEqual([true, false]), "Only the recommended model carries the Recommended tag.");
             // When to choose Nemotron is said on its own card: words while you speak, Asian languages, and a language per shortcut.
             var advice = Descendants(cards[1]).OfType<TextBlock>().Where(text => text.IsVisible).Select(text => text.Text).ToList();
-            Require(advice.Any(text => text.Contains("as you speak", StringComparison.Ordinal)) && advice.Any(text => text.Contains("each shortcut", StringComparison.Ordinal))
-                && advice.Any(text => text.Contains("Asian", StringComparison.Ordinal)), "Setup must say when to choose Nemotron instead.");
+            Require(advice.Any(text => text.Contains("as you speak", StringComparison.OrdinalIgnoreCase)) && advice.Any(text => text.Contains("each shortcut", StringComparison.OrdinalIgnoreCase))
+                && advice.Any(text => text.Contains("Asian", StringComparison.OrdinalIgnoreCase)), "Setup must say when to choose Nemotron instead.");
             var lastAdvice = Descendants(cards[1]).OfType<TextBlock>().Last(text => text.IsVisible);
             Require(lastAdvice.TranslatePoint(new Point(0, lastAdvice.ActualHeight), setup).Y <= setup.ActualHeight, "The advice must fit inside the setup window.");
             Capture(setup, outputDirectory, "model-consent-recommended.png");
