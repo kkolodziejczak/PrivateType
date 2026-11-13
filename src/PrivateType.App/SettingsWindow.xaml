@@ -38,8 +38,13 @@
           <ColumnDefinition Width="150" />
           <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
+        <!-- The footer has its own cell, outside the page: a page wider than its column by a rounding pixel can never move it. -->
+        <Grid.RowDefinitions>
+          <RowDefinition Height="*" />
+          <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
         <!-- Left rail: pages at the top, the rarely used windows pinned at the bottom. -->
-        <Border Grid.Column="0" Background="{DynamicResource ColorBg}" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,0,1,0" CornerRadius="0,0,0,11">
+        <Border Grid.Column="0" Grid.RowSpan="2" Background="{DynamicResource ColorBg}" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,0,1,0" CornerRadius="0,0,0,11">
           <DockPanel>
             <StackPanel DockPanel.Dock="Bottom" Margin="16,0,16,16">
               <Button Content="Licenses…" Style="{StaticResource TextLinkButton}" AutomationProperties.Name="Open-source licenses" Click="OpenLicenses" />
@@ -54,10 +59,6 @@
           </DockPanel>
         </Border>
         <Grid Grid.Column="1">
-          <Grid.RowDefinitions>
-            <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
-          </Grid.RowDefinitions>
           <ScrollViewer x:Name="SettingsScrollViewer" Grid.Row="0" VerticalScrollBarVisibility="Visible" HorizontalScrollBarVisibility="Disabled" Focusable="False" ScrollChanged="ShowScrollFade">
             <ScrollViewer.Resources>
               <Style TargetType="ScrollBar">
@@ -108,7 +109,7 @@
                   </ComboBox>
                   <TextBlock x:Name="RecordHint" Grid.Column="1" Grid.ColumnSpan="2" VerticalAlignment="Center" FontSize="13" Foreground="{DynamicResource ColorNeutral400}"
                              Text="Press Ctrl+Shift + a key" Visibility="Collapsed" />
-                  <Button x:Name="RemoveButton" Grid.Column="2" Style="{StaticResource GhostButton}" Width="28" Height="28" Padding="0" ContentTemplate="{StaticResource RemoveGlyph}" Content="Remove" Opacity="0"
+                  <Button x:Name="RemoveButton" Grid.Column="2" Style="{StaticResource GhostButton}" Width="28" Height="28" Padding="0" BorderThickness="0" ContentTemplate="{StaticResource RemoveGlyph}" Content="Remove" Opacity="0"
                           ToolTipService.ShowsToolTipOnKeyboardFocus="True"
                           Tag="{Binding}" Click="RemoveBinding"
                           ToolTip="{Binding ShortcutLabel, StringFormat='Remove {0} shortcut'}" AutomationProperties.Name="{Binding ShortcutLabel, StringFormat='Remove {0} shortcut'}" />
@@ -186,7 +187,7 @@
                   </ComboBox.ItemTemplate>
                 </ComboBox>
               </Grid>
-              <Canvas Style="{StaticResource RowHintLayer}"><Border Style="{StaticResource RowHint}"><TextBlock x:Name="InsertionModeHint" /></Border></Canvas>
+              <Border Style="{StaticResource RowHint}"><TextBlock x:Name="InsertionModeHint" /></Border>
             </StackPanel>
           </Border>
 
@@ -223,7 +224,7 @@
                          ToolTip="Click, then press the new shortcut, for example Win+Shift+V." AutomationProperties.Name="Recent dictations shortcut"
                          GotKeyboardFocus="StartRecordingHistoryShortcut" LostKeyboardFocus="StopRecordingHistoryShortcut" />
               </Grid>
-              <Canvas Style="{StaticResource RowHintLayer}"><Border Style="{StaticResource RowHint}"><TextBlock x:Name="HistoryHint" /></Border></Canvas>
+              <Border Style="{StaticResource RowHint}"><TextBlock x:Name="HistoryHint" /></Border>
             </StackPanel>
           </Border>
           <Border Style="{StaticResource TableRow}">
@@ -293,7 +294,7 @@
                   <TextBlock x:Name="ReadyVolumeText" Margin="12,0,0,0" Style="{StaticResource RowValue}" Text="80%" />
                 </StackPanel>
               </Grid>
-              <Canvas Style="{StaticResource RowHintLayer}"><Border Style="{StaticResource RowHint}"><TextBlock Text="0% mutes the ready sound and spoken cues." /></Border></Canvas>
+              <Border Style="{StaticResource RowHint}"><TextBlock Text="0% mutes the ready sound and spoken cues." /></Border>
             </StackPanel>
           </Border>
           <!-- Only a custom ready sound needs a file. -->
@@ -322,7 +323,7 @@
                 <TextBox x:Name="CustomSoundPathText" Grid.Column="1" Height="30" IsReadOnly="True" FontFamily="{DynamicResource MonoFont}" FontSize="12" AutomationProperties.Name="Custom ready sound file" />
                 <Button x:Name="BrowseSoundButton" Grid.Column="2" Margin="8,0,0,0" Content="Browse…" AutomationProperties.Name="Choose custom ready sound file" Click="BrowseSound" />
               </Grid>
-              <Canvas Style="{StaticResource RowHintLayer}"><Border Style="{StaticResource RowHint}"><TextBlock Text="WAV or MP3, up to 3 seconds of playback. Copied into app storage when saved." /></Border></Canvas>
+              <Border Style="{StaticResource RowHint}"><TextBlock Text="WAV or MP3, up to 3 seconds of playback. Copied into app storage when saved." /></Border>
             </StackPanel>
           </Border>
           <TextBlock x:Name="SoundStatusText" Margin="0,2,0,6" FontSize="12" Foreground="{DynamicResource ColorWarning}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite">
@@ -352,7 +353,7 @@
                   <Button x:Name="PreviewSpokenCueButton" Margin="8,0,0,0" Style="{StaticResource IconKeyButton}" Content="▶" ToolTip="Preview" AutomationProperties.Name="Preview spoken cue" Click="PreviewSpokenCue" />
                 </StackPanel>
               </Grid>
-              <Canvas Style="{StaticResource RowHintLayer}"><Border Style="{StaticResource RowHint}"><TextBlock Text="Says &#x201C;Loading model&#x201D; while the model loads and &#x201C;Transcribing&#x201D; while Parakeet finishes your text. Uses the volume above." /></Border></Canvas>
+              <Border Style="{StaticResource RowHint}"><TextBlock Text="Says &#x201C;Loading model&#x201D; while the model loads and &#x201C;Transcribing&#x201D; while Parakeet finishes your text. Uses the volume above." /></Border>
             </StackPanel>
           </Border>
 
@@ -371,7 +372,7 @@
                 <Button x:Name="ImportFromCopyButton" Grid.Column="1" HorizontalAlignment="Left" Content="Import…" Click="ImportFromCopy"
                         AutomationProperties.Name="Import settings from another copy" />
               </Grid>
-              <Canvas Style="{StaticResource RowHintLayer}"><Border Style="{StaticResource RowHint}"><TextBlock Text="Choose the folder of another PrivateType copy. You'll see what will be copied before anything changes." /></Border></Canvas>
+              <Border Style="{StaticResource RowHint}"><TextBlock Text="Choose the folder of another PrivateType copy. You'll see what will be copied before anything changes." /></Border>
             </StackPanel>
           </Border>
           <!-- The table closes with a hairline, so the end of the page reads as an end. -->
@@ -436,7 +437,7 @@
                   </ComboBox.ItemTemplate>
                 </ComboBox>
               </Grid>
-              <Canvas Style="{StaticResource RowHintLayer}"><Border Style="{StaticResource RowHint}"><TextBlock x:Name="StrengthHint" Text="Strength applies to every phrase. Stronger settings help rare words more but can also insert them where they were not said." /></Border></Canvas>
+              <Border Style="{StaticResource RowHint}"><TextBlock x:Name="StrengthHint" Text="Strength applies to every phrase. Stronger settings help rare words more but can also insert them where they were not said." /></Border>
             </StackPanel>
           </Border>
           <!-- The phrases: a flat mono list; each row shows its field and × on hover. -->
@@ -575,6 +576,11 @@
                             <Border.Style>
                               <Style TargetType="Border" BasedOn="{StaticResource StatusChip}">
                                 <Style.Triggers>
+                                  <!-- Beside a key the chip is centred on the key's face, which sits 2 above the key's bottom edge. -->
+                                  <DataTrigger Binding="{Binding CanDownload}" Value="True"><Setter Property="Margin" Value="0,0,0,2" /></DataTrigger>
+                                  <DataTrigger Binding="{Binding CanUse}" Value="True"><Setter Property="Margin" Value="0,0,0,2" /></DataTrigger>
+                                  <DataTrigger Binding="{Binding IsDownloading}" Value="True"><Setter Property="Margin" Value="0,0,0,2" /></DataTrigger>
+                                  <DataTrigger Binding="{Binding CanDelete}" Value="True"><Setter Property="Margin" Value="0,0,0,2" /></DataTrigger>
                                   <DataTrigger Binding="{Binding IsSelected}" Value="True">
                                     <Setter Property="BorderBrush" Value="{DynamicResource ColorAccent700}" />
                                     <Setter Property="TextElement.Foreground" Value="{DynamicResource ColorAccent400}" />
@@ -651,6 +657,15 @@
         </StackPanel>
         </Grid>
           </ScrollViewer>
+          <!-- Page scrolled: it fades out under the title bar, so a row divider passing under the header line never reads as a second line. -->
+          <Rectangle x:Name="ScrollFadeTop" Grid.Row="0" Height="16" Margin="0,0,12,0" VerticalAlignment="Top" IsHitTestVisible="False" Visibility="Hidden">
+            <Rectangle.Fill>
+              <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                <GradientStop Offset="0" Color="#FF1B1C20" />
+                <GradientStop Offset="1" Color="#001B1C20" />
+              </LinearGradientBrush>
+            </Rectangle.Fill>
+          </Rectangle>
           <!-- More page below: it fades into the footer. At the end the fade goes, so the page visibly stops. -->
           <Rectangle x:Name="ScrollFade" Grid.Row="0" Height="16" Margin="0,0,12,0" VerticalAlignment="Bottom" IsHitTestVisible="False">
             <Rectangle.Fill>
@@ -660,20 +675,20 @@
               </LinearGradientBrush>
             </Rectangle.Fill>
           </Rectangle>
-          <Border Grid.Row="1" Padding="24,10,16,12" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,1,0,0" CornerRadius="0,0,11,0">
-            <Grid>
-              <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-              </Grid.ColumnDefinitions>
-              <TextBlock x:Name="ValidationText" Margin="0,0,16,0" VerticalAlignment="Center" FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource ColorText}" AutomationProperties.LiveSetting="Polite" />
-              <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                <Button x:Name="CancelSettingsButton" Style="{StaticResource GhostButton}" Margin="0,0,8,0" Height="32" Padding="12,0" Content="Cancel" IsCancel="True" />
-                <Button x:Name="SaveSettingsButton" Style="{StaticResource PrimaryButton}" Height="32" Padding="16,0" Content="Save changes" IsDefault="True" Click="Save" />
-              </StackPanel>
-            </Grid>
-          </Border>
         </Grid>
+        <Border Grid.Row="1" Grid.Column="1" Padding="24,10,16,12" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,1,0,0" CornerRadius="0,0,11,0">
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock x:Name="ValidationText" Margin="0,0,16,0" VerticalAlignment="Center" FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource ColorText}" AutomationProperties.LiveSetting="Polite" />
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+              <Button x:Name="CancelSettingsButton" Style="{StaticResource GhostButton}" Margin="0,0,8,0" Height="32" Padding="12,0" Content="Cancel" IsCancel="True" />
+              <Button x:Name="SaveSettingsButton" Style="{StaticResource PrimaryButton}" Height="32" Padding="16,0" Content="Save changes" IsDefault="True" Click="Save" />
+            </StackPanel>
+          </Grid>
+        </Border>
       </Grid>
     </Grid>
   </Border>

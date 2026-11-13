@@ -558,7 +558,7 @@
     <Setter Property="MinHeight" Value="40" />
     <Setter Property="Padding" Value="0,4" />
     <Style.Triggers>
-      <!-- A focused row draws its hint over the rows below it, so it is lifted above them. -->
+      <!-- A focused row is lifted, so a focus ring drawn past its edge stays above the next row's divider. -->
       <Trigger Property="IsKeyboardFocusWithin" Value="True"><Setter Property="Panel.ZIndex" Value="1" /></Trigger>
     </Style.Triggers>
   </Style>
@@ -575,15 +575,10 @@
     <Setter Property="Foreground" Value="{DynamicResource ColorNeutral400}" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
-  <!-- One line under a row that explains it, shown while the row has keyboard focus. It lies over the rows below in a
-       zero-height layer, like an open dropdown, so focus never moves a row. -->
-  <Style x:Key="RowHintLayer" TargetType="Canvas">
-    <Setter Property="Height" Value="0" />
-    <Setter Property="ClipToBounds" Value="False" />
-  </Style>
+  <!-- The explanation under a row, shown while the row has keyboard focus. It opens inside its row and moves the rows
+       below it down, so it never covers the next row or a group heading; the focused control itself stays put. -->
   <Style x:Key="RowHint" TargetType="Border">
-    <Setter Property="Canvas.Top" Value="6" />
-    <Setter Property="Width" Value="{Binding ActualWidth, RelativeSource={RelativeSource AncestorType=Canvas}}" />
+    <Setter Property="Margin" Value="0,2,0,6" />
     <Setter Property="Padding" Value="10,7" />
     <Setter Property="Background" Value="{DynamicResource ColorNeutral900}" />
     <Setter Property="BorderBrush" Value="{DynamicResource ColorDivider}" />
@@ -752,11 +747,13 @@
             StrokeStartLineCap="Round" StrokeEndLineCap="Round" Data="M6,6 V10 M8.4,6 V10" />
     </Grid>
   </DataTemplate>
-  <!-- The remove key of a list row: 28 × 28, its name on hover and on keyboard focus. The row shows it on hover or focus. -->
+  <!-- The remove key of a list row: 28 × 28, its name on hover and on keyboard focus. The row shows it on hover or focus.
+       It has no key edge, so the glyph sits on the button's centre, level with the centre of the field beside it. -->
   <Style x:Key="RowRemoveButton" TargetType="Button" BasedOn="{StaticResource GhostButton}">
     <Setter Property="Width" Value="28" />
     <Setter Property="Height" Value="28" />
     <Setter Property="Padding" Value="0" />
+    <Setter Property="BorderThickness" Value="0" />
     <Setter Property="Content" Value="Remove" />
     <Setter Property="ContentTemplate" Value="{StaticResource RemoveGlyph}" />
     <Setter Property="ToolTipService.ShowsToolTipOnKeyboardFocus" Value="True" />

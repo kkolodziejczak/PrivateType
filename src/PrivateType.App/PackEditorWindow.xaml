@@ -74,7 +74,7 @@
         </Border>
 
         <TextBlock Style="{StaticResource GroupLabel}" Margin="0,18,0,8" Text="PHRASES" />
-        <!-- Each phrase is a real text field, so it keeps its box; the remove key sits beside it. -->
+        <!-- Each phrase is a real text field, so it keeps its box; the remove key sits beside it, its face (above its 2 px edge) centred on the field. -->
         <ScrollViewer x:Name="PhraseScroll" MaxHeight="300" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
           <StackPanel>
             <ItemsControl x:Name="PhraseList">
@@ -87,7 +87,7 @@
                     </Grid.ColumnDefinitions>
                     <TextBox Height="30" FontSize="13" MaxLength="120"
                              Text="{Binding Phrase, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Pack phrase" />
-                    <Button Grid.Column="1" Style="{StaticResource IconKeyButton}" Margin="8,0,0,0" VerticalAlignment="Center" ContentTemplate="{StaticResource RemoveGlyph}" Content="Remove"
+                    <Button Grid.Column="1" Style="{StaticResource IconKeyButton}" Margin="8,2,0,0" VerticalAlignment="Center" ContentTemplate="{StaticResource RemoveGlyph}" Content="Remove"
                             Tag="{Binding}" Click="RemovePhrase" ToolTip="Remove phrase" AutomationProperties.Name="Remove phrase" />
                   </Grid>
                 </DataTemplate>

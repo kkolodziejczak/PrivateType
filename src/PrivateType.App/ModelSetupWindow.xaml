@@ -21,16 +21,21 @@
           </Setter.Value>
         </Setter>
       </Style>
-      <!-- One line of the review: a quiet label and its value. -->
+      <!-- One line of the review: a quiet label and its value. Both use one 18 line box, so the 12 label, the 13 value and
+           the mono model ID share a baseline. -->
       <Style x:Key="FactLabel" TargetType="TextBlock">
         <Setter Property="FontSize" Value="12" />
         <Setter Property="Foreground" Value="{DynamicResource ColorNeutral400}" />
-        <Setter Property="Margin" Value="0,9,0,0" />
+        <Setter Property="Margin" Value="0,8,0,0" />
+        <Setter Property="LineHeight" Value="18" />
+        <Setter Property="LineStackingStrategy" Value="BlockLineHeight" />
       </Style>
       <Style x:Key="FactValue" TargetType="TextBlock">
         <Setter Property="FontSize" Value="13" />
         <Setter Property="TextWrapping" Value="Wrap" />
         <Setter Property="Margin" Value="0,8,0,0" />
+        <Setter Property="LineHeight" Value="18" />
+        <Setter Property="LineStackingStrategy" Value="BlockLineHeight" />
       </Style>
     </ResourceDictionary>
   </Window.Resources>
@@ -81,8 +86,8 @@
                     </Grid.RowDefinitions>
                     <!-- The current step carries the accent bar at the rail's edge, like the current page in Settings. -->
                     <Border x:Name="Bar" Width="2" HorizontalAlignment="Left" CornerRadius="1" Background="{DynamicResource ColorAccent}" Visibility="Hidden" />
-                    <!-- Joins this step's mark to the next one's. -->
-                    <Rectangle x:Name="Joiner" Grid.Column="1" Grid.RowSpan="2" Width="1" Margin="0,22,0,2" HorizontalAlignment="Center" Fill="{DynamicResource ColorNeutral800}" />
+                    <!-- Joins this step's mark to the next one's, with the same gap at both ends (2.4 is 3 whole pixels at 125 %). -->
+                    <Rectangle x:Name="Joiner" Grid.Column="1" Grid.RowSpan="2" Width="1" Margin="0,22.4,0,2.4" HorizontalAlignment="Center" Fill="{DynamicResource ColorNeutral800}" />
                     <Grid Grid.Column="1" Width="20" Height="20" VerticalAlignment="Top">
                       <Ellipse x:Name="Disc" Fill="{DynamicResource ColorBg}" Stroke="{DynamicResource ColorNeutral800}" StrokeThickness="1" />
                       <TextBlock x:Name="Number" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="11" FontWeight="SemiBold"
@@ -188,7 +193,8 @@
                         </Border>
                         <!-- Starts under the row's top hairline, where the row's fill starts. -->
                         <Border x:Name="Bar" Width="2" Margin="0,1,0,0" HorizontalAlignment="Left" Background="{DynamicResource ColorAccent}" Visibility="Hidden" />
-                        <Border x:Name="FocusRing" BorderBrush="{DynamicResource ColorAccent}" BorderThickness="2" CornerRadius="2" Visibility="Hidden" />
+                        <!-- Inset inside the row, clear of its hairline and of the next row's accent bar, so two blue strokes never meet. -->
+                        <Border x:Name="FocusRing" Margin="4,4,4,3" BorderBrush="{DynamicResource ColorAccent}" BorderThickness="2" CornerRadius="4" Visibility="Hidden" />
                       </Grid>
                       <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Row" Property="Background" Value="{DynamicResource ColorHairline}" /></Trigger>
@@ -236,7 +242,7 @@
             <TextBlock Grid.Row="4" Grid.Column="1" Style="{StaticResource FactValue}"><Run x:Name="LicenseNameText" /><Run Text="    " /><Hyperlink x:Name="ModelTermsLink"
                 Foreground="{DynamicResource ColorAccent400}" RequestNavigate="OpenModelTerms" ToolTip="Open the model terms in your default browser"><Run Text="Read the terms" /></Hyperlink></TextBlock>
             <TextBlock Grid.Row="5" Style="{StaticResource FactLabel}" Text="Model" />
-            <TextBlock x:Name="ModelIdText" Grid.Row="5" Grid.Column="1" Margin="0,9,0,0" FontFamily="{DynamicResource MonoFont}" FontSize="12" Foreground="{DynamicResource ColorNeutral400}" TextWrapping="Wrap" />
+            <TextBlock x:Name="ModelIdText" Grid.Row="5" Grid.Column="1" Style="{StaticResource FactValue}" FontFamily="{DynamicResource MonoFont}" FontSize="12" Foreground="{DynamicResource ColorNeutral400}" />
           </Grid>
           <CheckBox x:Name="TermsCheckBox" Margin="0,16,0,0" VerticalContentAlignment="Top" Checked="TermsChanged" Unchecked="TermsChanged"><TextBlock x:Name="TermsText" FontSize="13" TextWrapping="Wrap" /></CheckBox>
           <!-- Why Download waits, under the box it waits for. -->
@@ -259,7 +265,8 @@
           <!-- The system's own words for a failure: labelled, quieter than the explanation, and selectable so it can be copied. -->
           <StackPanel x:Name="FailureDetailPanel">
             <TextBlock Style="{StaticResource GroupLabel}" Margin="0,20,0,6" Text="DETAILS" />
-            <TextBox x:Name="FailureDetailText" Padding="0" FontFamily="{DynamicResource MonoFont}" FontSize="12" Foreground="{DynamicResource ColorNeutral600}" Background="Transparent"
+            <!-- A 16 line box is 20 whole pixels at 125 %, so every wrapped line sits the same distance below the last. -->
+            <TextBox x:Name="FailureDetailText" Padding="0" FontFamily="{DynamicResource MonoFont}" FontSize="12" TextBlock.LineHeight="16" TextBlock.LineStackingStrategy="BlockLineHeight" Foreground="{DynamicResource ColorNeutral600}" Background="Transparent"
                      BorderThickness="0" IsReadOnly="True" TextWrapping="Wrap" AutomationProperties.Name="Error details">
               <TextBox.Template>
                 <ControlTemplate TargetType="TextBox"><ScrollViewer x:Name="PART_ContentHost" Margin="-2,0" /></ControlTemplate>
@@ -273,7 +280,8 @@
         <Grid>
           <!-- Pulled left by 4 so its text sits on the content's edge, with the footer note; the padding keeps its hit area. -->
           <Button x:Name="BackButton" Margin="-4,0,0,0" HorizontalAlignment="Left" Style="{StaticResource GhostButton}" Height="32" Padding="12,0" Content="Back" Click="Back" />
-          <TextBlock x:Name="FooterNoteText" Margin="8,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource ColorNeutral400}"
+          <!-- Lifted 2, like the text on a key above its edge, so the note shares a line with Quit PrivateType. -->
+          <TextBlock x:Name="FooterNoteText" Margin="8,0,0,2" HorizontalAlignment="Left" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource ColorNeutral400}"
                      Text="Quitting stops the download." />
           <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
             <Button x:Name="QuitButton" Style="{StaticResource GhostButton}" Height="32" Padding="12,0" Content="Quit PrivateType" Click="Quit" />

@@ -198,6 +198,9 @@ public partial class ModelSetupWindow : Window
         DownloadAgainButton.Visibility = Shown(view == SetupView.Failed);
         GetZipButton.Visibility = Shown(view == SetupView.EngineMissing);
         CheckAgainButton.Visibility = Shown(view is SetupView.EngineMissing or SetupView.EngineCouldNotStart);
+        // Alone in the footer, Quit's text ends where a key's face would, so the right edge holds still between steps.
+        var quitIsLast = new[] { ContinueButton, DownloadButton, DownloadAgainButton, GetZipButton, CheckAgainButton }.All(button => button.Visibility != Visibility.Visible);
+        QuitButton.Margin = new Thickness(0, 0, quitIsLast ? -QuitButton.Padding.Right : 0, 0);
         // Missing engine: getting the ZIP is the way forward, checking again is beside it. A stopped engine: checking again is the way forward.
         if (view == SetupView.EngineCouldNotStart)
             CheckAgainButton.Style = (Style)FindResource("PrimaryButton");

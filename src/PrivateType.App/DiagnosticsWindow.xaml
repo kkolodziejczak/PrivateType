@@ -9,15 +9,17 @@
       <ResourceDictionary.MergedDictionaries>
         <ResourceDictionary Source="FormStyles.xaml" />
       </ResourceDictionary.MergedDictionaries>
-      <!-- The same slim dark scrollbar as Settings. -->
+      <!-- A slim scrollbar inside the list's column: a 10 lane (MinWidth would widen it to the system's 17) whose thumb is a
+           4 wide bar on the column's right edge, as long as the track gives it, so even a long log shows a bar, not a block. -->
       <Style TargetType="ScrollBar">
         <Setter Property="Width" Value="10" />
+        <Setter Property="MinWidth" Value="0" />
         <Setter Property="Template">
           <Setter.Value>
             <ControlTemplate TargetType="ScrollBar">
               <Track x:Name="PART_Track" Orientation="Vertical" IsDirectionReversed="True" Minimum="{TemplateBinding Minimum}" Maximum="{TemplateBinding Maximum}" Value="{TemplateBinding Value}" ViewportSize="{TemplateBinding ViewportSize}">
                 <Track.DecreaseRepeatButton><RepeatButton Command="ScrollBar.PageUpCommand" Focusable="False"><RepeatButton.Template><ControlTemplate TargetType="RepeatButton"><Border Background="Transparent" /></ControlTemplate></RepeatButton.Template></RepeatButton></Track.DecreaseRepeatButton>
-                <Track.Thumb><Thumb><Thumb.Template><ControlTemplate TargetType="Thumb"><Border Margin="3,4" Background="{DynamicResource ColorNeutral800}" CornerRadius="2" /></ControlTemplate></Thumb.Template></Thumb></Track.Thumb>
+                <Track.Thumb><Thumb><Thumb.Template><ControlTemplate TargetType="Thumb"><Border Margin="6,0,0,0" Background="{DynamicResource ColorNeutral800}" CornerRadius="2" /></ControlTemplate></Thumb.Template></Thumb></Track.Thumb>
                 <Track.IncreaseRepeatButton><RepeatButton Command="ScrollBar.PageDownCommand" Focusable="False"><RepeatButton.Template><ControlTemplate TargetType="RepeatButton"><Border Background="Transparent" /></ControlTemplate></RepeatButton.Template></RepeatButton></Track.IncreaseRepeatButton>
               </Track>
             </ControlTemplate>
@@ -58,6 +60,9 @@
         <Setter Property="IsReadOnly" Value="True" />
         <Setter Property="IsTabStop" Value="False" />
         <Setter Property="TextWrapping" Value="Wrap" />
+        <!-- 16 is 20 whole pixels at 125 %, so wrapped lines keep an even pitch. -->
+        <Setter Property="TextBlock.LineHeight" Value="16" />
+        <Setter Property="TextBlock.LineStackingStrategy" Value="BlockLineHeight" />
         <Setter Property="AutomationProperties.Name" Value="Raw event" />
         <Setter Property="Template">
           <Setter.Value>
@@ -72,11 +77,12 @@
         <Setter Property="Template">
           <Setter.Value>
             <ControlTemplate TargetType="ListBoxItem">
-              <!-- The text and the hairline keep the page edge; the selected fill and the focus ring reach 8 past it on both
-                   sides, like a selected row in Recent dictations, so the ring never touches the first letter. -->
+              <!-- The text keeps the page edge; the selected fill and the focus ring reach 8 past it on the left, like a selected
+                   row in Recent dictations, so the ring never touches the first letter. On the right the hairline runs to the
+                   column's edge, or to the scrollbar lane when the list scrolls. -->
               <Grid>
                 <Border x:Name="Row" Background="Transparent" />
-                <Border Margin="8,0" MinHeight="36" Padding="0,9" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,0,0,1">
+                <Border Margin="8,0,0,0" MinHeight="36" Padding="0,9" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,0,0,1">
                   <ContentPresenter />
                 </Border>
                 <!-- Keyboard focus: the same ring as a model row in setup. -->
@@ -194,11 +200,11 @@
             </Grid.ColumnDefinitions>
             <TextBlock x:Name="EntriesLabel" Style="{StaticResource GroupLabel}" Margin="0" VerticalAlignment="Center" Text="OTHER RECORDED EVENTS" />
             <TextBlock x:Name="Counts" Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource ColorNeutral400}" Typography.NumeralAlignment="Tabular" />
-            <Button Grid.Column="2" Margin="0,0,-8,0" Height="28" Padding="8,0" Style="{StaticResource GhostButton}" Foreground="{DynamicResource ColorDanger}" Content="Clear" Click="ClearReport" />
+            <Button Grid.Column="2" Margin="0,0,-8,0" Height="28" Padding="8,0" BorderThickness="0" Style="{StaticResource GhostButton}" Foreground="{DynamicResource ColorDanger}" Content="Clear" Click="ClearReport" />
           </Grid>
           <!-- The list's top hairline, as wide as the rows' own. -->
           <Border Grid.Row="1" Margin="0,6,0,0" VerticalAlignment="Top" BorderBrush="{DynamicResource ColorHairline}" BorderThickness="0,1,0,0" />
-          <ListBox x:Name="Entries" Grid.Row="1" Margin="-8,7,-8,0" ItemContainerStyle="{StaticResource EntryRow}" SelectionMode="Single"
+          <ListBox x:Name="Entries" Grid.Row="1" Margin="-8,7,0,0" ItemContainerStyle="{StaticResource EntryRow}" SelectionMode="Single"
                    ScrollViewer.HorizontalScrollBarVisibility="Disabled" AutomationProperties.Name="Recorded events">
             <ListBox.ItemTemplate>
               <DataTemplate>
@@ -212,9 +218,11 @@
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                   </Grid.RowDefinitions>
+                  <!-- One 18 line box for the mono time and the title puts both on one baseline; the 14 mark is centred on it. -->
                   <ContentControl Margin="0,2,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" Content="{Binding Severity}" ContentTemplate="{StaticResource SeverityMark}" Focusable="False" />
-                  <TextBlock Grid.Column="1" Margin="0,2,0,0" VerticalAlignment="Top" FontFamily="{DynamicResource MonoFont}" FontSize="12" Foreground="{DynamicResource ColorNeutral400}" Text="{Binding Time}" />
-                  <TextBlock x:Name="Title" Grid.Column="2" VerticalAlignment="Top" FontSize="13" TextWrapping="Wrap" Foreground="{DynamicResource ColorNeutral400}">
+                  <TextBlock Grid.Column="1" VerticalAlignment="Top" FontFamily="{DynamicResource MonoFont}" FontSize="12" LineHeight="18" LineStackingStrategy="BlockLineHeight"
+                             Foreground="{DynamicResource ColorNeutral400}" Text="{Binding Time}" />
+                  <TextBlock x:Name="Title" Grid.Column="2" VerticalAlignment="Top" FontSize="13" LineHeight="18" LineStackingStrategy="BlockLineHeight" TextWrapping="Wrap" Foreground="{DynamicResource ColorNeutral400}">
                     <Run FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource ColorDanger}" Text="{Binding ErrorWord, Mode=OneWay}" /><Run Text="{Binding Title, Mode=OneWay}" />
                   </TextBlock>
                   <TextBox x:Name="RawLine" Grid.Row="1" Grid.Column="2" Margin="0,4,0,0" Style="{StaticResource RawLine}" Text="{Binding Raw, Mode=OneWay}" Visibility="Collapsed" />
