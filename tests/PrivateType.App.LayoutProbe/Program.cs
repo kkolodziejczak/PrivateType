@@ -40,6 +40,9 @@ if (args.Length == 2 && string.Equals(args[0], "--capture-on-this-desktop", Stri
     return;
 }
 
+if (args.Length > 0 && args[0].StartsWith("--capture", StringComparison.OrdinalIgnoreCase))
+    throw new ArgumentException($"--capture takes one output folder, and got {args.Length - 1} arguments: a capture never falls back to the layout checks.");
+
 // The monitor placement checks alone stay on the visible desktop, as they were: nobody has tried them on a hidden one.
 var monitorPlacementOnly = args.Length == 1 && string.Equals(args[0], "--monitor-placement-only", StringComparison.OrdinalIgnoreCase);
 var checksOnThisDesktop = args.Length == 1 && string.Equals(args[0], "--checks-on-this-desktop", StringComparison.OrdinalIgnoreCase);
