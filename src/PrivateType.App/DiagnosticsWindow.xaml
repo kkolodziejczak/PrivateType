@@ -267,8 +267,9 @@
             <!-- Both words share the key, so "Copied" never changes its width. -->
             <Button x:Name="CopyButton" Margin="0,0,8,0" Height="32" Padding="12,0" Click="CopyReport" AutomationProperties.LiveSetting="Polite">
               <Grid>
-                <TextBlock x:Name="CopyLabel" HorizontalAlignment="Center" Text="Copy report" />
-                <TextBlock x:Name="CopiedLabel" HorizontalAlignment="Center" Text="Copied" Visibility="Hidden" />
+                <!-- The key's own text colour, so a disabled key dims them like any other label. -->
+                <TextBlock x:Name="CopyLabel" HorizontalAlignment="Center" Text="Copy report" Foreground="{Binding (TextElement.Foreground), RelativeSource={RelativeSource AncestorType=ContentPresenter}}" />
+                <TextBlock x:Name="CopiedLabel" HorizontalAlignment="Center" Text="Copied" Visibility="Hidden" Foreground="{Binding (TextElement.Foreground), RelativeSource={RelativeSource AncestorType=ContentPresenter}}" />
               </Grid>
             </Button>
             <Button x:Name="SaveButton" Style="{StaticResource PrimaryButton}" Height="32" Padding="16,0" Content="Save report…" Click="SaveReport" />
