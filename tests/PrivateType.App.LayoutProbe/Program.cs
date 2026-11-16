@@ -201,6 +201,7 @@ static void RenderWindows(bool monitorPlacementOnly)
     VerifyTargetMonitorPlacement();
     BubbleDragProbe.Run();
     VerifyShortcutCardLeavesBubbleStill();
+    VerifyRestingKeyHoldsThePointer();
     VerifyTranscriptPreviewClearsTaskbars();
 
     Console.WriteLine($"PASS: Win32 x64 INPUT layout is {inputSize} bytes.");
@@ -357,6 +358,37 @@ static void VerifyShortcutCardLeavesBubbleStill()
     }
 
     Console.WriteLine($"PASS: The shortcut card opens beside a still bubble on {Forms.Screen.AllScreens.Length} monitor(s).");
+}
+
+// Windows passes the pointer through every pixel a transparent window leaves fully clear. The resting key must draw
+// something everywhere inside its circle, or the pointer falls through between the ring and the microphone and the
+// shortcut card opens and closes as it crosses them.
+static void VerifyRestingKeyHoldsThePointer()
+{
+    foreach (var modelLoaded in new[] { true, false })
+    {
+        var bubble = new DictationBubble();
+        bubble.ShowReady(PortableSettings.Default, modelLoaded);
+        bubble.UpdateLayout();
+        var key = (FrameworkElement)bubble.FindName("IconTile");
+        var size = (int)Math.Ceiling(key.ActualWidth);
+        var drawing = new RenderTargetBitmap(size, size, 96, 96, PixelFormats.Pbgra32);
+        drawing.Render(key);
+        bubble.Close();
+
+        var pixels = new byte[size * size * 4];
+        drawing.CopyPixels(pixels, size * 4, 0);
+        // Between the ring and the microphone, on the key's horizontal centre line, left and right.
+        foreach (var x in new[] { 8, size - 9 })
+        {
+            var alpha = pixels[((size / 2) * size + x) * 4 + 3];
+            if (alpha == 0)
+                throw new InvalidOperationException(
+                    $"The resting key {(modelLoaded ? "with" : "without")} a model is fully clear at {x},{size / 2}, so the pointer falls through it there.");
+        }
+    }
+
+    Console.WriteLine("PASS: The resting key holds the pointer inside its whole circle, with and without a model.");
 }
 
 static void VerifyTranscriptPreviewClearsTaskbars()

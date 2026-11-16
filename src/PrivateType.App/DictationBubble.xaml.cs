@@ -641,6 +641,11 @@ public partial class DictationBubble : Window
     }
 
     // At rest only the key is a resting key; the card's keys are a pointer's only way to act on a notice.
+    // The outline key's inside: one step from clear, too faint to see, so Windows still finds this transparent window there.
+    // A fully clear pixel passes the pointer through, and the shortcut card would close between the ring and the microphone.
+    private static readonly System.Windows.Media.Brush HollowKeyFill =
+        (System.Windows.Media.Brush)new SolidColorBrush(System.Windows.Media.Color.FromArgb(1, 0, 0, 0)).GetAsFrozen();
+
     private void ApplyReadyVisuals(bool modelLoaded)
     {
         restingModelLoaded = modelLoaded;
@@ -648,7 +653,7 @@ public partial class DictationBubble : Window
         // ColorNeutral400 keeps 3:1 against the capture desktop (#5A636E) and a near-black backdrop alike.
         var fill = modelLoaded ? "ColorKeycap" : null;
         var glyph = modelLoaded ? "ColorText" : "ColorNeutral400";
-        IconTile.Background = fill is null ? System.Windows.Media.Brushes.Transparent : Brush(fill);
+        IconTile.Background = fill is null ? HollowKeyFill : Brush(fill);
         IconTile.BorderBrush = fill is null ? Brush(glyph) : Brush("ColorKeycapEdge");
         // 1.6 is two whole pixels at 125 %.
         IconTile.BorderThickness = fill is null ? new Thickness(1.6) : new Thickness(0, 0, 0, 3);
