@@ -711,21 +711,26 @@ internal static class CaptureProbe
             var shot = new RenderTargetBitmap(Pixels(width), Pixels(height), 96 * Scale, 96 * Scale, PixelFormats.Pbgra32);
             shot.Render(window);
 
-            // The bubble's menu opens to its right, so the drawing widens to hold it; every other window keeps its own size.
+            // Open popups and the bubble's menu (it opens to the right) are windows of their own, so the drawing grows to hold them.
+            var popups = OpenPopups(window).ToList();
             var menu = BubbleMenu(window) is { IsOpen: true } open ? open : null;
-            var sceneWidth = menu is null ? width : width + menu.HorizontalOffset + menu.ActualWidth;
-            var sceneHeight = menu is null ? height : Math.Max(height, menu.ActualHeight);
+            if (menu is not null)
+                popups.Add((new VisualBrush(menu) { Stretch = Stretch.None }, new Rect(width + menu.HorizontalOffset, 0, menu.ActualWidth, menu.ActualHeight)));
+            var bounds = new Rect(0, 0, width, height);
+            foreach (var popup in popups)
+                bounds.Union(popup.Area);
+            var sceneWidth = bounds.Width;
+            var sceneHeight = bounds.Height;
+            var origin = new Vector(Backdrop - bounds.X, Backdrop - bounds.Y);
             var scene = new DrawingVisual();
             using (var context = scene.RenderOpen())
             {
                 context.DrawRectangle(new SolidColorBrush(Desktop), null, new Rect(0, 0, sceneWidth + 2 * Backdrop, sceneHeight + 2 * Backdrop));
                 if (onEditor)
                     DrawEditor(context, sceneWidth + 2 * Backdrop, sceneHeight + 2 * Backdrop);
-                context.DrawImage(shot, new Rect(Backdrop, Backdrop, width, height));
-                DrawOpenPopups(window, context);
-                if (menu is not null)
-                    context.DrawRectangle(new VisualBrush(menu) { Stretch = Stretch.None }, null,
-                        new Rect(Backdrop + width + menu.HorizontalOffset, Backdrop, menu.ActualWidth, menu.ActualHeight));
+                context.DrawImage(shot, new Rect(origin.X, origin.Y, width, height));
+                foreach (var popup in popups)
+                    context.DrawRectangle(popup.Brush, null, Rect.Offset(popup.Area, origin));
             }
 
             var composed = new RenderTargetBitmap(Pixels(sceneWidth + 2 * Backdrop), Pixels(sceneHeight + 2 * Backdrop), 96 * Scale, 96 * Scale, PixelFormats.Pbgra32);
@@ -757,20 +762,22 @@ internal static class CaptureProbe
         context.DrawText(text, new Point(16, 10));
     }
 
-    // An open dropdown is its own window, so it is drawn where it opens: below the control that owns it.
-    private static void DrawOpenPopups(Window window, DrawingContext context)
+    // An open popup, such as a dropdown or the bubble's shortcut card, is its own window, so it is drawn where it opens.
+    private static IEnumerable<(Brush Brush, Rect Area)> OpenPopups(Window window)
     {
         foreach (var popup in Descendants(window).OfType<Popup>().Where(popup => popup.IsOpen && popup.Child is FrameworkElement))
         {
             var child = (FrameworkElement)popup.Child;
-            var owner = (FrameworkElement)VisualTreeHelper.GetParent(popup);
-            var origin = owner.TranslatePoint(new Point(0, owner.ActualHeight), window);
-            // The brush draws the child at its own offset in the popup (its margin), so the viewbox is taken there and drawn there below the owner.
+            var target = popup.PlacementTarget as FrameworkElement ?? (FrameworkElement)VisualTreeHelper.GetParent(popup);
+            // Below the target, or with Top its bottom edge on the target's top, each moved by the popup's offsets.
+            var top = popup.Placement == PlacementMode.Top ? popup.VerticalOffset - child.DesiredSize.Height : target.ActualHeight + popup.VerticalOffset;
+            var origin = target.TranslatePoint(new Point(popup.HorizontalOffset, top), window);
+            // The brush draws the child at its own offset in the popup (its margin), so the viewbox is taken there and drawn there.
             var offset = VisualTreeHelper.GetOffset(child);
             var bounds = Rect.Union(VisualTreeHelper.GetContentBounds(child), VisualTreeHelper.GetDescendantBounds(child));
             bounds.Offset(offset);
             var brush = new VisualBrush(child) { Stretch = Stretch.None, ViewboxUnits = BrushMappingMode.Absolute, Viewbox = bounds };
-            context.DrawRectangle(brush, null, new Rect(Backdrop + origin.X + bounds.X, Backdrop + origin.Y + bounds.Y, bounds.Width, bounds.Height));
+            yield return (brush, new Rect(origin.X + bounds.X, origin.Y + bounds.Y, bounds.Width, bounds.Height));
         }
     }
 

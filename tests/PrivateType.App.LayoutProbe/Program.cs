@@ -200,6 +200,7 @@ static void RenderWindows(bool monitorPlacementOnly)
 
     VerifyTargetMonitorPlacement();
     BubbleDragProbe.Run();
+    VerifyShortcutCardLeavesBubbleStill();
     VerifyTranscriptPreviewClearsTaskbars();
 
     Console.WriteLine($"PASS: Win32 x64 INPUT layout is {inputSize} bytes.");
@@ -315,6 +316,47 @@ static void VerifyModelProgressWidth(
     var expectedWidth = track.ActualWidth * downloaded / total;
     if (Math.Abs(indicator.ActualWidth - expectedWidth) > 1)
         throw new InvalidOperationException($"Model progress indicator width was {indicator.ActualWidth:F1} at {downloaded}/{total}; expected {expectedWidth:F1}.");
+}
+
+// Hovering the resting key opens the shortcut card. The bubble window must not move or resize for it: Windows hit-tests a
+// transparent window by its last drawn pixels, so a window that moves under the pointer loses it for a frame, the key
+// reports the pointer gone, the card closes, the key is under the pointer again, and the card flickers on and off.
+static void VerifyShortcutCardLeavesBubbleStill()
+{
+    foreach (var screen in Forms.Screen.AllScreens)
+    foreach (var nearBottom in new[] { false, true })
+    {
+        var bubble = new DictationBubble();
+        bubble.ShowReady(PortableSettings.Default, modelLoaded: true);
+        var workArea = WorkAreaInDips(bubble, screen);
+        bubble.Left = workArea.Left + 16;
+        bubble.Top = nearBottom ? workArea.Bottom - bubble.ActualHeight - 8 : workArea.Top + 16;
+        bubble.UpdateLayout();
+        FlushRender(bubble);
+        var before = new Rect(bubble.Left, bubble.Top, bubble.ActualWidth, bubble.ActualHeight);
+
+        bubble.ShowBindingsCard();
+        bubble.UpdateLayout();
+        FlushRender(bubble);
+        var after = new Rect(bubble.Left, bubble.Top, bubble.ActualWidth, bubble.ActualHeight);
+        var key = (FrameworkElement)bubble.FindName("IconTile");
+        var card = (FrameworkElement)bubble.FindName("BindingsCard");
+        var keyTop = key.PointToScreen(new Point(0, 0)).Y;
+        var keyBottom = key.PointToScreen(new Point(0, key.ActualHeight)).Y;
+        var cardTop = card.PointToScreen(new Point(0, 0)).Y;
+        var cardBottom = card.PointToScreen(new Point(0, card.ActualHeight)).Y;
+        bubble.Close();
+
+        var where = $"on {screen.DeviceName} {(nearBottom ? "near the bottom" : "near the top")}";
+        if (Math.Abs(after.X - before.X) > 0.5 || Math.Abs(after.Y - before.Y) > 0.5
+            || Math.Abs(after.Width - before.Width) > 0.5 || Math.Abs(after.Height - before.Height) > 0.5)
+            throw new InvalidOperationException($"Opening the shortcut card {where} moved the bubble from {before} to {after}.");
+        if (nearBottom ? cardBottom > keyTop : cardTop < keyBottom)
+            throw new InvalidOperationException(
+                $"The shortcut card {where} spans {cardTop:F0}–{cardBottom:F0} px, over the key at {keyTop:F0}–{keyBottom:F0} px; it belongs {(nearBottom ? "above" : "below")} it.");
+    }
+
+    Console.WriteLine($"PASS: The shortcut card opens beside a still bubble on {Forms.Screen.AllScreens.Length} monitor(s).");
 }
 
 static void VerifyTranscriptPreviewClearsTaskbars()

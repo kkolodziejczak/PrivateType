@@ -46,6 +46,7 @@ public partial class DictationBubble : Window
     private const double ReadyWidth = 64;
     internal const double ActiveWidth = 360;
     private const double WorkAreaBottomClearance = 8;
+    private const double BindingsCardGap = 4;
     private const double MinimumVisibleExtent = 24;
     private const nint HtClient = 1;
     private const nint HtTransparent = -1;
@@ -61,7 +62,6 @@ public partial class DictationBubble : Window
     private IReadOnlyList<ShortcutBinding> bindings = ShortcutBinding.Defaults;
     // A dictation that wasn't inserted, held in memory only while its notice is up; never written anywhere.
     private string? heldText;
-    private double bindingsCardShift;
     private bool restingModelLoaded;
     private PointInt dragGrabOffset;
     private readonly NativeMethods.MouseHookProc mouseHookProc;
@@ -458,47 +458,38 @@ public partial class DictationBubble : Window
     }
 
     // Hovering the resting key lists the shortcuts as keys, one line per language: under the key, or over it where
-    // there is no room below. The key itself stays where it is.
+    // there is no room below. The card is a popup of its own: the bubble window never moves or resizes for it, because
+    // Windows hit-tests this transparent window by its last drawn pixels, and a window moving under the pointer loses it,
+    // closes the card, finds the pointer again and opens it: a card flickering on and off.
     private void EnterRestingKey(object sender, System.Windows.Input.MouseEventArgs e) => ShowBindingsCard();
 
     internal void ShowBindingsCard()
     {
-        if (active || noticeShown || dragActive || Card.Visibility == Visibility.Visible || BindingsCard.Visibility == Visibility.Visible)
+        if (active || noticeShown || dragActive || Card.Visibility == Visibility.Visible || BindingsPopup.IsOpen)
             return;
 
         BindingsList.Children.Clear();
         foreach (var binding in HotkeyCatalog.FromBindings(bindings))
             BindingsList.Children.Add(BindingRow(binding.Label, LanguageName(binding.LocaleCode)));
-        BindingsCard.Visibility = Visibility.Visible;
         BindingsCard.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
-        var cardHeight = BindingsCard.DesiredSize.Height;
-        var above = Top + ActualHeight + cardHeight > CurrentWorkArea().Bottom - WorkAreaBottomClearance;
-        RestLayer.Children.Remove(BindingsCard);
-        RestLayer.Children.Insert(above ? 0 : 1, BindingsCard);
-        bindingsCardShift = above ? cardHeight : 0;
+        var card = BindingsCard.DesiredSize;
+        var above = Top + ActualHeight + BindingsCardGap + card.Height > CurrentWorkArea().Bottom - WorkAreaBottomClearance;
+        BindingsPopup.Placement = above ? PlacementMode.Top : PlacementMode.Bottom;
+        BindingsPopup.HorizontalOffset = (Pill.ActualWidth - card.Width) / 2;
+        BindingsPopup.VerticalOffset = above ? -BindingsCardGap : BindingsCardGap;
         BubbleShell.Opacity = 1;
-        SetWidthAroundCenter(Math.Max(ReadyWidth, Math.Ceiling(BindingsCard.DesiredSize.Width)));
-        Top -= bindingsCardShift;
-        UpdateLayout();
+        BindingsPopup.IsOpen = true;
     }
 
     private void LeaveRestingKey(object sender, System.Windows.Input.MouseEventArgs e)
     {
-        if (BindingsCard.Visibility != Visibility.Visible)
+        if (!BindingsPopup.IsOpen)
             return;
         HideBindingsCard();
         BubbleShell.Opacity = OpacityForReadyState(restingModelLoaded);
-        SetWidthAroundCenter(ReadyWidth);
     }
 
-    private void HideBindingsCard()
-    {
-        if (BindingsCard.Visibility != Visibility.Visible)
-            return;
-        BindingsCard.Visibility = Visibility.Collapsed;
-        Top += bindingsCardShift;
-        bindingsCardShift = 0;
-    }
+    private void HideBindingsCard() => BindingsPopup.IsOpen = false;
 
     // One shortcut: its keys, then the language it dictates in.
     private static StackPanel BindingRow(string label, string language)

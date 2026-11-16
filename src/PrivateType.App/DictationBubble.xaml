@@ -52,10 +52,13 @@
             </Grid>
           </Border>
         </Border>
-        <Border x:Name="BindingsCard" Margin="0,4,0,0" Padding="10,8" CornerRadius="10" Background="{DynamicResource ColorSurface}" BorderBrush="{DynamicResource ColorDivider}" BorderThickness="1"
-                HorizontalAlignment="Center" Visibility="Collapsed" IsHitTestVisible="False">
-          <StackPanel x:Name="BindingsList" />
-        </Border>
+        <!-- Its own window, so opening it never moves or resizes the bubble under the pointer. -->
+        <Popup x:Name="BindingsPopup" PlacementTarget="{Binding ElementName=Pill}" AllowsTransparency="True" Focusable="False">
+          <Border x:Name="BindingsCard" Padding="10,8" CornerRadius="10" Background="{DynamicResource ColorSurface}" BorderBrush="{DynamicResource ColorDivider}" BorderThickness="1"
+                  IsHitTestVisible="False">
+            <StackPanel x:Name="BindingsList" />
+          </Border>
+        </Popup>
       </StackPanel>
       <!-- Active: one caption card. The words dominate; the state is a slim line over them, which is also the handle to drag the card by. -->
       <Border x:Name="Card" AutomationProperties.LiveSetting="Polite" Background="{DynamicResource ColorSurface}" BorderBrush="{DynamicResource ColorDivider}" BorderThickness="1" CornerRadius="12" Padding="12" Visibility="Collapsed">
