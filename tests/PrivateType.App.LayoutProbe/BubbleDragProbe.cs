@@ -13,6 +13,8 @@ internal static class BubbleDragProbe
 
     public static void Run()
     {
+        VerifyDragRestoresRestingKey();
+
         var screens = Forms.Screen.AllScreens;
         if (screens.Length < 2)
         {
@@ -34,6 +36,35 @@ internal static class BubbleDragProbe
         foreach (var grabFraction in new[] { 0.3, 0.5, 0.7 })
         foreach (var startsAtTop in new[] { false, true })
             VerifyJumpsAcrossBorder(source, target, grabFraction, startsAtTop);
+    }
+
+    // A drag starts on the hovered key, so its shortcut card is open and the key drawn at full strength. Grabbing the key
+    // closes the card, and the key must go back to its resting look, not stay solid until the next hover.
+    private static void VerifyDragRestoresRestingKey()
+    {
+        foreach (var modelLoaded in new[] { true, false })
+        {
+            var bubble = new DictationBubble();
+            bubble.ShowReady(PortableSettings.Default, modelLoaded);
+            bubble.UpdateLayout();
+            bubble.ShowBindingsCard();
+            var start = PhysicalRect(new WindowInteropHelper(bubble).Handle);
+            var x = (start.Left + start.Right) / 2;
+            var y = (start.Top + start.Bottom) / 2;
+            Inject(bubble, NativeMethods.WmLButtonDown, x, y);
+            Inject(bubble, NativeMethods.WmMouseMove, x + 30, y);
+            Inject(bubble, NativeMethods.WmLButtonUp, x + 30, y);
+            var opacity = ((System.Windows.UIElement)bubble.FindName("BubbleShell")).Opacity;
+            var cardOpen = ((System.Windows.Controls.Primitives.Popup)bubble.FindName("BindingsPopup")).IsOpen;
+            bubble.Close();
+
+            var expected = DictationBubble.OpacityForReadyState(modelLoaded);
+            if (cardOpen || Math.Abs(opacity - expected) > 0.001)
+                throw new InvalidOperationException(
+                    $"After a drag {(modelLoaded ? "with" : "without")} a model the bubble is at opacity {opacity:F2} with the card {(cardOpen ? "open" : "closed")}; at rest it is {expected:F2} with the card closed.");
+        }
+
+        Console.WriteLine("PASS: A drag from the hovered key leaves the bubble at its resting look, with and without a model.");
     }
 
     // A fast mouse lands anywhere near the border from outside the bubble. The bubble may leave the
