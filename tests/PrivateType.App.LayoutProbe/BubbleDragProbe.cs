@@ -47,17 +47,24 @@ internal static class BubbleDragProbe
             var bubble = new DictationBubble();
             bubble.ShowReady(PortableSettings.Default, modelLoaded);
             bubble.UpdateLayout();
+            var popup = (System.Windows.Controls.Primitives.Popup)bubble.FindName("BindingsPopup");
             bubble.ShowBindingsCard();
-            var start = PhysicalRect(new WindowInteropHelper(bubble).Handle);
+            var handle = new WindowInteropHelper(bubble).Handle;
+            var start = PhysicalRect(handle);
             var x = (start.Left + start.Right) / 2;
             var y = (start.Top + start.Bottom) / 2;
-            Inject(bubble, NativeMethods.WmLButtonDown, x, y);
+            var cardOpened = popup.IsOpen;
+            var grabbed = Inject(bubble, NativeMethods.WmLButtonDown, x, y) == 1;
             Inject(bubble, NativeMethods.WmMouseMove, x + 30, y);
             Inject(bubble, NativeMethods.WmLButtonUp, x + 30, y);
+            var moved = PhysicalRect(handle).Left != start.Left;
             var opacity = ((System.Windows.UIElement)bubble.FindName("BubbleShell")).Opacity;
-            var cardOpen = ((System.Windows.Controls.Primitives.Popup)bubble.FindName("BindingsPopup")).IsOpen;
+            var cardOpen = popup.IsOpen;
             bubble.Close();
 
+            if (!cardOpened || !grabbed || !moved)
+                throw new InvalidOperationException(
+                    $"The drag from the hovered key did not run {(modelLoaded ? "with" : "without")} a model: card opened {cardOpened}, grabbed {grabbed}, moved {moved}.");
             var expected = DictationBubble.OpacityForReadyState(modelLoaded);
             if (cardOpen || Math.Abs(opacity - expected) > 0.001)
                 throw new InvalidOperationException(
