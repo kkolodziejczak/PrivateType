@@ -481,15 +481,17 @@ public partial class DictationBubble : Window
         BindingsPopup.IsOpen = true;
     }
 
-    private void LeaveRestingKey(object sender, System.Windows.Input.MouseEventArgs e)
+    private void LeaveRestingKey(object sender, System.Windows.Input.MouseEventArgs e) => HideBindingsCard();
+
+    // The card opens only at rest, so closing it returns the key to its resting look, however it closes: the pointer
+    // leaving, a drag grabbing the key, or a new state (which then sets its own look).
+    private void HideBindingsCard()
     {
         if (!BindingsPopup.IsOpen)
             return;
-        HideBindingsCard();
+        BindingsPopup.IsOpen = false;
         BubbleShell.Opacity = OpacityForReadyState(restingModelLoaded);
     }
-
-    private void HideBindingsCard() => BindingsPopup.IsOpen = false;
 
     // One shortcut: its keys, then the language it dictates in.
     private static StackPanel BindingRow(string label, string language)
