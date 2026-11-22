@@ -26,3 +26,22 @@ Do not stop the app merely to provide a code-only explanation. Do stop it whenev
 ## Documentation
 
 Keep [README.md](README.md) user-first. Update its measured model/runtime figures whenever the pinned model or package changes. Keep implementation and contributor guidance below the user instructions, rather than replacing them.
+
+## Starting the approval for the owner
+
+<!-- Shared with every repository that signs through gh-release-signing; keep it identical to the
+     copy in that repository's README ("Instructions for agents"). -->
+When a run waits for signing, start the approval script for the owner instead of asking them to
+run it. Open it in its own window, from this repository's folder, so the owner can answer it:
+
+```powershell
+Start-Process powershell.exe -WorkingDirectory (Get-Location) -ArgumentList '-NoExit', '-Command', 'gh release-signing approve -Tag vX.Y.Z'
+```
+
+- Pass `-RunId <id>` after a rerun, and `-Workflow <file>` when the calling workflow is not
+  `release.yml`.
+- If `gh extension list` does not show `release-signing`, run `Approve-ReleaseSigning.ps1` from a
+  local clone of gh-release-signing instead (`-NoExit -ExecutionPolicy Bypass -File <path> …`),
+  still with this repository's folder as the working directory.
+- Never answer its prompts or type the code yourself. Tell the owner the window is open, then wait
+  for the run to finish in the background and report its result.
