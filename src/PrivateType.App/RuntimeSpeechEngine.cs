@@ -91,7 +91,8 @@ internal sealed class RuntimeSpeechEngine(Action<string, Exception?, (string Nam
             var values = string.Join(" ", (details ?? []).Select(detail => $"{detail.Name}={detail.Value}"));
             File.AppendAllText(SpikeLogPath, $"{DateTimeOffset.Now:O} {eventName} {values}{Environment.NewLine}");
         }
-        catch (IOException)
+        // The spike log is optional; it must never fail a load or a transcription that succeeded.
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
         }
     }

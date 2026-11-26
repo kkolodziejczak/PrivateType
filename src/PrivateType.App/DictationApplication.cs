@@ -1202,7 +1202,8 @@ internal sealed class DictationApplication : IDisposable
         var path = modelPath ?? throw new InvalidOperationException("The local speech model is not available.");
         RecordDiagnostic("model.loading");
         statusItem.Text = "Loading local model";
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(25));
+        // A first run downloads the runtime's 714 MB model inside this load, which cannot fit the start deadline.
+        using var timeout = new CancellationTokenSource(UsesRuntime && !RuntimeSpeechEngine.Model.IsInstalled ? Timeout.InfiniteTimeSpan : TimeSpan.FromSeconds(25));
         if (UsesRuntime)
         {
             engine.Stop();
