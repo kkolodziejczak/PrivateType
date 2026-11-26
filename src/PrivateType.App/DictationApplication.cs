@@ -11,6 +11,9 @@ namespace PrivateType.App;
 internal sealed class DictationApplication : IDisposable
 {
     private readonly EngineHost engine;
+    // Spike: the offline model (Parakeet) runs here instead of in the EngineHost server.
+    private readonly RuntimeSpeechEngine runtime;
+    private bool UsesRuntime => activeModel.Style == RecognitionStyle.Offline;
     private readonly DictationCues cues = new();
     private TranscriptionTimeForecast transcriptionForecast = new();
     private readonly EngineLoadCoordinator engineLoads;
@@ -58,7 +61,10 @@ internal sealed class DictationApplication : IDisposable
     {
         models = new SpeechModelLibrary(downloader);
         engine = new EngineHost((eventName, error, details) => RecordDiagnostic(eventName, error, details));
-        engineLoads = new EngineLoadCoordinator(LoadEngineAsync, () => engine.IsReady && engine.LoadedModelPath == modelPath && engine.LoadedDevicePreference == settings.ModelDevice);
+        runtime = new RuntimeSpeechEngine((eventName, error, details) => RecordDiagnostic(eventName, error, details));
+        engineLoads = new EngineLoadCoordinator(LoadEngineAsync, () => UsesRuntime
+            ? runtime.IsReady && runtime.LoadedDevicePreference == settings.ModelDevice
+            : engine.IsReady && engine.LoadedModelPath == modelPath && engine.LoadedDevicePreference == settings.ModelDevice);
         sessions = new DictationSessionCoordinator(CreateSession);
         trayIcon = new Forms.NotifyIcon
         {
@@ -143,6 +149,7 @@ internal sealed class DictationApplication : IDisposable
         DisposeStep(trayIcon.Dispose);
         DisposeStep(trayIcons.Dispose);
         DisposeStep(engine.Dispose);
+        DisposeStep(runtime.Dispose);
         DisposeStep(cues.Dispose);
         DisposeStep(downloader.Dispose);
         DisposeStep(() => provisioningCancellation?.Dispose());
@@ -235,6 +242,8 @@ internal sealed class DictationApplication : IDisposable
                 if (!File.Exists(settingsStore.SettingsPath))
                     settingsStore.Save(settings);
             }
+            // Spike: always start on Parakeet, which runs on ParakeetRuntime. The file keeps the saved model until Settings are saved.
+            settings = settings with { SpeechModel = SpeechModelCatalog.ParakeetId };
             activeModel = SpeechModelCatalog.Get(settings.SpeechModel);
             var modelStorage = models.Storage(activeModel);
             var modelProvisioner = models.Provisioner(activeModel);
@@ -245,7 +254,10 @@ internal sealed class DictationApplication : IDisposable
             if (!microphones.Any(microphone => microphone.Id == settings.MicrophoneId))
                 trayIcon.ShowBalloonTip(5000, "PrivateType", "The saved microphone is unavailable; the system default will be used until you choose another microphone.", Forms.ToolTipIcon.Warning);
 
-            if (modelProvisioner.IsAvailable())
+            // ParakeetRuntime brings and verifies its own model, so PrivateType's model download and setup are skipped.
+            if (UsesRuntime)
+                await ConfigureReadyAsync(RuntimeSpeechEngine.Model.Path);
+            else if (modelProvisioner.IsAvailable())
                 await ConfigureReadyAsync(modelProvisioner.ModelPath);
             else
                 ShowModelSetup(modelStorage);
@@ -896,8 +908,11 @@ internal sealed class DictationApplication : IDisposable
         var session = new DictationSession(
             new DefaultMicrophoneCapture(settings.MicrophoneId),
             activeModel.Style == RecognitionStyle.Offline
-                ? new OfflineRecognizer(engine.TranscriptionEndpointAsync, settings.OfflinePreview ? OfflinePreviewInterval : null, RestartBusyEngineAsync,
-                    (eventName, details) => RecordDiagnostic(eventName, details: details))
+                ? new OfflineRecognizer(engine.TranscriptionEndpointAsync, settings.OfflinePreview ? OfflinePreviewInterval : null,
+                    // The in-process engine queues the final pass behind a running preview; it has no restart.
+                    UsesRuntime ? null : RestartBusyEngineAsync,
+                    (eventName, details) => RecordDiagnostic(eventName, details: details),
+                    UsesRuntime ? runtime.TranscribeAsync : null)
                 : new RealtimeRecognizer(engine.RealtimeEndpointAsync),
             new ForegroundTargetGuard(new Win32ForegroundTarget()),
             CreateInjector(),
@@ -1182,14 +1197,23 @@ internal sealed class DictationApplication : IDisposable
     private async Task LoadEngineAsync()
     {
         // Restarting the engine for another model must not cut off a dictation that is still finalizing.
-        if (engine.IsRunning)
+        if (engine.IsRunning || runtime.IsReady)
             await sessions.WhenIdleAsync();
         var path = modelPath ?? throw new InvalidOperationException("The local speech model is not available.");
         RecordDiagnostic("model.loading");
         statusItem.Text = "Loading local model";
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(25));
-        await engine.StartAsync(path, settings.ModelDevice, timeout.Token);
-        statusItem.Text = "Dictation ready";
+        if (UsesRuntime)
+        {
+            engine.Stop();
+            await runtime.StartAsync(settings.ModelDevice, timeout.Token);
+        }
+        else
+        {
+            runtime.Stop();
+            await engine.StartAsync(path, settings.ModelDevice, timeout.Token);
+        }
+        statusItem.Text = UsesRuntime ? $"Dictation ready — ParakeetRuntime on {runtime.Backend}" : "Dictation ready";
         trayIcon.Text = $"PrivateType — {statusItem.Text}";
         RecordDiagnostic("model.loaded");
     }
@@ -1238,6 +1262,7 @@ internal sealed class DictationApplication : IDisposable
             return;
 
         engine.Stop();
+        runtime.Stop();
         statusItem.Text = "Dictation ready — model unloaded";
         trayIcon.Text = $"PrivateType — {statusItem.Text}";
         ShowReadyPanel();

@@ -17,11 +17,14 @@ namespace PrivateType.App;
 // every request, so it always reaches the engine that is running now.
 // The model can stop emitting words partway through a long dictation. When the microphone heard a
 // voice well past the last recognized word, the rest is transcribed again and appended.
+// With transcribeLocally (the in-process ParakeetRuntime engine), the audio goes to it as 16 kHz
+// float samples instead of to the HTTP engine. It gives no word timings, so the end recovery is skipped.
 internal sealed class OfflineRecognizer(
     Func<Task<Uri>> engineEndpoint,
     TimeSpan? previewInterval = null,
     Func<Task>? restartEngine = null,
-    Action<string, (string Name, object? Value)[]>? record = null) : IStreamingRecognizer
+    Action<string, (string Name, object? Value)[]>? record = null,
+    Func<float[], CancellationToken, Task<string>>? transcribeLocally = null) : IStreamingRecognizer
 {
     // Reloading the model takes about a second and a half, so a preview that finishes within a
     // second is cheaper to wait for than a restart.
@@ -233,6 +236,9 @@ internal sealed class OfflineRecognizer(
 
     private async Task<EngineTranscript> TranscribeAsync(long startByte, bool timedWords, CancellationToken cancellationToken)
     {
+        if (transcribeLocally is not null)
+            return await TranscribeLocallyAsync(transcribeLocally, startByte, cancellationToken);
+
         byte[] wav;
         lock (gate)
             wav = Wav(chunks, startByte, pcmBytes);
@@ -257,6 +263,36 @@ internal sealed class OfflineRecognizer(
         {
             Array.Clear(wav);
         }
+    }
+
+    private async Task<EngineTranscript> TranscribeLocallyAsync(Func<float[], CancellationToken, Task<string>> transcribe, long startByte, CancellationToken cancellationToken)
+    {
+        float[] samples;
+        lock (gate)
+            samples = Samples(chunks, startByte, pcmBytes);
+        try
+        {
+            return new EngineTranscript(await transcribe(samples, cancellationToken), null);
+        }
+        finally
+        {
+            Array.Clear(samples);
+        }
+    }
+
+    // The PCM16 from start to end as samples in the range -1 to 1; start is on a sample boundary.
+    private static float[] Samples(IReadOnlyList<byte[]> chunks, long start, long end)
+    {
+        var samples = new float[(end - start) / 2];
+        var index = 0;
+        long position = 0;
+        foreach (var chunk in chunks)
+        {
+            for (var offset = (int)Math.Clamp(start - position, 0, chunk.Length); offset + 1 < chunk.Length; offset += 2)
+                samples[index++] = BinaryPrimitives.ReadInt16LittleEndian(chunk.AsSpan(offset)) / 32768f;
+            position += chunk.Length;
+        }
+        return samples;
     }
 
     internal static EngineTranscript ParseTranscript(string body)
