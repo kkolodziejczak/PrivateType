@@ -150,6 +150,9 @@ public partial class DictationBubble : Window
         bindings = settings.Shortcuts;
         RestLayer.Visibility = Visibility.Visible;
         Card.Visibility = Visibility.Collapsed;
+        // The pointer may rest on the key through the refresh, as when the idle model unloads; no new hover follows.
+        if (IconTile.IsMouseOver)
+            ShowBindingsCard();
     }
 
     // Shows the bubble where the text will go: the monitor of the window being dictated into.
@@ -758,6 +761,9 @@ public partial class DictationBubble : Window
             case DragHookAction.End:
                 dragActive = false;
                 ReportPosition();
+                // The bubble landed under the pointer, still on the key; no new hover follows the drop.
+                if (IsCursorOverIcon(lParam))
+                    ShowBindingsCard();
                 // We suppressed the matching button-down, so suppress the up too.
                 return 1;
         }

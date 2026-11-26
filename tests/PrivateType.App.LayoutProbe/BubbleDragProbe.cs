@@ -39,7 +39,8 @@ internal static class BubbleDragProbe
     }
 
     // A drag starts on the hovered key, so its shortcut card is open and the key drawn at full strength. Grabbing the key
-    // closes the card, and the key must go back to its resting look, not stay solid until the next hover.
+    // closes the card for the drag. The bubble lands under the pointer, which still rests on the key, so the card is back;
+    // once the pointer leaves, the key returns to its resting look instead of staying solid until the next hover.
     private static void VerifyDragRestoresRestingKey()
     {
         foreach (var modelLoaded in new[] { true, false })
@@ -48,6 +49,8 @@ internal static class BubbleDragProbe
             bubble.ShowReady(PortableSettings.Default, modelLoaded);
             bubble.UpdateLayout();
             var popup = (System.Windows.Controls.Primitives.Popup)bubble.FindName("BindingsPopup");
+            var shell = (System.Windows.UIElement)bubble.FindName("BubbleShell");
+            var key = (System.Windows.UIElement)bubble.FindName("IconTile");
             bubble.ShowBindingsCard();
             var handle = new WindowInteropHelper(bubble).Handle;
             var start = PhysicalRect(handle);
@@ -56,22 +59,28 @@ internal static class BubbleDragProbe
             var cardOpened = popup.IsOpen;
             var grabbed = Inject(bubble, NativeMethods.WmLButtonDown, x, y) == 1;
             Inject(bubble, NativeMethods.WmMouseMove, x + 30, y);
+            var cardOpenWhileDragging = popup.IsOpen;
             Inject(bubble, NativeMethods.WmLButtonUp, x + 30, y);
             var moved = PhysicalRect(handle).Left != start.Left;
-            var opacity = ((System.Windows.UIElement)bubble.FindName("BubbleShell")).Opacity;
-            var cardOpen = popup.IsOpen;
+            var cardOpenAfterDrop = popup.IsOpen;
+            key.RaiseEvent(new System.Windows.Input.MouseEventArgs(System.Windows.Input.Mouse.PrimaryDevice, 0) { RoutedEvent = System.Windows.Input.Mouse.MouseLeaveEvent });
+            var opacity = shell.Opacity;
+            var cardOpenAfterLeave = popup.IsOpen;
             bubble.Close();
 
+            var model = modelLoaded ? "with" : "without";
             if (!cardOpened || !grabbed || !moved)
+                throw new InvalidOperationException($"The drag from the hovered key did not run {model} a model: card opened {cardOpened}, grabbed {grabbed}, moved {moved}.");
+            if (cardOpenWhileDragging || !cardOpenAfterDrop)
                 throw new InvalidOperationException(
-                    $"The drag from the hovered key did not run {(modelLoaded ? "with" : "without")} a model: card opened {cardOpened}, grabbed {grabbed}, moved {moved}.");
+                    $"Dragging {model} a model, the card was {(cardOpenWhileDragging ? "open" : "closed")} during the drag and {(cardOpenAfterDrop ? "open" : "closed")} after the drop with the pointer on the key; it belongs closed, then open.");
             var expected = DictationBubble.OpacityForReadyState(modelLoaded);
-            if (cardOpen || Math.Abs(opacity - expected) > 0.001)
+            if (cardOpenAfterLeave || Math.Abs(opacity - expected) > 0.001)
                 throw new InvalidOperationException(
-                    $"After a drag {(modelLoaded ? "with" : "without")} a model the bubble is at opacity {opacity:F2} with the card {(cardOpen ? "open" : "closed")}; at rest it is {expected:F2} with the card closed.");
+                    $"After a drag {model} a model and the pointer leaving, the bubble is at opacity {opacity:F2} with the card {(cardOpenAfterLeave ? "open" : "closed")}; at rest it is {expected:F2} with the card closed.");
         }
 
-        Console.WriteLine("PASS: A drag from the hovered key leaves the bubble at its resting look, with and without a model.");
+        Console.WriteLine("PASS: A drag from the hovered key closes the card, brings it back on the drop, and leaves the resting look once the pointer goes, with and without a model.");
     }
 
     // A fast mouse lands anywhere near the border from outside the bubble. The bubble may leave the

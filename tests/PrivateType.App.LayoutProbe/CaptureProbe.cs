@@ -138,7 +138,7 @@ internal static class CaptureProbe
 
     // Windows and WPF only take a mouse move over a window that is really under the pointer. On the capture's own desktop
     // no pointer can be read, so the position stays 0,0 and the window is put with the hovered point there.
-    private static void MoveMouseOver(Window window, Point at)
+    internal static void MoveMouseOver(Window window, Point at)
     {
         var toDevice = PresentationSource.FromVisual(window)!.CompositionTarget!.TransformToDevice;
         NativeMethods.GetCursorPos(out var cursor);
