@@ -54,6 +54,8 @@ internal sealed class DictationApplication : IDisposable
     // The model load the current hold started while its microphone was already listening; null when
     // the hold began with the model loaded or behind the loading card.
     private Task? loadingWhileListening;
+    // Spike timing: when the current hold began, for the press-to-ping records in the spike log.
+    private long pressedAt;
     // Makes "is a new dictation held?" and "start the release cue" one step, so a cue is either
     // stopped by the next hold before its microphone starts or never started at all.
     private readonly object releaseCueGate = new();
@@ -561,8 +563,8 @@ internal sealed class DictationApplication : IDisposable
             try
             {
                 await EnsureEngineLoadedAsync();
-                // A dictation that shared this load owns the bubble now.
-                if (!shortcutHeld)
+                // A dictation that shared this load owns the bubble now, also while it finalizes.
+                if (!shortcutHeld && loadingWhileListening is null)
                     ShowReadyPanel();
                 ScheduleModelUnload();
                 return;
@@ -936,11 +938,16 @@ internal sealed class DictationApplication : IDisposable
                 : null,
             // A text that wasn't inserted is kept in Recent dictations; with that list off, the message says it is gone.
             keptTextHint: history.IsEnabled ? KeptTextHint(settings.HistoryShortcut) : NotKeptNotice);
+        runtime.Record("app.session.created", details: [("afterPressSeconds", SecondsSincePress())]);
         session.PresentationChanged += presentation => Present(localeCode, presentation);
         // Only models that transcribe on release make the user wait for the text.
         var forecast = activeModel.Style == RecognitionStyle.Offline ? transcriptionForecast : null;
         // Building and starting the cue takes tens of milliseconds; the final pass must not wait for it.
-        session.FinalizingStarted += recorded => _ = Task.Run(() => PlayReleaseCue(forecast, recorded));
+        session.FinalizingStarted += recorded =>
+        {
+            var releasedGeneration = Interlocked.Read(ref heldGeneration);
+            _ = Task.Run(() => PlayReleaseCue(forecast, recorded, releasedGeneration));
+        };
         if (forecast is not null)
             session.FinalizingCompleted += (recorded, took) => LearnTranscriptionTime(forecast, recorded, took);
         session.AudioMeterChanged += PresentAudioMeter;
@@ -958,14 +965,15 @@ internal sealed class DictationApplication : IDisposable
 
     // Runs on a pool thread as soon as the microphone stops after release.
     // Every release says "microphone off"; only a dictation long enough to wait for adds "Transcribing".
-    private void PlayReleaseCue(TranscriptionTimeForecast? forecast, TimeSpan recorded)
+    private void PlayReleaseCue(TranscriptionTimeForecast? forecast, TimeSpan recorded, long releasedGeneration)
     {
         var announced = false;
         // Never play into the microphone of a dictation that started meanwhile. A hold that begins
         // after this check stops the cue before its own microphone starts.
         lock (releaseCueGate)
         {
-            if (!shortcutHeld)
+            // Running late on the pool, it must also skip a dictation that started and was released meanwhile.
+            if (!shortcutHeld && releasedGeneration == Interlocked.Read(ref heldGeneration))
             {
                 announced = forecast?.IsWorthAnnouncing(recorded) == true;
                 PlayCue(() => cues.PlayReleased(settings, announced));
@@ -1120,7 +1128,7 @@ internal sealed class DictationApplication : IDisposable
     private async Task BeginDictationAsync(string localeCode)
     {
         // Discard the previous sentence before anything else happens for the new dictation.
-        var pressed = Stopwatch.GetTimestamp();
+        pressedAt = Stopwatch.GetTimestamp();
         lastDictation.Clear();
         Interlocked.Increment(ref dictationSequence);
         lock (releaseCueGate)
@@ -1134,7 +1142,7 @@ internal sealed class DictationApplication : IDisposable
         loadingWhileListening = null;
         if (CanListenWhileLoading)
         {
-            await ListenWhileLoadingAsync(localeCode, generation, pressed);
+            await ListenWhileLoadingAsync(localeCode, generation);
             return;
         }
 
@@ -1162,7 +1170,7 @@ internal sealed class DictationApplication : IDisposable
             await sessions.HoldAsync(localeCode);
             // The ping means the microphone is listening, whether or not the model had to load.
             if (shortcutHeld && generation == heldGeneration && sessions.IsRecording)
-                PlayReadyCue(pressed, modelLoading: false);
+                PlayReadyCue(modelLoading: false);
         }
         catch (Exception exception)
         {
@@ -1178,9 +1186,11 @@ internal sealed class DictationApplication : IDisposable
     private bool CanListenWhileLoading =>
         UsesRuntime && !engineLoads.IsLoaded && !runtime.IsReady && !engine.IsRunning && RuntimeSpeechEngine.Model.IsInstalled;
 
-    private async Task ListenWhileLoadingAsync(string localeCode, long generation, long pressed)
+    private async Task ListenWhileLoadingAsync(string localeCode, long generation)
     {
-        var load = EnsureEngineLoadedAsync();
+        // One load, not EnsureEngineLoadedAsync's retries: a retry after a device change waits for every
+        // dictation to finish, and this dictation's final pass waits for this load.
+        var load = engineLoads.EnsureLoadedAsync();
         // The session created for this hold waits for this load before each transcription.
         loadingWhileListening = load;
         PlayCue(cues.KeepOutputAwake);
@@ -1190,13 +1200,25 @@ internal sealed class DictationApplication : IDisposable
         {
             await sessions.HoldAsync(localeCode);
             if (shortcutHeld && generation == heldGeneration && sessions.IsRecording)
-                PlayReadyCue(pressed, modelLoading: true);
+                PlayReadyCue(modelLoading: true);
+        }
+        catch (Exception exception)
+        {
+            // The load goes on and is unloaded below like any other; only the microphone failed.
+            RecordDiagnostic("dictation.start.failed", exception);
+            ShowFailure(DictationStoppedTitle, DictationStoppedText, BubbleAction.MicrophoneSettings);
+        }
+
+        try
+        {
             await load;
         }
         catch (Exception exception)
         {
             ReportModelLoadFailure(exception);
-            // Nothing can transcribe this recording: end it now, and its failure shows "Model didn't load".
+            // Shown here too, because a hold released before its recording started has no session to fail.
+            ShowFailure(ModelLoadFailedTitle, ModelLoadFailedText, BubbleAction.Diagnostics);
+            // Nothing can transcribe the recording: end it now; its failure shows the same card.
             if (generation == heldGeneration)
                 _ = sessions.ReleaseAsync();
             return;
@@ -1207,6 +1229,15 @@ internal sealed class DictationApplication : IDisposable
             ScheduleModelUnload();
     }
 
+    // Stays as long as a session's own failure does, then returns to rest unless something newer is shown.
+    private void ShowFailure(string title, string text, BubbleAction action)
+    {
+        var version = ++presentationVersion;
+        bubble.ShowError(title, text, action);
+        cancellationVisibleUntil = DateTimeOffset.UtcNow + CancellationHoldTime;
+        _ = ReturnToReadyWhenCurrentAsync(version, CancellationHoldTime);
+    }
+
     private void ReportModelLoadFailure(Exception exception)
     {
         RecordDiagnostic("model.load.failed", exception);
@@ -1215,15 +1246,13 @@ internal sealed class DictationApplication : IDisposable
     }
 
     // The ping means the microphone is listening. The spike log keeps how long that took from the press.
-    private void PlayReadyCue(long pressed, bool modelLoading)
+    private void PlayReadyCue(bool modelLoading)
     {
         PlayCue(() => cues.PlayReady(settings));
-        runtime.Record("app.listening", details:
-        [
-            ("afterPressSeconds", Math.Round(Stopwatch.GetElapsedTime(pressed).TotalSeconds, 2)),
-            ("modelLoading", modelLoading)
-        ]);
+        runtime.Record("app.listening", details: [("afterPressSeconds", SecondsSincePress()), ("modelLoading", modelLoading)]);
     }
+
+    private double SecondsSincePress() => Math.Round(Stopwatch.GetElapsedTime(Interlocked.Read(ref pressedAt)).TotalSeconds, 2);
 
     // Lets a transcription started before the model was ready wait for it.
     private Func<float[], CancellationToken, Task<string>> TranscribeWhenLoaded(Task? load) => async (samples, cancellationToken) =>
@@ -1435,7 +1464,8 @@ internal sealed class DictationApplication : IDisposable
             case BubblePresentationKind.Error:
                 trayIcon.Icon = trayIcons.Ready;
                 // A failure stays as long as "Not inserted" does: three lines can't be read in two seconds.
-                if (loadingWhileListening is { IsFaulted: true })
+                // A load that failed or timed out leaves nothing to transcribe with.
+                if (loadingWhileListening is { IsCompleted: true, IsCompletedSuccessfully: false })
                     bubble.ShowError(ModelLoadFailedTitle, ModelLoadFailedText, BubbleAction.Diagnostics);
                 else
                     bubble.ShowError(DictationStoppedTitle, DictationStoppedText, BubbleAction.MicrophoneSettings);
