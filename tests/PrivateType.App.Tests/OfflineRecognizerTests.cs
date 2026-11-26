@@ -55,6 +55,30 @@ public sealed class OfflineRecognizerTests
     }
 
     [Fact]
+    public async Task Transcribes_in_process_from_16_kHz_float_samples_when_given_a_local_engine()
+    {
+        var received = new List<float[]>();
+        await using var recognizer = new OfflineRecognizer(
+            () => throw new InvalidOperationException("The HTTP engine must not be used."),
+            transcribeLocally: (samples, _) =>
+            {
+                received.Add(samples.ToArray());
+                return Task.FromResult("Hello from the runtime.");
+            });
+        var updates = CollectAsync(recognizer);
+
+        for (var frame = 0; frame < 3; frame++)
+            await recognizer.PushPcmAsync(Pcm(amplitude: 16_384), CancellationToken.None);
+        await recognizer.CompleteAsync(CancellationToken.None);
+
+        Assert.Equal("Hello from the runtime.", Assert.Single(await updates).Text);
+        var samples = Assert.Single(received);
+        Assert.Equal(3 * 1_600, samples.Length);
+        Assert.Equal(0.5f, samples[0]);
+        Assert.Equal(-0.5f, samples[1]);
+    }
+
+    [Fact]
     public async Task Transcribes_again_the_speech_after_the_last_recognized_word_and_appends_it()
     {
         // One quiet second, five seconds of voice, then a quiet second; the model stops after two seconds.

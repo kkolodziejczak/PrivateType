@@ -1,6 +1,7 @@
 # Build and local runtime output
 .engine/
 artifacts/
+local-feed/
 data/
 models/
 **/bin/
