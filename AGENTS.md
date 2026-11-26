@@ -31,8 +31,10 @@ Keep [README.md](README.md) user-first. Update its measured model/runtime figure
 
 <!-- Shared with every repository that signs through gh-release-signing; keep it identical to the
      copy in that repository's README ("Instructions for agents"). -->
-When a run waits for signing, start the approval script for the owner instead of asking them to
-run it. Open it in its own window, from this repository's folder, so the owner can answer it:
+As soon as you start a release run (push the tag or start the workflow), also start the approval
+script for the owner; don't wait for the build, and don't ask them to run it. It follows the run
+and prompts the owner when signing needs them. Open it in its own window, from this repository's
+folder:
 
 ```powershell
 Start-Process powershell.exe -WorkingDirectory (Get-Location) -ArgumentList '-NoExit', '-Command', 'gh release-signing approve -Tag vX.Y.Z'
