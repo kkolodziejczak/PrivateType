@@ -74,6 +74,8 @@ public partial class DictationBubble : Window
         Menu.PlacementTarget = BubbleShell;
         Menu.Placement = PlacementMode.Right;
         Menu.HorizontalOffset = 8;
+        // The menu and the shortcut card never share the screen: the menu closes the card, and the card won't open over it.
+        Menu.Opened += (_, _) => HideBindingsCard();
         CreateWaveformBars();
         stillLoadingTimer.Tick += (_, _) =>
         {
@@ -756,7 +758,6 @@ public partial class DictationBubble : Window
                 // and passes through untouched.
                 dragActive = false;
                 ReportPosition();
-                ShowBindingsCardIfOnKeyFace(lParam);
                 break;
             case DragHookAction.Move:
                 MoveDrag(lParam);
