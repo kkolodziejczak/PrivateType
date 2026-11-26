@@ -581,7 +581,8 @@ internal sealed class DictationApplication : IDisposable
             }
 
             await Task.Delay(StandbyLoadRetryDelay);
-            if (disposed || shortcutHeld || engineLoads.IsLoaded || run != standbyLoadRun)
+            // Settings may have switched to unloading after each dictation during the wait.
+            if (disposed || shortcutHeld || engineLoads.IsLoaded || run != standbyLoadRun || UnloadsAfterEachDictation)
                 return;
         }
     }
@@ -1128,6 +1129,8 @@ internal sealed class DictationApplication : IDisposable
         PlayCue(cues.KeepOutputAwake);
         if (!engineLoads.IsLoaded)
         {
+            // A pending return to rest from the previous dictation must not cover this load.
+            presentationVersion++;
             bubble.ShowModelLoading(hotkey.ToggleMode);
             // Unloading after each dictation makes every hold a short load; saying so each time would outlast it.
             if (!UnloadsAfterEachDictation)
@@ -1237,7 +1240,7 @@ internal sealed class DictationApplication : IDisposable
         await sessions.ReleaseAsync();
         if (!engineLoads.IsLoaded)
             ShowReadyPanel();
-        ScheduleModelUnload(afterDictation: true);
+        ScheduleModelUnload();
         await LetOutputSleepWhenQuietAsync(generation);
     }
 
@@ -1258,22 +1261,38 @@ internal sealed class DictationApplication : IDisposable
     private bool UnloadsAfterEachDictation => settings.ModelIdleTimeoutMinutes == ModelIdleTimeouts.EachDictation;
     private const string LoadsWithEachDictationStatus = "Dictation ready — model loads with each dictation";
 
-    // afterDictation: the bubble is still showing that dictation, and returns to its resting look by itself.
-    private void ScheduleModelUnload(bool afterDictation = false)
+    private void ScheduleModelUnload()
     {
         modelIdleTimer.Stop();
-        if (shortcutHeld || !engineLoads.IsLoaded)
+        if (shortcutHeld)
             return;
 
         if (UnloadsAfterEachDictation)
         {
-            UnloadModel(showReady: !afterDictation);
+            // A device or model change makes IsLoaded false while the old engine is still resident.
+            if (engine.IsRunning || runtime.IsReady)
+                _ = UnloadAfterDictationsFinishAsync();
             return;
         }
+
+        if (!engineLoads.IsLoaded)
+            return;
 
         modelIdleTimer.Interval = TimeSpan.FromMinutes(settings.ModelIdleTimeoutMinutes);
         modelIdleTimer.Start();
         RecordDiagnostic("model.unload.scheduled", details: [("minutes", settings.ModelIdleTimeoutMinutes)]);
+    }
+
+    // Waits for every queued dictation to finish, so the unload never cuts a transcription off. The bubble may
+    // still show a result, a notice, or a load that ended without a dictation; it returns to rest when that is done.
+    private async Task UnloadAfterDictationsFinishAsync()
+    {
+        await sessions.WhenIdleAsync();
+        if (disposed || shortcutHeld || !UnloadsAfterEachDictation)
+            return;
+
+        UnloadModel();
+        _ = ReturnToReadyWhenCurrentAsync(presentationVersion, RestDelay());
     }
 
     private void UnloadModelWhenIdle(object? sender, EventArgs e)
@@ -1282,17 +1301,16 @@ internal sealed class DictationApplication : IDisposable
         if (shortcutHeld)
             return;
 
-        UnloadModel(showReady: true);
+        UnloadModel();
+        ShowReadyPanel();
     }
 
-    private void UnloadModel(bool showReady)
+    private void UnloadModel()
     {
         engine.Stop();
         runtime.Stop();
         statusItem.Text = UnloadsAfterEachDictation ? LoadsWithEachDictationStatus : "Dictation ready — model unloaded";
         trayIcon.Text = $"PrivateType — {statusItem.Text}";
-        if (showReady)
-            ShowReadyPanel();
         RecordDiagnostic("model.unloaded");
     }
 
@@ -1343,10 +1361,15 @@ internal sealed class DictationApplication : IDisposable
                 break;
             case BubblePresentationKind.Hide:
                 // A "Text not inserted" message stays readable even though Ready follows it at once.
-                var cancellationRemaining = cancellationVisibleUntil - DateTimeOffset.UtcNow;
-                _ = ReturnToReadyWhenCurrentAsync(version, cancellationRemaining > HideDelay ? cancellationRemaining : HideDelay);
+                _ = ReturnToReadyWhenCurrentAsync(version, RestDelay());
                 break;
         }
+    }
+
+    private TimeSpan RestDelay()
+    {
+        var cancellationRemaining = cancellationVisibleUntil - DateTimeOffset.UtcNow;
+        return cancellationRemaining > HideDelay ? cancellationRemaining : HideDelay;
     }
 
     private static readonly TimeSpan HideDelay = TimeSpan.FromMilliseconds(700);
