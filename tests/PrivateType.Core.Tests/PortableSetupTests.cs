@@ -85,6 +85,18 @@ public sealed class PortableSetupTests : IDisposable
     }
 
     [Fact]
+    public void Keeps_unloading_the_model_after_each_dictation()
+    {
+        var store = new PortableSettingsStore(directory);
+
+        store.Save(PortableSettings.Default with { ModelIdleTimeoutMinutes = ModelIdleTimeouts.EachDictation });
+
+        var loaded = store.Load();
+        Assert.Null(loaded.Warning);
+        Assert.Equal(0, loaded.Settings.ModelIdleTimeoutMinutes);
+    }
+
+    [Fact]
     public async Task Rejects_corrupt_download_and_leaves_no_active_or_partial_model()
     {
         var manifest = CreateManifest("expected model"u8.ToArray());
