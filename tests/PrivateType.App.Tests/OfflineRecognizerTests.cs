@@ -79,6 +79,32 @@ public sealed class OfflineRecognizerTests
     }
 
     [Fact]
+    public async Task Keeps_every_frame_recorded_before_the_local_engine_was_ready()
+    {
+        var engineReady = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var received = new List<int>();
+        await using var recognizer = new OfflineRecognizer(
+            () => throw new InvalidOperationException("The HTTP engine must not be used."),
+            transcribeLocally: async (samples, _) =>
+            {
+                await engineReady.Task;
+                received.Add(samples.Length);
+                return "Spoken while loading.";
+            });
+        var updates = CollectAsync(recognizer);
+
+        for (var frame = 0; frame < 5; frame++)
+            await recognizer.PushPcmAsync(Pcm(amplitude: 8_000), CancellationToken.None);
+        var completed = recognizer.CompleteAsync(CancellationToken.None);
+        Assert.False(completed.IsCompleted);
+        engineReady.SetResult();
+        await completed;
+
+        Assert.Equal("Spoken while loading.", Assert.Single(await updates).Text);
+        Assert.Equal(5 * 1_600, Assert.Single(received));
+    }
+
+    [Fact]
     public async Task Transcribes_again_the_speech_after_the_last_recognized_word_and_appends_it()
     {
         // One quiet second, five seconds of voice, then a quiet second; the model stops after two seconds.
