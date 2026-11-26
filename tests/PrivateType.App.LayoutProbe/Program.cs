@@ -201,6 +201,7 @@ static void RenderWindows(bool monitorPlacementOnly)
     VerifyTargetMonitorPlacement();
     BubbleDragProbe.Run();
     VerifyShortcutCardLeavesBubbleStill();
+    VerifyShortcutCardOutlastsReadyRefresh();
     VerifyRestingKeyHoldsThePointer();
     VerifyTranscriptPreviewClearsTaskbars();
 
@@ -358,6 +359,47 @@ static void VerifyShortcutCardLeavesBubbleStill()
     }
 
     Console.WriteLine($"PASS: The shortcut card opens beside a still bubble on {Forms.Screen.AllScreens.Length} monitor(s).");
+}
+
+// The bubble refreshes its resting state while the pointer rests on the key, as when the idle model unloads. The pointer
+// never left, so no new hover opens the card: the refresh itself must keep it open, and must not open it for a pointer
+// elsewhere.
+static void VerifyShortcutCardOutlastsReadyRefresh()
+{
+    foreach (var modelLoaded in new[] { false, true })
+    foreach (var pointerOnKey in new[] { true, false })
+    {
+        var bubble = new DictationBubble();
+        bubble.ShowReady(PortableSettings.Default, modelLoaded: true);
+        bubble.UpdateLayout();
+        var key = (FrameworkElement)bubble.FindName("IconTile");
+        var popup = (System.Windows.Controls.Primitives.Popup)bubble.FindName("BindingsPopup");
+        if (pointerOnKey)
+        {
+            CaptureProbe.MoveMouseOver(bubble, key.TranslatePoint(new Point(key.ActualWidth / 2, key.ActualHeight / 2), bubble));
+            if (!popup.IsOpen)
+            {
+                bubble.Close();
+                throw new InvalidOperationException("Hovering the resting key did not open the shortcut card.");
+            }
+        }
+
+        bubble.ShowReady(PortableSettings.Default, modelLoaded);
+        var cardOpen = popup.IsOpen;
+        var opacity = ((UIElement)bubble.FindName("BubbleShell")).Opacity;
+        bubble.Close();
+
+        var model = modelLoaded ? "with" : "without";
+        if (cardOpen != pointerOnKey)
+            throw new InvalidOperationException(
+                $"After a refresh to ready {model} a model, with the pointer {(pointerOnKey ? "on" : "away from")} the key, the card is {(cardOpen ? "open" : "closed")}.");
+        var expected = pointerOnKey ? 1 : DictationBubble.OpacityForReadyState(modelLoaded);
+        if (Math.Abs(opacity - expected) > 0.001)
+            throw new InvalidOperationException(
+                $"After a refresh to ready {model} a model, with the pointer {(pointerOnKey ? "on" : "away from")} the key, the bubble is at opacity {opacity:F2}, not {expected:F2}.");
+    }
+
+    Console.WriteLine("PASS: The shortcut card stays open through a ready refresh while the pointer rests on the key, and stays shut for a pointer elsewhere.");
 }
 
 // Windows passes the pointer through every pixel a transparent window leaves fully clear. The resting key must draw
