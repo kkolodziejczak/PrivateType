@@ -84,7 +84,7 @@ internal sealed class RuntimeSpeechEngine(Action<string, Exception?, (string Nam
 
     private static double Seconds(long started) => Math.Round(Stopwatch.GetElapsedTime(started).TotalSeconds, 2);
 
-    private void Record(string eventName, Exception? error = null, (string Name, object? Value)[]? details = null)
+    internal void Record(string eventName, Exception? error = null, (string Name, object? Value)[]? details = null)
     {
         diagnostics(eventName, error, details);
         try
