@@ -374,7 +374,7 @@ static void VerifyShortcutCardOutlastsReadyRefresh()
         bubble.UpdateLayout();
         var key = (FrameworkElement)bubble.FindName("IconTile");
         var popup = (System.Windows.Controls.Primitives.Popup)bubble.FindName("BindingsPopup");
-        if (pointer is "on the key" or "left behind by a notice")
+        if (pointer is "on the key" or "left behind by a notice" or "in the menu")
         {
             CaptureProbe.MoveMouseOver(bubble, key.TranslatePoint(new Point(key.ActualWidth / 2, key.ActualHeight / 2), bubble));
             if (!popup.IsOpen)
@@ -389,14 +389,18 @@ static void VerifyShortcutCardOutlastsReadyRefresh()
             bubble.ShowNotice(succeeded: true, DictationApplication.CopiedTitle, "Copied.");
             bubble.Left += 400;
         }
+        // The menu and the card never share the screen, whichever opens first: a menu opening closes the card, and the
+        // card won't open over the menu.
         if (pointer == "in the menu")
         {
             ((FrameworkElement)bubble.FindName("BubbleShell")).ContextMenu.IsOpen = true;
+            var cardOpenWithMenu = popup.IsOpen;
             bubble.ShowBindingsCard();
-            if (popup.IsOpen)
+            cardOpenWithMenu |= popup.IsOpen;
+            if (cardOpenWithMenu)
             {
                 bubble.Close();
-                throw new InvalidOperationException("The shortcut card opened over the bubble's open menu.");
+                throw new InvalidOperationException("The shortcut card stayed or opened beside the bubble's open menu.");
             }
         }
         bubble.ShowReady(PortableSettings.Default, modelLoaded);
