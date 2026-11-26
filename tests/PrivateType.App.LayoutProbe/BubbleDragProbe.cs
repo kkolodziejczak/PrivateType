@@ -81,6 +81,24 @@ internal static class BubbleDragProbe
         }
 
         Console.WriteLine("PASS: A drag from the hovered key closes the card, brings it back on the drop, and leaves the resting look once the pointer goes, with and without a model.");
+
+        // The key is round. A drop in a corner of its square, outside the circle, is a pointer Windows passes through and
+        // WPF never sees over the key, so no leave would ever close a card opened there.
+        var corner = new DictationBubble();
+        corner.ShowReady(PortableSettings.Default, modelLoaded: true);
+        corner.UpdateLayout();
+        var cornerKey = (System.Windows.UIElement)corner.FindName("IconTile");
+        var grab = cornerKey.PointToScreen(new System.Windows.Point(2, 2));
+        var (gx, gy) = ((int)grab.X, (int)grab.Y);
+        var grabbedCorner = Inject(corner, NativeMethods.WmLButtonDown, gx, gy) == 1;
+        Inject(corner, NativeMethods.WmMouseMove, gx + 30, gy);
+        Inject(corner, NativeMethods.WmLButtonUp, gx + 30, gy);
+        var cardOpenAfterCornerDrop = ((System.Windows.Controls.Primitives.Popup)corner.FindName("BindingsPopup")).IsOpen;
+        corner.Close();
+        if (!grabbedCorner || cardOpenAfterCornerDrop)
+            throw new InvalidOperationException($"A drop outside the key's circle: grabbed {grabbedCorner}, card {(cardOpenAfterCornerDrop ? "open" : "closed")}; it belongs closed.");
+
+        Console.WriteLine("PASS: A drop outside the key's circle leaves the shortcut card shut.");
     }
 
     // A fast mouse lands anywhere near the border from outside the bubble. The bubble may leave the
