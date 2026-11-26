@@ -13,7 +13,7 @@
     <ProjectReference Include="..\PrivateType.Core\PrivateType.Core.csproj" />
     <PackageReference Include="NAudio" Version="2.2.1" />
     <!-- Spike: in-process Parakeet engine from local-feed (see nuget.config). A rebuilt package needs a new version. -->
-    <PackageReference Include="ParakeetRuntime" Version="0.1.0-spike.1" />
+    <PackageReference Include="ParakeetRuntime.Net" Version="0.1.0-spike.2" />
   </ItemGroup>
   <ItemGroup>
     <Resource Include="Assets\PrivateType.ready.ico" />

@@ -1,6 +1,6 @@
 using System.Diagnostics;
 using System.IO;
-using ParakeetRuntime;
+using ParakeetRuntime.Net;
 using PrivateType.Core;
 
 namespace PrivateType.App;
@@ -75,8 +75,9 @@ internal sealed class RuntimeSpeechEngine(Action<string, Exception?, (string Nam
         LoadedDevicePreference = null;
         if (running is null)
             return;
+        var started = Stopwatch.GetTimestamp();
         running.Dispose();
-        Record("runtime.unloaded");
+        Record("runtime.unloaded", details: [("tookSeconds", Seconds(started))]);
     }
 
     public void Dispose() => Stop();
