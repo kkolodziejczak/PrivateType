@@ -142,6 +142,7 @@ public partial class DictationBubble : Window
             ApplyPosition(settings);
         }
 
+        var cardWasOpen = BindingsPopup.IsOpen;
         LeaveState(active: false);
         BubbleShell.Opacity = OpacityForReadyState(modelLoaded);
         ApplyReadyVisuals(modelLoaded);
@@ -150,8 +151,9 @@ public partial class DictationBubble : Window
         bindings = settings.Shortcuts;
         RestLayer.Visibility = Visibility.Visible;
         Card.Visibility = Visibility.Collapsed;
-        // The pointer may rest on the key through the refresh, as when the idle model unloads; no new hover follows.
-        if (IconTile.IsMouseOver)
+        // A refresh while the card is up, as when the idle model unloads, keeps it: the pointer still rests on the key and
+        // no new hover follows. It never opens one, so a hover gone stale after the bubble moved can't open a card.
+        if (cardWasOpen)
             ShowBindingsCard();
     }
 
@@ -468,7 +470,7 @@ public partial class DictationBubble : Window
 
     internal void ShowBindingsCard()
     {
-        if (active || noticeShown || dragActive || Card.Visibility == Visibility.Visible || BindingsPopup.IsOpen)
+        if (active || noticeShown || dragActive || Menu.IsOpen || Card.Visibility == Visibility.Visible || BindingsPopup.IsOpen)
             return;
 
         BindingsList.Children.Clear();
@@ -754,6 +756,7 @@ public partial class DictationBubble : Window
                 // and passes through untouched.
                 dragActive = false;
                 ReportPosition();
+                ShowBindingsCardIfOnKeyFace(lParam);
                 break;
             case DragHookAction.Move:
                 MoveDrag(lParam);
@@ -761,14 +764,22 @@ public partial class DictationBubble : Window
             case DragHookAction.End:
                 dragActive = false;
                 ReportPosition();
-                // The bubble landed under the pointer, still on the key; no new hover follows the drop.
-                if (IsCursorOverIcon(lParam))
-                    ShowBindingsCard();
+                ShowBindingsCardIfOnKeyFace(lParam);
                 // We suppressed the matching button-down, so suppress the up too.
                 return 1;
         }
 
         return NativeMethods.CallNextHookEx(mouseHook, code, wParam, lParam);
+    }
+
+    // The bubble landed under the pointer, and no new hover follows the drop, so the drop itself brings the card back
+    // for a pointer on the key. Only on the key's round face: a corner of its square passes the pointer through, WPF
+    // never sees it there, and no leave would close the card.
+    private void ShowBindingsCardIfOnKeyFace(nint lParam)
+    {
+        var cursor = CursorInWindowSpace(lParam, new WindowInteropHelper(this).Handle);
+        if (IconTile.IsVisible && IconTile.InputHitTest(IconTile.PointFromScreen(new System.Windows.Point(cursor.X, cursor.Y))) is not null)
+            ShowBindingsCard();
     }
 
     internal static bool DismissesMenu(bool menuOpen, nint message, bool overMenu) =>

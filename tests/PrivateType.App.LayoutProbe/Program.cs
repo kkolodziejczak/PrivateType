@@ -362,19 +362,19 @@ static void VerifyShortcutCardLeavesBubbleStill()
 }
 
 // The bubble refreshes its resting state while the pointer rests on the key, as when the idle model unloads. The pointer
-// never left, so no new hover opens the card: the refresh itself must keep it open, and must not open it for a pointer
-// elsewhere.
+// never left, so no new hover opens the card: the refresh itself must keep it open. It must not open it for a pointer
+// elsewhere: one that never came, one whose hover went stale while a notice moved the bubble, or one in the bubble's menu.
 static void VerifyShortcutCardOutlastsReadyRefresh()
 {
     foreach (var modelLoaded in new[] { false, true })
-    foreach (var pointerOnKey in new[] { true, false })
+    foreach (var pointer in new[] { "on the key", "never on the key", "left behind by a notice", "in the menu" })
     {
         var bubble = new DictationBubble();
         bubble.ShowReady(PortableSettings.Default, modelLoaded: true);
         bubble.UpdateLayout();
         var key = (FrameworkElement)bubble.FindName("IconTile");
         var popup = (System.Windows.Controls.Primitives.Popup)bubble.FindName("BindingsPopup");
-        if (pointerOnKey)
+        if (pointer is "on the key" or "left behind by a notice")
         {
             CaptureProbe.MoveMouseOver(bubble, key.TranslatePoint(new Point(key.ActualWidth / 2, key.ActualHeight / 2), bubble));
             if (!popup.IsOpen)
@@ -384,22 +384,38 @@ static void VerifyShortcutCardOutlastsReadyRefresh()
             }
         }
 
+        if (pointer == "left behind by a notice")
+        {
+            bubble.ShowNotice(succeeded: true, DictationApplication.CopiedTitle, "Copied.");
+            bubble.Left += 400;
+        }
+        if (pointer == "in the menu")
+        {
+            ((FrameworkElement)bubble.FindName("BubbleShell")).ContextMenu.IsOpen = true;
+            bubble.ShowBindingsCard();
+            if (popup.IsOpen)
+            {
+                bubble.Close();
+                throw new InvalidOperationException("The shortcut card opened over the bubble's open menu.");
+            }
+        }
         bubble.ShowReady(PortableSettings.Default, modelLoaded);
         var cardOpen = popup.IsOpen;
         var opacity = ((UIElement)bubble.FindName("BubbleShell")).Opacity;
         bubble.Close();
 
         var model = modelLoaded ? "with" : "without";
-        if (cardOpen != pointerOnKey)
+        var belongsOpen = pointer == "on the key";
+        if (cardOpen != belongsOpen)
             throw new InvalidOperationException(
-                $"After a refresh to ready {model} a model, with the pointer {(pointerOnKey ? "on" : "away from")} the key, the card is {(cardOpen ? "open" : "closed")}.");
-        var expected = pointerOnKey ? 1 : DictationBubble.OpacityForReadyState(modelLoaded);
+                $"After a refresh to ready {model} a model, with the pointer {pointer}, the card is {(cardOpen ? "open" : "closed")}.");
+        var expected = belongsOpen ? 1 : DictationBubble.OpacityForReadyState(modelLoaded);
         if (Math.Abs(opacity - expected) > 0.001)
             throw new InvalidOperationException(
-                $"After a refresh to ready {model} a model, with the pointer {(pointerOnKey ? "on" : "away from")} the key, the bubble is at opacity {opacity:F2}, not {expected:F2}.");
+                $"After a refresh to ready {model} a model, with the pointer {pointer}, the bubble is at opacity {opacity:F2}, not {expected:F2}.");
     }
 
-    Console.WriteLine("PASS: The shortcut card stays open through a ready refresh while the pointer rests on the key, and stays shut for a pointer elsewhere.");
+    Console.WriteLine("PASS: The shortcut card stays open through a ready refresh while the pointer rests on the key, and stays shut for a pointer elsewhere, left behind by a notice, or in the menu.");
 }
 
 // Windows passes the pointer through every pixel a transparent window leaves fully clear. The resting key must draw
