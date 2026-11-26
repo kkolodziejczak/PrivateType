@@ -62,6 +62,18 @@ internal static class CaptureProbe
             FocusKeyboard(window, picker);
             picker.IsDropDownOpen = true;
         });
+        Draw(NewSettings(), output, "settings", "settings-general-unload-picker-open", window =>
+        {
+            Scroll(window).ScrollToBottom();
+            var picker = (ComboBox)window.FindName("IdleTimeoutBox");
+            FocusKeyboard(window, picker);
+            picker.IsDropDownOpen = true;
+        });
+        Draw(NewSettings(), output, "settings", "settings-general-unload-each-dictation", window =>
+        {
+            Scroll(window).ScrollToBottom();
+            ((ComboBox)window.FindName("IdleTimeoutBox")).SelectedValue = PrivateType.Core.ModelIdleTimeouts.EachDictation;
+        });
         // A pointer over a picker and over a switch row: each window is placed so that control lies under the pointer where it already is.
         Draw(NewSettings(), output, "settings", "settings-general-hover", window => Hover(window, (FrameworkElement)window.FindName("MicrophoneBox")));
         Draw(NewSettings(), output, "settings", "settings-general-hover-switch", window => Hover(window, (FrameworkElement)window.FindName("ClipboardHistoryCheckBox")));

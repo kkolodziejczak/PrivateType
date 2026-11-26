@@ -745,6 +745,7 @@ public sealed record IdleTimeoutOption(int Minutes, string Label)
 {
     public static IReadOnlyList<IdleTimeoutOption> Supported { get; } =
     [
+        new(ModelIdleTimeouts.EachDictation, "Each dictation"),
         new(5, "5 minutes"),
         new(10, "10 minutes"),
         new(15, "15 minutes"),

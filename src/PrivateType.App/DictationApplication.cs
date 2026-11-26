@@ -545,6 +545,14 @@ internal sealed class DictationApplication : IDisposable
     private async Task LoadModelInStandbyAsync()
     {
         var run = ++standbyLoadRun;
+        // It would be unloaded again at once; the first shortcut loads it instead.
+        if (UnloadsAfterEachDictation)
+        {
+            statusItem.Text = LoadsWithEachDictationStatus;
+            trayIcon.Text = $"PrivateType — {statusItem.Text}";
+            return;
+        }
+
         for (var attempt = 1; ; attempt++)
         {
             try
@@ -1121,7 +1129,9 @@ internal sealed class DictationApplication : IDisposable
         if (!engineLoads.IsLoaded)
         {
             bubble.ShowModelLoading(hotkey.ToggleMode);
-            PlayCue(() => cues.Announce(SpokenCue.LoadingModel, settings));
+            // Unloading after each dictation makes every hold a short load; saying so each time would outlast it.
+            if (!UnloadsAfterEachDictation)
+                PlayCue(() => cues.Announce(SpokenCue.LoadingModel, settings));
         }
         try
         {
@@ -1227,7 +1237,7 @@ internal sealed class DictationApplication : IDisposable
         await sessions.ReleaseAsync();
         if (!engineLoads.IsLoaded)
             ShowReadyPanel();
-        ScheduleModelUnload();
+        ScheduleModelUnload(afterDictation: true);
         await LetOutputSleepWhenQuietAsync(generation);
     }
 
@@ -1245,11 +1255,21 @@ internal sealed class DictationApplication : IDisposable
             RecordDiagnostic("shortcut.release.recovered");
     }
 
-    private void ScheduleModelUnload()
+    private bool UnloadsAfterEachDictation => settings.ModelIdleTimeoutMinutes == ModelIdleTimeouts.EachDictation;
+    private const string LoadsWithEachDictationStatus = "Dictation ready — model loads with each dictation";
+
+    // afterDictation: the bubble is still showing that dictation, and returns to its resting look by itself.
+    private void ScheduleModelUnload(bool afterDictation = false)
     {
         modelIdleTimer.Stop();
         if (shortcutHeld || !engineLoads.IsLoaded)
             return;
+
+        if (UnloadsAfterEachDictation)
+        {
+            UnloadModel(showReady: !afterDictation);
+            return;
+        }
 
         modelIdleTimer.Interval = TimeSpan.FromMinutes(settings.ModelIdleTimeoutMinutes);
         modelIdleTimer.Start();
@@ -1262,11 +1282,17 @@ internal sealed class DictationApplication : IDisposable
         if (shortcutHeld)
             return;
 
+        UnloadModel(showReady: true);
+    }
+
+    private void UnloadModel(bool showReady)
+    {
         engine.Stop();
         runtime.Stop();
-        statusItem.Text = "Dictation ready — model unloaded";
+        statusItem.Text = UnloadsAfterEachDictation ? LoadsWithEachDictationStatus : "Dictation ready — model unloaded";
         trayIcon.Text = $"PrivateType — {statusItem.Text}";
-        ShowReadyPanel();
+        if (showReady)
+            ShowReadyPanel();
         RecordDiagnostic("model.unloaded");
     }
 

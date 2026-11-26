@@ -71,6 +71,14 @@ public static class SpokenCueVoices
     public static bool IsSupported(string? value) => value is Off or Female or Male;
 }
 
+public static class ModelIdleTimeouts
+{
+    // Frees the model as soon as each dictation's text is typed; the next shortcut loads it again.
+    public const int EachDictation = 0;
+
+    public static bool IsSupported(int minutes) => minutes is EachDictation or 5 or 10 or 15 or 30;
+}
+
 public static class ModelDevices
 {
     public const string Automatic = "automatic";
@@ -112,7 +120,7 @@ public static class PortableSettingsValidator
                 : null,
             settings => settings with { PanelLeftFraction = null, PanelTopFraction = null, PanelDisplayDeviceName = null }),
         new("model idle timeout",
-            settings => settings.ModelIdleTimeoutMinutes is not (5 or 10 or 15 or 30) ? "Choose a supported model idle timeout." : null,
+            settings => !ModelIdleTimeouts.IsSupported(settings.ModelIdleTimeoutMinutes) ? "Choose a supported model idle timeout." : null,
             settings => settings with { ModelIdleTimeoutMinutes = PortableSettings.Default.ModelIdleTimeoutMinutes }),
         new("ready sound",
             ValidateReadySound,
