@@ -16,6 +16,8 @@ internal sealed class RuntimeSpeechEngine(Action<string, Exception?, (string Nam
 
     public string? Backend => engine?.Backend;
 
+    public bool IsUsingGpu => engine?.IsUsingGpu ?? false;
+
     public string? LoadedDevicePreference { get; private set; }
 
     public async Task StartAsync(string modelPath, string devicePreference, CancellationToken cancellationToken)

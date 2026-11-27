@@ -92,17 +92,18 @@ languages.
 
 ### Speed
 
-PrivateType runs the model on the fastest device it finds: a graphics card,
-then integrated graphics, then the processor. **Settings → Model → Run model
-on** shows which one it uses and lets you keep it on the processor to save
-battery. Measured with Parakeet on a laptop with an Intel Core i7-11850H
-(2026-10-07), 70 seconds of speech took:
+PrivateType runs the model on the fastest device it finds. Parakeet runs
+inside PrivateType on a graphics card, or on the processor when there is none;
+it skips integrated graphics, which were slower than the processor. Nemotron
+tries a graphics card, then integrated graphics, then the processor.
+**Settings → Model → Run model on** shows which one it uses and lets you keep
+it on the processor to save battery. Measured with Parakeet on a laptop with an
+Intel Core i7-11850H (2026-11-27), 70 seconds of speech took:
 
 | Device | Time after release |
 | --- | --- |
-| NVIDIA GeForce MX450 graphics card | about 1.9 s |
-| Intel UHD integrated graphics | about 6.5 s |
-| Processor only | about 15 s |
+| NVIDIA GeForce MX450 graphics card | about 1.2 s |
+| Processor only | about 5–7 s |
 
 ### Vocabulary
 
