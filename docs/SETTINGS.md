@@ -124,8 +124,15 @@ progress is lost.
 it again, which takes a moment. Keep holding the shortcut while **Loading local
 model…** is shown.
 
+**Each dictation** keeps the model in memory only while you dictate: it loads
+when you press the shortcut and unloads once the text is typed. With Parakeet
+you can start speaking at the ready sound, which comes as soon as the microphone
+is listening, while the model is still loading. Nemotron makes you wait for the
+model on every dictation.
+
 **Recommended:** turn on startup if you dictate daily. Choose 30 minutes if you
-dictate often and have 8 GB of RAM or more. Choose 5 minutes if memory is tight.
+dictate often and have 8 GB of RAM or more. Choose 5 minutes, or **Each
+dictation** with Parakeet, if memory is tight.
 
 ### Sound
 

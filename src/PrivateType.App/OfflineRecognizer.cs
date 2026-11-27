@@ -144,8 +144,11 @@ internal sealed class OfflineRecognizer(
         {
             return (await TranscribeAsync(startByte, timedWords: false, CancellationToken.None)).Text;
         }
-        catch (Exception exception) when (exception is HttpRequestException or InvalidOperationException or InvalidDataException or JsonException or OperationCanceledException)
+        // A preview is only a hint. Whatever it fails with, from the server or the in-process engine
+        // (which may reread its model file), the final pass decides the text.
+        catch (Exception exception)
         {
+            record?.Invoke("preview.failed", [("error", exception.GetType().Name)]);
             return null;
         }
     }

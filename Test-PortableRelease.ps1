@@ -43,6 +43,12 @@ $engineFiles = @(
     'vulkan-1.dll'
 )
 
+$inProcessEngineFiles = @(
+    'ParakeetRuntime.Net.dll',
+    'TestableIO.System.IO.Abstractions.Wrappers.dll',
+    'Testably.Abstractions.FileSystem.Interface.dll'
+)
+
 $noticeFiles = @(
     'LICENSE',
     'licenses\THIRD-PARTY-NOTICES.txt',
@@ -110,6 +116,10 @@ try {
     }
     foreach ($engineFile in $engineFiles) {
         Assert-ReleaseFile (Join-Path $releaseDirectory "app\engine\bin\$engineFile")
+    }
+    # Parakeet runs in the app's own process, so the server check below does not cover it.
+    foreach ($inProcessFile in $inProcessEngineFiles) {
+        Assert-ReleaseFile (Join-Path $releaseDirectory "app\$inProcessFile")
     }
     foreach ($noticeFile in $noticeFiles) {
         Assert-ReleaseFile (Join-Path $releaseDirectory "app\$noticeFile")

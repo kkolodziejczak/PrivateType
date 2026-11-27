@@ -918,12 +918,12 @@ internal sealed class DictationApplication : IDisposable
         var sequence = Interlocked.Read(ref dictationSequence);
         var session = new DictationSession(
             new DefaultMicrophoneCapture(settings.MicrophoneId),
-            activeModel.Style == RecognitionStyle.Offline
+            // The offline model always runs in-process; its final pass queues behind a running preview.
+            UsesRuntime
                 ? new OfflineRecognizer(engine.TranscriptionEndpointAsync, settings.OfflinePreview ? OfflinePreviewInterval : null,
-                    // The in-process engine queues the final pass behind a running preview; it has no restart.
-                    UsesRuntime ? null : RestartBusyEngineAsync,
+                    restartEngine: null,
                     (eventName, details) => RecordDiagnostic(eventName, details: details),
-                    UsesRuntime ? TranscribeWhenLoaded(loadingWhileListening) : null)
+                    TranscribeWhenLoaded(loadingWhileListening))
                 : new RealtimeRecognizer(engine.RealtimeEndpointAsync),
             new ForegroundTargetGuard(new Win32ForegroundTarget()),
             CreateInjector(),
@@ -1291,43 +1291,26 @@ internal sealed class DictationApplication : IDisposable
             throw new InvalidOperationException("The local speech model changed while it was loading.");
     }
 
-    // Called when a long preview still occupies the engine at release: the engine cannot abandon
-    // it, and on the processor reloading the model is quicker than waiting. On a graphics device
-    // previews finish quickly and a reload costs more, so the final pass simply queues. Runs on
-    // the UI thread, so a dictation started meanwhile shares this load instead of starting a
-    // second engine.
-    private async Task RestartBusyEngineAsync()
-    {
-        // Shutdown waits for this dictation on the UI thread; let it queue behind the preview.
-        if (disposed || engine.Device?.Kind != EngineDeviceKind.Processor || Wpf.Application.Current is not { } application)
-            return;
-
-        var started = Stopwatch.GetTimestamp();
-        await application.Dispatcher.InvokeAsync(async () =>
-        {
-            engine.Stop();
-            await EnsureEngineLoadedAsync();
-            RecordDiagnostic("engine.restarted", details: [("tookSeconds", Math.Round(Stopwatch.GetElapsedTime(started).TotalSeconds, 2))]);
-        }).Task.Unwrap();
-    }
+    private static readonly TimeSpan LoadDeadline = TimeSpan.FromSeconds(25);
 
     private async Task LoadEngineAsync()
     {
-        // Restarting the engine for another model must not cut off a dictation that is still finalizing.
+        // Restarting the engine for another model or device must not cut off a dictation that is still
+        // recording or finalizing; it keeps the old engine until it is done.
         if (engine.IsRunning || runtime.IsReady)
             await sessions.WhenIdleAsync();
         var path = modelPath ?? throw new InvalidOperationException("The local speech model is not available.");
         RecordDiagnostic("model.loading");
         statusItem.Text = "Loading local model";
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(25));
         if (UsesRuntime)
         {
             engine.Stop();
-            await runtime.StartAsync(path, settings.ModelDevice, timeout.Token);
+            await runtime.StartAsync(path, settings.ModelDevice, LoadDeadline);
         }
         else
         {
             runtime.Stop();
+            using var timeout = new CancellationTokenSource(LoadDeadline);
             await engine.StartAsync(path, settings.ModelDevice, timeout.Token);
         }
         statusItem.Text = UsesRuntime ? $"Dictation ready — ParakeetRuntime on {runtime.Backend}" : "Dictation ready";
@@ -1392,7 +1375,9 @@ internal sealed class DictationApplication : IDisposable
     private async Task UnloadAfterDictationsFinishAsync()
     {
         await sessions.WhenIdleAsync();
-        if (disposed || shortcutHeld || !UnloadsAfterEachDictation)
+        // Checked again here on the UI thread, where holds start: a dictation pressed and released after
+        // the wait ended is still finalizing, and its own release schedules the unload again.
+        if (disposed || shortcutHeld || !UnloadsAfterEachDictation || !sessions.IsIdle)
             return;
 
         UnloadModel();
