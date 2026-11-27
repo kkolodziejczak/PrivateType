@@ -6,10 +6,29 @@
       "name": "NeMo-Speech.cpp",
       "maker": "by NVIDIA",
       "release": "0.2.0, the unmodified Windows x64 Vulkan release nemo-speech-0.2.0-windows-x86_64-vulkan.zip (SHA-256 edf15a04ba98740aa0ab75ae4681ac7ad0a488b22b35ce2cbebd10590bb1c1e1)",
-      "role": "Turns your speech into text on this computer.",
+      "role": "Runs the Nemotron model on this computer.",
       "license": "Apache-2.0",
       "includes": "It includes ggml, llama.cpp, cpp-httplib, miniaudio, Abseil, Protocol Buffers, SentencePiece and utf8-range under their own licenses, and Microsoft's Visual C++ runtime libraries.",
       "texts": "NVIDIA's LICENSE and NOTICE, and the licenses NVIDIA ships for the libraries it includes, in the NeMo-Speech.cpp folder"
+    },
+    {
+      "group": "Speech",
+      "name": "ParakeetRuntime.Net",
+      "maker": "by Krzysztof Kołodziejczak",
+      "release": "0.5.0, the signed NuGet package",
+      "role": "Runs the Parakeet model inside PrivateType.",
+      "license": "MIT",
+      "includes": "Its engine is a C# port of parts of NVIDIA's NeMo-Speech.cpp (Apache-2.0); no NeMo-Speech.cpp source or binary is included in it.",
+      "texts": "ParakeetRuntime.Net-MIT.txt and ParakeetRuntime.Net-THIRD-PARTY-NOTICES.md"
+    },
+    {
+      "group": "Speech",
+      "name": "System.IO.Abstractions",
+      "maker": "by Tatham Oddie & friends",
+      "release": "23.0.1 (TestableIO.System.IO.Abstractions.Wrappers), with Testably.Abstractions.FileSystem.Interface 11.0.0",
+      "role": "Lets ParakeetRuntime.Net check the model file.",
+      "license": "MIT",
+      "texts": "System.IO.Abstractions-MIT.txt and Testably.Abstractions-MIT.txt"
     },
     {
       "group": "Graphics",

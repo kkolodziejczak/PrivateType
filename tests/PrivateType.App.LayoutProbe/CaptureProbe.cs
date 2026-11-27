@@ -666,6 +666,10 @@ internal static class CaptureProbe
         (string Name, string Text)[] standIns =
         [
             ("NAudio-MIT.txt", "MIT License\n\nStand-in for the capture: the release ships the NAudio 2.2.1 license text here."),
+            ("ParakeetRuntime.Net-MIT.txt", "MIT License\n\nStand-in for the capture: the release writes ParakeetRuntime.Net's license text here."),
+            ("ParakeetRuntime.Net-THIRD-PARTY-NOTICES.md", "Stand-in for the capture: the release ships ParakeetRuntime.Net's third-party notices here."),
+            ("System.IO.Abstractions-MIT.txt", "MIT License\n\nStand-in for the capture: the release writes System.IO.Abstractions' license text here."),
+            ("Testably.Abstractions-MIT.txt", "MIT License\n\nStand-in for the capture: the release writes Testably.Abstractions' license text here."),
             ("VulkanRT-License.txt", "Stand-in for the capture: the release ships the Vulkan loader's MIT and Apache-2.0 texts here."),
             ("dotnet-LICENSE.txt", "The MIT License (MIT)\n\nStand-in for the capture: the release ships the .NET runtime license here."),
             ("dotnet-THIRD-PARTY-NOTICES.txt", "Stand-in for the capture: the release ships the .NET runtime's third-party notices here."),

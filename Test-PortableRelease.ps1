@@ -60,6 +60,10 @@ $noticeFiles = @(
     'licenses\NeMo-Speech.cpp\third_party\vcpkg\utf8-range\LICENSE',
     'licenses\VulkanRT-License.txt',
     'licenses\NAudio-MIT.txt',
+    'licenses\ParakeetRuntime.Net-MIT.txt',
+    'licenses\ParakeetRuntime.Net-THIRD-PARTY-NOTICES.md',
+    'licenses\System.IO.Abstractions-MIT.txt',
+    'licenses\Testably.Abstractions-MIT.txt',
     'licenses\dotnet-LICENSE.txt',
     'licenses\dotnet-THIRD-PARTY-NOTICES.txt'
 )

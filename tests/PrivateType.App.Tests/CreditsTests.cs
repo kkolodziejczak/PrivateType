@@ -15,6 +15,8 @@ public sealed class CreditsTests
             new Dictionary<string, string>
             {
                 ["NeMo-Speech.cpp"] = "Apache-2.0",
+                ["ParakeetRuntime.Net"] = "MIT",
+                ["System.IO.Abstractions"] = "MIT",
                 ["Vulkan loader"] = "MIT and Apache-2.0",
                 ["NAudio"] = "MIT",
                 [".NET runtime"] = ".NET Library License",

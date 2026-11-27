@@ -29,6 +29,51 @@ function Copy-ReleaseFile {
     Copy-Item -LiteralPath $SourcePath -Destination $DestinationPath
 }
 
+# A package licensed by the MIT expression ships no license file, so its text is written from the
+# standard MIT terms and the copyright line the package itself declares.
+function Write-PackageMitLicense {
+    param(
+        [Parameter(Mandatory)] [string] $NuspecPath,
+        [Parameter(Mandatory)] [string] $DestinationPath
+    )
+
+    if (!(Test-Path -LiteralPath $NuspecPath -PathType Leaf)) {
+        throw "Required release notice is missing: $NuspecPath"
+    }
+    $metadata = ([xml](Get-Content -LiteralPath $NuspecPath -Raw -Encoding utf8)).package.metadata
+    if ($metadata.license.'#text' -ne 'MIT') {
+        throw "$($metadata.id) is no longer MIT-licensed; update Credits.json and its license text."
+    }
+    if ([string]::IsNullOrWhiteSpace($metadata.copyright)) {
+        throw "$($metadata.id) declares no copyright line for its MIT license text."
+    }
+
+    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $DestinationPath) | Out-Null
+    @(
+        'MIT License'
+        ''
+        $metadata.copyright
+        ''
+        'Permission is hereby granted, free of charge, to any person obtaining a copy'
+        'of this software and associated documentation files (the "Software"), to deal'
+        'in the Software without restriction, including without limitation the rights'
+        'to use, copy, modify, merge, publish, distribute, sublicense, and/or sell'
+        'copies of the Software, and to permit persons to whom the Software is'
+        'furnished to do so, subject to the following conditions:'
+        ''
+        'The above copyright notice and this permission notice shall be included in all'
+        'copies or substantial portions of the Software.'
+        ''
+        'THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR'
+        'IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,'
+        'FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE'
+        'AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER'
+        'LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,'
+        'OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE'
+        'SOFTWARE.'
+    ) -join [Environment]::NewLine | Set-Content -LiteralPath $DestinationPath -Encoding utf8
+}
+
 # Wraps a notice at 80 columns; a bullet's later lines hang under its text.
 function Format-NoticeLines {
     param(
@@ -59,7 +104,7 @@ function Add-ReleaseNotices {
     )
 
     $licensesDirectory = Join-Path $PublishDirectory 'licenses'
-    $naudioPackageRoot = if ($env:NUGET_PACKAGES) { $env:NUGET_PACKAGES } else { Join-Path $env:USERPROFILE '.nuget\packages' }
+    $packagesRoot = if ($env:NUGET_PACKAGES) { $env:NUGET_PACKAGES } else { Join-Path $env:USERPROFILE '.nuget\packages' }
     $dotnetRoot = Split-Path -Parent (Get-Command dotnet -ErrorAction Stop).Source
 
     Copy-ReleaseFile (Join-Path $PSScriptRoot 'LICENSE') (Join-Path $PublishDirectory 'LICENSE')
@@ -69,7 +114,12 @@ function Add-ReleaseNotices {
         Copy-ReleaseFile (Join-Path $EngineLicenses $file) (Join-Path $licensesDirectory "NeMo-Speech.cpp\$file")
     }
     Copy-ReleaseFile $loaderLicense (Join-Path $licensesDirectory 'VulkanRT-License.txt')
-    Copy-ReleaseFile (Join-Path $naudioPackageRoot 'naudio\2.2.1\license.txt') (Join-Path $licensesDirectory 'NAudio-MIT.txt')
+    Copy-ReleaseFile (Join-Path $packagesRoot 'naudio\2.2.1\license.txt') (Join-Path $licensesDirectory 'NAudio-MIT.txt')
+    $parakeetRuntimePackage = Join-Path $packagesRoot 'parakeetruntime.net\0.5.0'
+    Write-PackageMitLicense (Join-Path $parakeetRuntimePackage 'parakeetruntime.net.nuspec') (Join-Path $licensesDirectory 'ParakeetRuntime.Net-MIT.txt')
+    Copy-ReleaseFile (Join-Path $parakeetRuntimePackage 'THIRD-PARTY-NOTICES.md') (Join-Path $licensesDirectory 'ParakeetRuntime.Net-THIRD-PARTY-NOTICES.md')
+    Write-PackageMitLicense (Join-Path $packagesRoot 'testableio.system.io.abstractions.wrappers\23.0.1\testableio.system.io.abstractions.wrappers.nuspec') (Join-Path $licensesDirectory 'System.IO.Abstractions-MIT.txt')
+    Write-PackageMitLicense (Join-Path $packagesRoot 'testably.abstractions.filesystem.interface\11.0.0\testably.abstractions.filesystem.interface.nuspec') (Join-Path $licensesDirectory 'Testably.Abstractions-MIT.txt')
     Copy-ReleaseFile (Join-Path $dotnetRoot 'LICENSE.txt') (Join-Path $licensesDirectory 'dotnet-LICENSE.txt')
     Copy-ReleaseFile (Join-Path $dotnetRoot 'ThirdPartyNotices.txt') (Join-Path $licensesDirectory 'dotnet-THIRD-PARTY-NOTICES.txt')
 
