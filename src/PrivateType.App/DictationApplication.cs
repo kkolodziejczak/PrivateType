@@ -11,7 +11,7 @@ namespace PrivateType.App;
 internal sealed class DictationApplication : IDisposable
 {
     private readonly EngineHost engine;
-    // Spike: the offline model (Parakeet) runs here instead of in the EngineHost server.
+    // The offline model (Parakeet) runs in this process; the streaming model keeps the EngineHost server.
     private readonly RuntimeSpeechEngine runtime;
     private bool UsesRuntime => activeModel.Style == RecognitionStyle.Offline;
     private readonly DictationCues cues = new();
@@ -54,7 +54,7 @@ internal sealed class DictationApplication : IDisposable
     // The model load the current hold started while its microphone was already listening; null when
     // the hold began with the model loaded or behind the loading card.
     private Task? loadingWhileListening;
-    // Spike timing: when the current hold began, for the press-to-ping records in the spike log.
+    // When the current hold began, so the diagnostics show how long the microphone took to listen.
     private long pressedAt;
     // Makes "is a new dictation held?" and "start the release cue" one step, so a cue is either
     // stopped by the next hold before its microphone starts or never started at all.
@@ -247,8 +247,6 @@ internal sealed class DictationApplication : IDisposable
                 if (!File.Exists(settingsStore.SettingsPath))
                     settingsStore.Save(settings);
             }
-            // Spike: always start on Parakeet, which runs on ParakeetRuntime. The file keeps the saved model until Settings are saved.
-            settings = settings with { SpeechModel = SpeechModelCatalog.ParakeetId };
             activeModel = SpeechModelCatalog.Get(settings.SpeechModel);
             var modelStorage = models.Storage(activeModel);
             var modelProvisioner = models.Provisioner(activeModel);
@@ -259,10 +257,7 @@ internal sealed class DictationApplication : IDisposable
             if (!microphones.Any(microphone => microphone.Id == settings.MicrophoneId))
                 trayIcon.ShowBalloonTip(5000, "PrivateType", "The saved microphone is unavailable; the system default will be used until you choose another microphone.", Forms.ToolTipIcon.Warning);
 
-            // ParakeetRuntime brings and verifies its own model, so PrivateType's model download and setup are skipped.
-            if (UsesRuntime)
-                await ConfigureReadyAsync(RuntimeSpeechEngine.Model.Path);
-            else if (modelProvisioner.IsAvailable())
+            if (modelProvisioner.IsAvailable())
                 await ConfigureReadyAsync(modelProvisioner.ModelPath);
             else
                 ShowModelSetup(modelStorage);
@@ -938,7 +933,7 @@ internal sealed class DictationApplication : IDisposable
                 : null,
             // A text that wasn't inserted is kept in Recent dictations; with that list off, the message says it is gone.
             keptTextHint: history.IsEnabled ? KeptTextHint(settings.HistoryShortcut) : NotKeptNotice);
-        runtime.Record("app.session.created", details: [("afterPressSeconds", SecondsSincePress())]);
+        RecordDiagnostic("app.session.created", details: [("afterPressSeconds", SecondsSincePress())]);
         session.PresentationChanged += presentation => Present(localeCode, presentation);
         // Only models that transcribe on release make the user wait for the text.
         var forecast = activeModel.Style == RecognitionStyle.Offline ? transcriptionForecast : null;
@@ -1180,11 +1175,10 @@ internal sealed class DictationApplication : IDisposable
     }
 
     // The in-process engine only needs the model to transcribe, and the recording is held in memory
-    // until then, so the microphone opens while the model loads. Only a model already on disk
-    // qualifies: a first run's download keeps the loading card. A resident engine for another device
-    // must first wait for every dictation, this one included, so it also takes the loading path.
+    // until then, so the microphone opens while the model loads. A resident engine for another device
+    // must first wait for every dictation, this one included, so it takes the loading path.
     private bool CanListenWhileLoading =>
-        UsesRuntime && !engineLoads.IsLoaded && !runtime.IsReady && !engine.IsRunning && RuntimeSpeechEngine.Model.IsInstalled;
+        UsesRuntime && !engineLoads.IsLoaded && !runtime.IsReady && !engine.IsRunning;
 
     private async Task ListenWhileLoadingAsync(string localeCode, long generation)
     {
@@ -1245,11 +1239,11 @@ internal sealed class DictationApplication : IDisposable
         trayIcon.ShowBalloonTip(5000, "PrivateType", $"The local model could not load: {exception.Message}", Forms.ToolTipIcon.Error);
     }
 
-    // The ping means the microphone is listening. The spike log keeps how long that took from the press.
+    // The ping means the microphone is listening. The diagnostics keep how long that took from the press.
     private void PlayReadyCue(bool modelLoading)
     {
         PlayCue(() => cues.PlayReady(settings));
-        runtime.Record("app.listening", details: [("afterPressSeconds", SecondsSincePress()), ("modelLoading", modelLoading)]);
+        RecordDiagnostic("app.listening", details: [("afterPressSeconds", SecondsSincePress()), ("modelLoading", modelLoading)]);
     }
 
     private double SecondsSincePress() => Math.Round(Stopwatch.GetElapsedTime(Interlocked.Read(ref pressedAt)).TotalSeconds, 2);
@@ -1323,12 +1317,11 @@ internal sealed class DictationApplication : IDisposable
         var path = modelPath ?? throw new InvalidOperationException("The local speech model is not available.");
         RecordDiagnostic("model.loading");
         statusItem.Text = "Loading local model";
-        // A first run downloads the runtime's 714 MB model inside this load, which cannot fit the start deadline.
-        using var timeout = new CancellationTokenSource(UsesRuntime && !RuntimeSpeechEngine.Model.IsInstalled ? Timeout.InfiniteTimeSpan : TimeSpan.FromSeconds(25));
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(25));
         if (UsesRuntime)
         {
             engine.Stop();
-            await runtime.StartAsync(settings.ModelDevice, timeout.Token);
+            await runtime.StartAsync(path, settings.ModelDevice, timeout.Token);
         }
         else
         {
