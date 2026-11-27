@@ -744,7 +744,9 @@ internal sealed class DictationApplication : IDisposable
 
     private (SettingsWindow Window, bool? Result) ShowSettingsWindow(PortableSettings shown, bool openVocabulary, string? vocabularyScope, string? notice)
     {
-        var deviceStatus = ModelDeviceStatus.Of(engine.IsRunning ? engine.Device : null, engine.FellBack, engine.PredictDevice(settings.ModelDevice));
+        var deviceStatus = UsesRuntime
+            ? ModelDeviceStatus.OfInProcess(runtime.Backend, runtime.IsUsingGpu, engine.PredictDevice(settings.ModelDevice))
+            : ModelDeviceStatus.Of(engine.IsRunning ? engine.Device : null, engine.FellBack, engine.PredictDevice(settings.ModelDevice));
         var window = new SettingsWindow(shown, MicrophoneCatalog.Enumerate(), new LibraryModelStore(models), openVocabulary, vocabularyScope, notice, activeModelId: settings.SpeechModel, deviceStatus: deviceStatus, canChangeStartup: EngineHost.IsReleaseCopy);
         window.Loaded += (_, _) => BringToForeground(window);
         window.DiagnosticsRequested += () => ShowDiagnostics(window);
