@@ -6,6 +6,8 @@ public sealed class DictationSessionCoordinator : IAsyncDisposable
     private readonly object commandLock = new();
     private Task commands = Task.CompletedTask;
     private DictationSession? activeSession;
+    // Completed when the active session is finished; replaced, under commandLock, for each new session.
+    private TaskCompletionSource sessionEnded = new();
     private long activeHoldGeneration;
     private long holdGeneration;
     private bool hotkeyHeld;
@@ -51,11 +53,33 @@ public sealed class DictationSessionCoordinator : IAsyncDisposable
         }
     }
 
-    // Completes once every queued hold and release, including finalization, has finished.
-    public Task WhenIdleAsync()
+    // No hold or release is queued, and no dictation is recording or finalizing.
+    public bool IsIdle
     {
-        lock (commandLock)
-            return EnqueueLocked(() => Task.CompletedTask);
+        get
+        {
+            lock (commandLock)
+                return commands.IsCompleted && activeSession is null;
+        }
+    }
+
+    // Completes once the coordinator is idle. A dictation still held counts until it is released and
+    // finished, so whatever waits here never takes the engine from under a recording.
+    public async Task WhenIdleAsync()
+    {
+        while (true)
+        {
+            Task queued, ended;
+            lock (commandLock)
+            {
+                if (commands.IsCompleted && activeSession is null)
+                    return;
+                queued = commands;
+                ended = activeSession is null ? Task.CompletedTask : sessionEnded.Task;
+            }
+            // A failed command is reported by whoever queued it; here it only means that command is over.
+            await Task.WhenAll(queued, ended).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+        }
     }
 
     public async ValueTask DisposeAsync()
@@ -94,8 +118,12 @@ public sealed class DictationSessionCoordinator : IAsyncDisposable
         var session = createSession(heldLocale);
         var sessionHoldGeneration = holdGeneration;
         session.Faulted += _ => QueueFaultCleanup(session, sessionHoldGeneration);
-        activeSession = session;
-        activeHoldGeneration = sessionHoldGeneration;
+        lock (commandLock)
+        {
+            activeSession = session;
+            activeHoldGeneration = sessionHoldGeneration;
+            sessionEnded = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        }
 
         try
         {
@@ -134,11 +162,17 @@ public sealed class DictationSessionCoordinator : IAsyncDisposable
         finally
         {
             await session.DisposeAsync();
-            if (ReferenceEquals(activeSession, session))
+            TaskCompletionSource? ended = null;
+            lock (commandLock)
             {
-                activeSession = null;
-                activeHoldGeneration = 0;
+                if (ReferenceEquals(activeSession, session))
+                {
+                    activeSession = null;
+                    activeHoldGeneration = 0;
+                    ended = sessionEnded;
+                }
             }
+            ended?.TrySetResult();
         }
     }
 

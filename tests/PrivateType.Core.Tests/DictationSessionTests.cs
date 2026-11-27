@@ -334,6 +334,27 @@ public sealed class DictationSessionTests
     }
 
     [Fact]
+    public async Task Reports_idle_only_after_a_dictation_still_held_is_released_and_finished()
+    {
+        var capture = new FakeCapture();
+        var recognizer = new FakeRecognizer();
+        await using var coordinator = new DictationSessionCoordinator(_ =>
+            CreateSession(capture, recognizer, new FakeForegroundTarget(), new FakeInjector()));
+        Assert.True(coordinator.IsIdle);
+
+        await coordinator.HoldAsync("pl-PL");
+        var idle = coordinator.WhenIdleAsync();
+        await Task.Delay(50);
+        Assert.False(idle.IsCompleted);
+        Assert.False(coordinator.IsIdle);
+
+        await coordinator.ReleaseAsync();
+        await idle.WaitAsync(TimeSpan.FromSeconds(1));
+        Assert.True(recognizer.Disposed);
+        Assert.True(coordinator.IsIdle);
+    }
+
+    [Fact]
     public async Task Reports_recording_only_after_microphone_start_completes()
     {
         var capture = new FakeCapture

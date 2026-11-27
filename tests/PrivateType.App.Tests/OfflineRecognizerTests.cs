@@ -105,6 +105,32 @@ public sealed class OfflineRecognizerTests
     }
 
     [Fact]
+    public async Task Still_finishes_the_text_after_the_local_engine_fails_a_preview()
+    {
+        var previewFailed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var calls = 0;
+        await using var recognizer = new OfflineRecognizer(
+            () => throw new InvalidOperationException("The HTTP engine must not be used."),
+            TimeSpan.FromMilliseconds(10),
+            transcribeLocally: (_, _) =>
+            {
+                if (Interlocked.Increment(ref calls) > 1)
+                    return Task.FromResult("Final text.");
+                previewFailed.SetResult();
+                // For example the model file, which the engine rereads after losing the graphics card.
+                throw new IOException("The model file is in use.");
+            });
+        await recognizer.StartAsync(RecognitionRequest.WithoutVocabulary("pl-PL"), CancellationToken.None);
+        var updates = CollectAsync(recognizer);
+
+        await recognizer.PushPcmAsync(new byte[32_000], CancellationToken.None);
+        await previewFailed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await recognizer.CompleteAsync(CancellationToken.None);
+
+        Assert.Equal("Final text.", Assert.Single(await updates).Text);
+    }
+
+    [Fact]
     public async Task Transcribes_again_the_speech_after_the_last_recognized_word_and_appends_it()
     {
         // One quiet second, five seconds of voice, then a quiet second; the model stops after two seconds.

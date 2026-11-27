@@ -20,7 +20,7 @@ internal sealed class RuntimeSpeechEngine(Action<string, Exception?, (string Nam
 
     public string? LoadedDevicePreference { get; private set; }
 
-    public async Task StartAsync(string modelPath, string devicePreference, CancellationToken cancellationToken)
+    public async Task StartAsync(string modelPath, string devicePreference, TimeSpan loadDeadline)
     {
         Stop();
         var started = Stopwatch.GetTimestamp();
@@ -28,11 +28,16 @@ internal sealed class RuntimeSpeechEngine(Action<string, Exception?, (string Nam
         {
             var model = new SpeechModel(Path.GetDirectoryName(modelPath)!, SpeechModel.Parakeet);
             // The package keeps a small record beside the file once it has checked it, so only the first load
-            // reads the whole file. The check happens in place; nothing is copied or downloaded.
+            // reads the whole file. The check happens in place; nothing is copied or downloaded. It reads at the
+            // disk's speed, which on a slow portable drive can take longer than a load, so the deadline starts after it.
             if (!model.IsInstalled)
-                await model.InstallFromFileAsync(modelPath, null, cancellationToken);
+            {
+                await model.InstallFromFileAsync(modelPath, null, CancellationToken.None);
+                diagnostics("runtime.model.checked", null, [("tookSeconds", Seconds(started))]);
+            }
 
-            var loaded = await SpeechEngine.LoadAsync(model, new SpeechEngineOptions(UseGpu: devicePreference != ModelDevices.Processor), cancellationToken);
+            using var deadline = new CancellationTokenSource(loadDeadline);
+            var loaded = await SpeechEngine.LoadAsync(model, new SpeechEngineOptions(UseGpu: devicePreference != ModelDevices.Processor), deadline.Token);
             engine = loaded;
             LoadedDevicePreference = devicePreference;
             diagnostics("runtime.loaded", null,
