@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.Diagnostics;
 using System.IO;
 using System.Net;
@@ -9,8 +10,8 @@ namespace PrivateType.App;
 
 // Runs the local NeMo-Speech engine on the fastest device that works. A freshly started engine
 // takes several seconds over its first transcription, so a silent warm-up is sent right away,
-// in the background; dictations ask for the endpoint through the *Async methods, which wait for
-// it. If the warm-up fails on a graphics device, the engine is restarted on the processor and
+// in the background; dictations ask for the endpoint through RealtimeEndpointAsync, which waits
+// for it. If the warm-up fails on a graphics device, the engine is restarted on the processor and
 // graphics are not tried again until the app restarts.
 internal sealed class EngineHost(Action<string, Exception?, (string Name, object? Value)[]?> record) : IDisposable
 {
@@ -124,14 +125,8 @@ internal sealed class EngineHost(Action<string, Exception?, (string Name, object
             : EngineDevices.Choose(ReadDevices(runtime), devicePreference);
     }
 
-    // The endpoints a dictation should use: they wait for the warm-up, after which the engine
+    // The endpoint a dictation should use: it waits for the warm-up, after which the engine
     // answers at full speed on its final device.
-    public async Task<Uri> TranscriptionEndpointAsync()
-    {
-        await warmUp;
-        return TranscriptionEndpoint;
-    }
-
     public async Task<Uri> RealtimeEndpointAsync()
     {
         await warmUp;
@@ -290,8 +285,7 @@ internal sealed class EngineHost(Action<string, Exception?, (string Name, object
         {
             using var client = new HttpClient { Timeout = WarmUpTimeout };
             using var content = new MultipartFormDataContent();
-            // One second of silence, 16 kHz mono PCM16.
-            content.Add(new ByteArrayContent(OfflineRecognizer.Wav(new byte[32_000])), "file", "warm-up.wav");
+            content.Add(new ByteArrayContent(SilentWav(32_000)), "file", "warm-up.wav");
             content.Add(new StringContent("json"), "response_format");
             using var response = await client.PostAsync(TranscriptionEndpoint, content);
             var warm = (int)response.StatusCode < 500;
@@ -303,6 +297,26 @@ internal sealed class EngineHost(Action<string, Exception?, (string Name, object
             record("engine.warm-up.failed", exception, [("device", Device?.Description)]);
             return false;
         }
+    }
+
+    // A canonical 44-byte RIFF header for 16 kHz mono PCM16, followed by that many bytes of silence.
+    internal static byte[] SilentWav(int sampleBytes)
+    {
+        var wav = new byte[44 + sampleBytes];
+        var span = wav.AsSpan();
+        "RIFF"u8.CopyTo(span);
+        BinaryPrimitives.WriteInt32LittleEndian(span[4..], 36 + sampleBytes);
+        "WAVEfmt "u8.CopyTo(span[8..]);
+        BinaryPrimitives.WriteInt32LittleEndian(span[16..], 16);
+        BinaryPrimitives.WriteInt16LittleEndian(span[20..], 1);
+        BinaryPrimitives.WriteInt16LittleEndian(span[22..], 1);
+        BinaryPrimitives.WriteInt32LittleEndian(span[24..], 16000);
+        BinaryPrimitives.WriteInt32LittleEndian(span[28..], 32000);
+        BinaryPrimitives.WriteInt16LittleEndian(span[32..], 2);
+        BinaryPrimitives.WriteInt16LittleEndian(span[34..], 16);
+        "data"u8.CopyTo(span[36..]);
+        BinaryPrimitives.WriteInt32LittleEndian(span[40..], sampleBytes);
+        return wav;
     }
 
     private static async Task<bool> IsEndpointReadyAsync(int port, CancellationToken cancellationToken)

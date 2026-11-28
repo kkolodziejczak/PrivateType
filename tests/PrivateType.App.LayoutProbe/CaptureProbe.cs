@@ -594,8 +594,7 @@ internal static class CaptureProbe
             Record(session, 9, "session.state", [("state", "Finalizing")]);
             Record(session, 0, "session.finalizing", [("timeoutMilliseconds", "15000")]);
             Record("application", 0, "cue.transcribing", [("recordedSeconds", recorded), ("predictedSeconds", took), ("announced", "False")]);
-            Record("application", 1, "transcription.coverage", [("voicedSeconds", recorded), ("lastVoicedSeconds", recorded), ("lastWordSeconds", recorded), ("recoveredCharacters", "0")]);
-            Record("application", 0, "transcription.timed", [("recordedSeconds", recorded), ("tookSeconds", took)]);
+            Record("application", 1, "transcription.timed", [("recordedSeconds", recorded), ("tookSeconds", took)]);
             if (skipped is null)
             {
                 Record(session, 0, "injection.started", [("characters", characters)]);
