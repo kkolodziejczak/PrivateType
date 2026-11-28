@@ -37,7 +37,7 @@ On the processor, a preview still running at release used to hold up the final p
 
 ## Second model: Parakeet TDT 0.6B v3
 
-The same runtime and `serve` command also load `nvidia/parakeet-tdt-0.6b-v3` Q8_0 (see [MODEL_ARTIFACT.md](MODEL_ARTIFACT.md)). It is offline-only, so the app records the whole hold and transcribes it once through `/v1/audio/transcriptions`. Measured on the recorded test machine (2026-10-01): a 13 s FLEURS Polish clip was transcribed exactly, with punctuation, in about 0.9 s after release; a 61 s clip took 5.1 s; the ready runtime used about 790 MiB of working set, peaking near 1.14 GiB on the 61 s clip.
+Until 2026-11, the same runtime and `serve` command also load `nvidia/parakeet-tdt-0.6b-v3` Q8_0 (see [MODEL_ARTIFACT.md](MODEL_ARTIFACT.md)). It is offline-only, so the app recorded the whole hold and transcribed it once through `/v1/audio/transcriptions`. Measured on the recorded test machine (2026-10-01): a 13 s FLEURS Polish clip was transcribed exactly, with punctuation, in about 0.9 s after release; a 61 s clip took 5.1 s; the ready runtime used about 790 MiB of working set, peaking near 1.14 GiB on the 61 s clip.
 
 Since 2026-11, Parakeet no longer uses this server. It runs inside PrivateType's own process on the ParakeetRuntime.Net package, which loads the same verified model file; current timings are in the [README](README.md). The server's word timings went with it, and so did the second pass that transcribed speech left after the last recognized word. The server now runs only the Nemotron streaming model.
 

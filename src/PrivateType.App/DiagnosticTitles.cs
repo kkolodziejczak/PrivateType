@@ -43,7 +43,6 @@ internal static class DiagnosticTitles
         // Information.
         ["engine.started"] = ("Speech engine started", null),
         ["engine.warmed"] = ("Speech engine ready", null),
-        ["engine.restarted"] = ("Speech engine restarted", null),
         ["engine.fallback"] = ("The graphics device failed, so the speech engine moved to the processor", null),
         ["model.loading"] = ("Loading the speech model", null),
         ["model.loaded"] = ("Speech model loaded", null),
