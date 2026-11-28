@@ -108,6 +108,37 @@ public sealed class OfflineRecognizerTests
     }
 
     [Fact]
+    public async Task Release_starts_the_final_pass_without_waiting_for_a_preview_still_running()
+    {
+        var previewStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var previewMayFinish = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var calls = 0;
+        await using var recognizer = new OfflineRecognizer(async (_, _) =>
+        {
+            if (Interlocked.Increment(ref calls) > 1)
+                return "Final text.";
+            previewStarted.SetResult();
+            await previewMayFinish.Task;
+            return "Late preview.";
+        }, TimeSpan.FromMilliseconds(10));
+        await recognizer.StartAsync(RecognitionRequest.WithoutVocabulary("pl-PL"), CancellationToken.None);
+        var updates = CollectAsync(recognizer);
+
+        await recognizer.PushPcmAsync(new byte[32_000], CancellationToken.None);
+        await previewStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        try
+        {
+            await recognizer.CompleteAsync(CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(5));
+        }
+        finally
+        {
+            previewMayFinish.SetResult();
+        }
+
+        Assert.Equal("Final text.", Assert.Single(await updates).Text);
+    }
+
+    [Fact]
     public async Task Previews_the_audio_so_far_while_held_then_commits_one_final_pass()
     {
         var engine = new FakeEngine();

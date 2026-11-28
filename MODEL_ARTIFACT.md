@@ -31,5 +31,7 @@ Revision `ea30d66` (2026-09-10) re-converted the GGUF with the model's SentenceP
 | Expected SHA-256 | `e3880d0aaaaf2c308ea2c35016b2b895c423eb3fda924c1b463d1c19b7f4d32e` |
 | License | CC-BY-4.0 (attribution: NVIDIA); it is accepted separately before download. |
 
-The pinned engine loads this GGUF as a TDT transducer (`head=tdt`, durations 0–4) but serves it offline only: `/v1/realtime` rejects it with "this transducer encoder is offline-only and cannot serve StreamingRecognize". PrivateType therefore keeps the held audio in memory and posts it once, as a 16 kHz PCM16 WAV, to `/v1/audio/transcriptions` on release. The engine ignores the language field (the model detects it) and ignores `speech_contexts` for this head ("boosting requires the Flashlight decoder").
+The model is offline-only: it transcribes a whole recording rather than streaming. PrivateType keeps the held audio in memory and, on release, passes it once as 16 kHz mono float samples to the ParakeetRuntime.Net package, which runs in the app's own process and loads this same file; nothing is sent over HTTP. The model detects the language itself and has no vocabulary boosting.
+
+Until 2026-11 the file ran on the NeMo-Speech.cpp server instead, which loaded it as a TDT transducer (`head=tdt`, durations 0–4) but refused it on `/v1/realtime` ("this transducer encoder is offline-only and cannot serve StreamingRecognize"), so the app posted a 16 kHz PCM16 WAV to `/v1/audio/transcriptions`.
 
