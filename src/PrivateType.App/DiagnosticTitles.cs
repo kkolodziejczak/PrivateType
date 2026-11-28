@@ -57,7 +57,6 @@ internal static class DiagnosticTitles
         ["session.completed"] = ("Dictation finished", null),
         ["cue.transcribing"] = ("Transcribing cue", null),
         ["transcription.timed"] = ("Transcription timed", null),
-        ["transcription.coverage"] = ("Transcription coverage checked", null),
         ["text.corrected"] = ("Vocabulary corrections applied", null),
         ["injection.started"] = ("Typing the text", null),
         ["injection.completed"] = ("Text typed", null),

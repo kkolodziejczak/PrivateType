@@ -920,10 +920,8 @@ internal sealed class DictationApplication : IDisposable
             new DefaultMicrophoneCapture(settings.MicrophoneId),
             // The offline model always runs in-process; its final pass queues behind a running preview.
             UsesRuntime
-                ? new OfflineRecognizer(engine.TranscriptionEndpointAsync, settings.OfflinePreview ? OfflinePreviewInterval : null,
-                    restartEngine: null,
-                    (eventName, details) => RecordDiagnostic(eventName, details: details),
-                    TranscribeWhenLoaded(loadingWhileListening))
+                ? new OfflineRecognizer(TranscribeWhenLoaded(loadingWhileListening), settings.OfflinePreview ? OfflinePreviewInterval : null,
+                    (eventName, details) => RecordDiagnostic(eventName, details: details))
                 : new RealtimeRecognizer(engine.RealtimeEndpointAsync),
             new ForegroundTargetGuard(new Win32ForegroundTarget()),
             CreateInjector(),
